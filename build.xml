@@ -1,0 +1,109 @@
+<project name="mchange-commons-java" default="tested-dist">
+
+   <!-- ignore the CLASSPATH environment variable. force builds to specify classpaths -->
+   <property name="build.sysclasspath" value="ignore" />
+
+   <property file="../settings/build-mchange-commons-java.properties" />
+   <property file="build.properties" />
+
+   <property name="mchange-commons-java.version" value="0.2.1" />
+   <property name="mchange-commons-java.name" value="mchange-commons-java-${mchange-commons-java.version}" />
+   <property name="src.dir" value="src" />
+   <property name="java.src.dir" value="${src.dir}/java" />
+   <property name="rsrc.src.dir" value="${src.dir}/resources" />
+   <property name="build.dir" value="build" />
+   <property name="build.classes.dir" value="${build.dir}/classes" />
+   <property name="build.testresults.dir" value="${build.dir}/testresults" />
+   <property name="dist.dir" value="dist" />
+   <property name="jar.file" value="${build.dir}/${mchange-commons-java.name}.jar" />
+
+   <property name="jvm.target.version" value="1.5" />
+
+   <path id="build-classpath">
+     <pathelement location="${junit.jar.file}" />
+     <pathelement location="${log4j.jar.file}" />
+   </path>
+
+   <path id="test-classpath">
+     <pathelement location="${jar.file}" />
+     <pathelement location="${build.classes.dir}" />
+     <path refid="build-classpath" />
+   </path>
+
+   <target name="init">
+      <mkdir dir="${build.dir}" />
+      <mkdir dir="${dist.dir}" />
+   </target>
+
+   <target name="clean">
+      <delete dir="${build.dir}" />
+      <delete dir="${dist.dir}" />
+   </target>
+
+   <target name="compile" depends="init">
+      <mkdir dir="${build.classes.dir}" />
+      <javac srcdir="${java.src.dir}" 
+             destdir="${build.classes.dir}" 
+	     source="${jvm.target.version}"
+	     target="${jvm.target.version}"
+             debug="on">
+	<classpath refid="build-classpath" />
+      </javac>
+   </target>
+
+
+   <target name="jar" depends="compile">
+      <jar destfile="${jar.file}">
+          <fileset dir="${build.classes.dir}">
+	    <exclude name="**/junit/**" />
+	    <exclude name="**/*JUnitTestCase.*" />
+	  </fileset>
+          <fileset dir="${rsrc.src.dir}" />
+      </jar>
+   </target>
+
+   <target name="fast-junit-tests" depends="jar">
+     <mkdir dir="${build.testresults.dir}" />
+     <junit printsummary="true" showoutput="true" haltonfailure="true"> 
+       <classpath refid="test-classpath" />
+       <formatter type="plain"/>
+       <batchtest fork="yes" toDir="${build.testresults.dir}">
+	 <fileset dir="${build.classes.dir}">
+	   <include name="**/*JUnitTestCase.class"/>
+	   <exclude name="com/mchange/v2/async/**/*" /> <!-- these create Threads, sleep, etc. -->
+	 </fileset>
+       </batchtest>
+     </junit>
+   </target>
+
+   <target name="all-junit-tests" depends="fast-junit-tests">
+     <mkdir dir="${build.testresults.dir}" />
+     <junit printsummary="true" showoutput="true" haltonfailure="true"> 
+       <classpath refid="test-classpath" />
+       <formatter type="plain"/>
+       <batchtest fork="yes" toDir="${build.testresults.dir}">
+	 <fileset dir="${build.classes.dir}">
+	   <include name="com/mchange/v2/async/**/*JUnitTestCase.class" /> <!-- these create Threads, sleep, etc. -->
+	 </fileset>
+       </batchtest>
+     </junit>
+   </target>
+
+   <target name="dist" depends="jar">
+      <copy toDir="${dist.dir}">
+         <fileset file="${jar.file}" />
+      </copy>
+   </target>
+
+   <target name="tested-dist" depends="all-junit-tests,dist"/>
+
+   <target name="install" if="install.jar.dir" depends="dist">
+      <copy toDir="${install.jar.dir}">
+         <fileset file="${jar.file}" />
+      </copy>
+   </target>
+
+   <target name="tested-install" if="install.jar.dir" depends="tested-dist,install" />
+
+</project>
+
