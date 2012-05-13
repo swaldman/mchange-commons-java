@@ -137,42 +137,54 @@ public final class VersionUtils
     public static boolean isAtLeastJavaVersion15()
     { return (JDK_VERSION >= 15); }
     
+    public static boolean isAtLeastJavaVersion16()
+    { return (JDK_VERSION >= 16); }
+    
+    public static boolean isAtLeastJavaVersion17()
+    { return (JDK_VERSION >= 17); }
+    
     public static int[] extractVersionNumberArray(String versionString)
         throws NumberFormatException
-    { return extractVersionNumberArray(versionString, "._"); }
+    { return extractVersionNumberArray( versionString, versionString.split("\\D+") ); }
 
     public static int[] extractVersionNumberArray(String versionString, String delims)
 	throws NumberFormatException
     {
 	String[] intStrs = StringTokenizerUtils.tokenizeToArray( versionString, delims, false );
+	return extractVersionNumberArray( versionString, intStrs );
+    }
+
+    private static int[] extractVersionNumberArray(String versionString, String[] intStrs)
+	throws NumberFormatException
+    {
 	int len = intStrs.length;
 	int[] out = new int[ len ];
 	for (int i = 0; i < len; ++i)
-    {
-        try
-        {
-            out[i] = Integer.parseInt( intStrs[i] );
-        }
-        catch (NumberFormatException e)
-        {
-            if (i <= 1) //we don't even have the major version, e.g. 1.2
-                throw e; // just bail
-            else //we'll make do with what we have
-            {
-                if (logger.isLoggable(MLevel.INFO))
-                    logger.log(MLevel.INFO, 
-                               "JVM version string (" +
-                               versionString + 
-                               ") contains non-integral component (" + intStrs[i] + 
-                               "). Using precending components only to resolve JVM version.");
-                
-                int[] goodEnough = new int[i];
-                System.arraycopy(out, 0, goodEnough, 0, i);
-                out = goodEnough;
-                break;
-            }
-        }
-    }
+	    {
+		try
+		    {
+			out[i] = Integer.parseInt( intStrs[i] );
+		    }
+		catch (NumberFormatException e)
+		    {
+			if (i <= 1) //we don't even have the major version, e.g. 1.2
+			    throw e; // just bail
+			else //we'll make do with what we have
+			    {
+				if (logger.isLoggable(MLevel.INFO))
+				    logger.log(MLevel.INFO, 
+					       "JVM version string (" +
+					       versionString + 
+					       ") contains non-integral component (" + intStrs[i] + 
+					       "). Using precending components only to resolve JVM version.");
+				
+				int[] goodEnough = new int[i];
+				System.arraycopy(out, 0, goodEnough, 0, i);
+				out = goodEnough;
+				break;
+			    }
+		    }
+	    }
 	return out;
     }
 
