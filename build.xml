@@ -6,7 +6,7 @@
    <property file="../settings/build-mchange-commons-java.properties" />
    <property file="build.properties" />
 
-   <property name="mchange-commons-java.version" value="0.2.1" />
+   <property name="mchange-commons-java.version" value="0.2.1_compat14" />
    <property name="mchange-commons-java.name" value="mchange-commons-java-${mchange-commons-java.version}" />
    <property name="src.dir" value="src" />
    <property name="java.src.dir" value="${src.dir}/java" />
@@ -17,11 +17,15 @@
    <property name="dist.dir" value="dist" />
    <property name="jar.file" value="${build.dir}/${mchange-commons-java.name}.jar" />
 
-   <property name="jvm.target.version" value="1.5" />
+   <property name="jvm.version.14" value="true" />
+
+   <!-- <property name="jvm.target.version" value="1.5" /> -->
+   
 
    <path id="build-classpath">
      <pathelement location="${junit.jar.file}" />
      <pathelement location="${log4j.jar.file}" />
+     <pathelement location="${jdk14.jmx.jar.file}" /> <!-- only set if building for jdk1.4 compatibility -->
    </path>
 
    <path id="test-classpath">
@@ -40,7 +44,11 @@
       <delete dir="${dist.dir}" />
    </target>
 
-   <target name="compile" depends="init">
+   <target name="jvm14_init" depends="init" if="jvm.version.14">
+     <property name="jvm.target.version" value="1.4" />
+   </target>
+
+   <target name="compile" depends="jvm14_init">
       <mkdir dir="${build.classes.dir}" />
       <javac srcdir="${java.src.dir}" 
              destdir="${build.classes.dir}" 
@@ -48,6 +56,10 @@
 	     target="${jvm.target.version}"
              debug="on">
 	<classpath refid="build-classpath" />
+	<exclude name="com/mchange/v3/**" if="jvm.version.14" />
+	<exclude name="com/mchange/v1/db/sql/DriverManagerDataSource.java" if="jvm.version.14" />
+	<!-- <exclude name="com/mchange/v2/management/**" if="jvm.version.14" /> -->
+	<exclude name="com/mchange/v2/csv/**" if="jvm.version.14" />
       </javac>
    </target>
 

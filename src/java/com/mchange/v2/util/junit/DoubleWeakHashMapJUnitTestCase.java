@@ -32,7 +32,7 @@ import junit.framework.TestCase;
 
 public class DoubleWeakHashMapJUnitTestCase extends TestCase
 {
-    final static int ARRAY_SZ = 1024 * 1024  * 32 /* * 1024 */;
+    final static int ARRAY_SZ = 1024 * 1024  /* * 32 * 1024 */;
 
     public void testGetNeverAdded()
     {
@@ -94,7 +94,7 @@ public class DoubleWeakHashMapJUnitTestCase extends TestCase
         // let's see if we can force a deeper gc via a big array creation
         byte[] bArray = new byte[ARRAY_SZ];
 	System.gc();
-	try { Thread.sleep(2000); } catch (InterruptedException e) { e.printStackTrace(); }
+	//try { Thread.sleep(2000); } catch (InterruptedException e) { e.printStackTrace(); }
         
         assertEquals("2) Weak values should have been automatically removed (but not guaranteed! sometimes fails without a defect!)", 1, m.size());
         

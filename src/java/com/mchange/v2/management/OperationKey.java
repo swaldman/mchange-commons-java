@@ -24,6 +24,7 @@
 package com.mchange.v2.management;
 
 import java.util.Arrays;
+import com.mchange.v1.util.ArrayUtils; //Arrays.hashCode(...) not available in jdk1.4
 
 public final class OperationKey
 {
@@ -49,6 +50,11 @@ public final class OperationKey
             return false;
     }
     
+    // needs java 1.5
+    // public int hashCode()
+    // { return name.hashCode() ^ Arrays.hashCode(signature); }
+
     public int hashCode()
-    { return name.hashCode() ^ Arrays.hashCode(signature); }
+    { return name.hashCode() ^ ArrayUtils.hashArray(signature); }
 }
+
