@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.io.PrintWriter;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Random;
 import com.mchange.v2.io.IndentedWriter;
 import com.mchange.v2.util.ResourceClosedException;
 
@@ -45,6 +46,8 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
 
     final static int DFLT_MAX_EMERGENCY_THREADS                   = 10;
 
+    final static long PURGE_EVERY = 500L;
+
     int deadlock_detector_interval;
     int interrupt_delay_after_apparent_deadlock;
     int max_individual_task_time;
@@ -54,6 +57,8 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
     HashSet    managed;
     HashSet    available;
     LinkedList pendingTasks;
+
+    Random rnd = new Random();
 
     Timer myTimer;
     boolean should_cancel_timer;
@@ -593,8 +598,18 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
             this.maxIndividualTaskTimeEnforcer = null;
         }
 
+        // no need to sync. Timer threadsafe, no other data access
+        private void purgeTimer()
+        { 
+	    myTimer.purge(); 
+	    if ( logger.isLoggable( MLevel.FINER ) )
+		logger.log(MLevel.FINER, this.getClass().getName() + " -- PURGING TIMER");
+	}
+
         public void run()
         {
+	    long checkForPurge = rnd.nextLong();
+
             try
             {
                 thread_loop:
@@ -628,7 +643,18 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                         finally
                         {
                             if ( maxIndividualTaskTimeEnforcer != null )
-                                cancelMaxIndividualTaskTimeEnforcer();
+				{
+				    cancelMaxIndividualTaskTimeEnforcer();
+
+				    // we stochastically purge the timer roughly every PURGE_EVERY cancels
+				    // math below is an inline, fast, pseudorandom long generator.
+				    // see com.mchange.v2.util.XORShiftRandomUtils
+				    checkForPurge ^= (checkForPurge << 21);
+				    checkForPurge ^= (checkForPurge >>> 35);
+				    checkForPurge ^= (checkForPurge << 4);
+				    if ( (checkForPurge % PURGE_EVERY ) == 0 )
+					purgeTimer();
+				}
 
                             synchronized ( ThreadPoolAsynchronousRunner.this )
                             {
