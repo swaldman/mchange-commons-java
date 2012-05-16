@@ -23,7 +23,7 @@
 package com.mchange.v2.util;
 
 /*
- * A not-cryptographically-string but decent and very fast
+ * A not-cryptographically-strong but decent and very fast
  * pseudorandom number generator. Algorithm can be inlined easily
  * for speed.
  *
