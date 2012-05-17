@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"                                                                                                           
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"                                                                                                        
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                                                                                                    
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">                                                                                                               
+ <modelVersion>4.0.0</modelVersion>                                                                                                                          
+ <groupId>com.mchange</groupId>
+ <artifactId>mchange-commons-java</artifactId> 
+ <packaging>jar</packaging> 
+ <version>@mchange-commons-java.version.maven@</version>                                                                                                                   
+ <name>mchange-commons-java library</name>
+ <description>a library of arguably useful Java utilities.</description>
+ <url>https://github.com/swaldman/mchange-commons-java</url>
+ <licenses>                                                                                                                                                  
+   <license>                                                                                                                                                 
+     <name>GNU Lesser General Public License, Version 2.1</name>
+     <url>http://www.gnu.org/licenses/lgpl-2.1.html</url> 
+     <distribution>repo</distribution>                                                                                                                       
+   </license>                                                                                                                                                
+ </licenses>                                                                                                                                                 
+ <scm>                                                                                                                                                       
+   <url>scm:git:git@github.com:swaldman/mchange-commons-java.git</url>              
+   <connection>scm:git:git@github.com:swaldman/mchange-commons-java.git</connection>
+ </scm>                                                                                                                                                      
+ <developers>                                                                                                                                                
+   <developer>                                                                                                                                               
+     <id>swaldman</id>                  
+     <name>Steve Waldman</name>         
+     <email>swaldman@mchange.com</email>
+   </developer>                                                                                                                                              
+ </developers>                                                                                                                                               
+</project>                                                                                                                                                   
