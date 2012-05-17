@@ -1,7 +1,7 @@
 /*
- * Distributed as part of mchange-commonslib v.0.2
+ * Distributed as part of mchange-commons-java v.0.2.1
  *
- * Copyright (C) 2010 Machinery For Change, Inc.
+ * Copyright (C) 2012 Machinery For Change, Inc.
  *
  * Author: Steve Waldman <swaldman@mchange.com>
  *

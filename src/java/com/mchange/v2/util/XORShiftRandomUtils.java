@@ -1,7 +1,7 @@
 /*
- * Distributed as part of mchange-commonslib v.0.2
+ * Distributed as part of mchange-commons-java v.0.2.1
  *
- * Copyright (C) 2010 Machinery For Change, Inc.
+ * Copyright (C) 2012 Machinery For Change, Inc.
  *
  * Author: Steve Waldman <swaldman@mchange.com>
  *
@@ -22,14 +22,14 @@
 
 package com.mchange.v2.util;
 
-/*
- * A not-cryptographically-strong but decent and very fast
- * pseudorandom number generator. Algorithm can be inlined easily
- * for speed.
+/**
+ *  A not-cryptographically-strong but decent and very fast
+ *  pseudorandom number generator. Algorithm can be inlined easily
+ *  for speed.
  *
- * Algorithm taken from...
+ *  Algorithm taken from...
  *
- *   http://javamex.com/tutorials/random_numbers/xorshift.shtml
+ *    http://javamex.com/tutorials/random_numbers/xorshift.shtml
  *
  */
 public final class XORShiftRandomUtils
