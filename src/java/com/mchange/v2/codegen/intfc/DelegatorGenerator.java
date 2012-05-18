@@ -172,7 +172,6 @@ public class DelegatorGenerator
 	generateExtraImports( iw );
 	iw.println();
 	generateClassJavaDocComment( iw );
-	iw.println();
 	iw.print(CodegenUtils.getModifierString( class_modifiers ) + " class " + sgc);
 	if (superclass != null)
 	    iw.print(" extends " + scn);

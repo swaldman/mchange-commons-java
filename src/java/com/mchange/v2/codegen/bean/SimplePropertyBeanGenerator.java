@@ -118,7 +118,6 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 		iw.println();
 	    }
 	generateClassJavaDocComment();
-	iw.println();
 	writeClassDeclaration();
 	iw.println('{');
 	iw.upIndent();
@@ -290,7 +289,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 	if (java_version >= 140)
 	    {
 		iw.println("public VetoableChangeListener[] getVetoableChangeListeners()");
-		iw.println("{ return vcs.getPropertyChangeListeners(); }");
+		iw.println("{ return vcs.getVetoableChangeListeners(); }");
 	    }
     }
 
