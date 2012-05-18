@@ -131,9 +131,11 @@
      </jar>
    </target>
 
-   <target name="dist" depends="jar">
+   <target name="dist" depends="jar,javadoc-jar,sources-jar">
       <copy toDir="${dist.dir}">
          <fileset file="${main.jar.file}" />
+         <fileset file="${javadoc.jar.file}" />
+         <fileset file="${sources.jar.file}" />
       </copy>
    </target>
 
