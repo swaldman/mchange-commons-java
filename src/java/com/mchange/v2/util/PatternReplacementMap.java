@@ -57,7 +57,7 @@ public final class PatternReplacementMap
     { return mappings.size(); }
 
     /**
-     * @returns null if there was no match, designated replacement otherwise.
+     * @return null if there was no match, designated replacement otherwise.
      */
     public synchronized String attemptReplace( String testString )
     {

@@ -47,7 +47,7 @@ public final class ThreadUtils
     { ThreadGroupUtils.rootThreadGroup().enumerate( threads ); }
 
     /**
-     * @returns null if cannot be determined, otherwise true or false
+     * @return null if cannot be determined, otherwise true or false
      */
     public static Boolean reflectiveHoldsLock( Object o )
     {

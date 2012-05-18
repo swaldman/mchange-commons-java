@@ -25,7 +25,7 @@ package com.mchange.v2.lang;
 
 import java.util.*;
 
-/** @deprected delete me */
+/** @deprecated delete me */
 public final class TypeResolutionUtils
 {
 }
