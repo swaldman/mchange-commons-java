@@ -20,19 +20,19 @@
  * Boston, MA 02111-1307, USA.
  */
 
-package com.mchange.v2.encounter;
 
-import java.util.Map;
-import java.util.WeakHashMap;
+package com.mchange.v1.identicator;
 
 /**
- * @deprecated -- Use of WeakHashMap can't properly guarantee counts with equality semantics,
- *                as an Object can be encounted garbage collected, then re-encountered with 
- *                no apparent history. Clients should explicit choose the semantics they want
- *                via WeakEqualityEncounterCounter or StrongEqualityEncounterCounter
+ * Two entities are considered equivalent if they share the same IdentityHashCode
  */
-public class EqualityEncounterCounter extends AbstractEncounterCounter
+public class IdentityHashCodeIdenticator implements Identicator
 {
-    public EqualityEncounterCounter()
-    { super( new WeakHashMap() ); }
+    public static IdentityHashCodeIdenticator INSTANCE = new IdentityHashCodeIdenticator();
+
+    public boolean identical(Object a, Object b)
+    { return System.identityHashCode(a) == System.identityHashCode(b); }
+
+    public int hash(Object o)
+    { return System.identityHashCode( o ); }
 }

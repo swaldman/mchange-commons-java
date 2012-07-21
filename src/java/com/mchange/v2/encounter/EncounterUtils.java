@@ -22,17 +22,16 @@
 
 package com.mchange.v2.encounter;
 
-import java.util.Map;
-import java.util.WeakHashMap;
+import com.mchange.v1.identicator.*;
 
-/**
- * @deprecated -- Use of WeakHashMap can't properly guarantee counts with equality semantics,
- *                as an Object can be encounted garbage collected, then re-encountered with 
- *                no apparent history. Clients should explicit choose the semantics they want
- *                via WeakEqualityEncounterCounter or StrongEqualityEncounterCounter
- */
-public class EqualityEncounterCounter extends AbstractEncounterCounter
+public final class EncounterUtils
 {
-    public EqualityEncounterCounter()
-    { super( new WeakHashMap() ); }
+    public static EncounterCounter createStrong( Identicator id )
+    { return new GenericEncounterCounter( new IdHashMap( id ) ); }
+
+    public static EncounterCounter createWeak( Identicator id )
+    { return new GenericEncounterCounter( new IdWeakHashMap( id ) ); }
+
+    private EncounterUtils()
+    {}
 }
