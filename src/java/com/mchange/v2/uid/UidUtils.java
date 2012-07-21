@@ -18,6 +18,9 @@ public final class UidUtils
 
     public final static String VM_ID = generateVmId();
 
+    //MT: protected by class lock
+    private static long within_vm_seq_counter = 0;
+
     private static String generateVmId()
     {
         DataOutputStream dos = null;
@@ -82,6 +85,12 @@ public final class UidUtils
             { logger.log(MLevel.WARNING, "Huh? Exception close()ing a byte-array bound IntputStream.", e); }
         }
     }
+
+    private synchronized static long nextWithinVmSeq()
+    { return ++within_vm_seq_counter; }
+
+    public static String allocateWithinVmSequential()
+    { return VM_ID + "#" + nextWithinVmSeq(); }
 
     private UidUtils()
     {}
