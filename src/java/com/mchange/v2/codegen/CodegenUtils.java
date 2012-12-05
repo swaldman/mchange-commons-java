@@ -151,6 +151,43 @@ public final class CodegenUtils
 	return sb.toString();
     } 
 
+    public static String reflectiveMethodObjectArray( Method m )
+    { return reflectiveMethodObjectArray( m, null ); }
+
+    public static String reflectiveMethodObjectArray( Method m, String[] argNames )
+    {
+       StringBuffer sb = new StringBuffer(256);
+       sb.append( "new Object[] " );
+       sb.append('{');
+        Class[] cls = m.getParameterTypes();
+        for(int i = 0, len = cls.length; i < len; ++i)
+        {
+           if (i != 0)
+             sb.append(", ");
+           sb.append( argNames == null ? generatedArgumentName( i ) : argNames[i] );
+        }
+        sb.append('}');
+	return sb.toString();
+    }
+
+    public static String reflectiveMethodParameterTypeArray( Method m )
+    {
+       StringBuffer sb = new StringBuffer(256);
+       sb.append( "new Class[] " );
+       sb.append('{');
+        Class[] cls = m.getParameterTypes();
+        for(int i = 0, len = cls.length; i < len; ++i)
+        {
+           if (i != 0)
+             sb.append(", ");
+           sb.append( ClassUtils.simpleClassName( cls[i] ) );
+	   sb.append(".class");
+        }
+        sb.append('}');
+	return sb.toString();
+    }
+
+
     public static String generatedArgumentName( int index )
     { return String.valueOf((char) ('a' + index)); }
 

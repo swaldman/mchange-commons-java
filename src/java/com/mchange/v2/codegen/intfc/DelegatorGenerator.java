@@ -43,6 +43,9 @@ public class DelegatorGenerator
     Class   superclass           = null;
     Class[] extraInterfaces      = null;
 
+    // A rarely used feature, see below
+    Method[] reflectiveDelegateMethods = null;
+
     final static Comparator classComp = new Comparator()
     {
        public int compare(Object a, Object b)
@@ -109,6 +112,18 @@ public class DelegatorGenerator
     public Class[] getExtraInterfaces()
     { return extraInterfaces; }
 
+    public Method[] getReflectiveDelegateMethods()
+    { return reflectiveDelegateMethods; }
+
+    /**
+     *  Reflectively delegated methods are methods that are not declared in the interface at
+     *  build time, but that should reflectively be delegated at runtime to the inner delegate.
+     *  This permits support of public methods not exposed via the interface, or support of
+     *  methods added to versions of the interface newer than the build version.
+     */
+    public void setReflectiveDelegateMethods(Method[] reflectiveDelegateMethods)
+    { this.reflectiveDelegateMethods = reflectiveDelegateMethods; }
+
     public void writeDelegator(Class intfcl, String genclass, Writer w) throws IOException
     {
 	IndentedWriter iw = CodegenUtils.toIndentedWriter(w);
@@ -144,26 +159,12 @@ public class DelegatorGenerator
 			    imports.add( checkMe );
 		    }
 	    }
-	for (int i = 0, len = methods.length; i < len; ++i)
-	    {
-		Class[] args = methods[i].getParameterTypes();
-		for (int j = 0, jlen = args.length; j < jlen; ++j)
-		    {
-			if (! CodegenUtils.inSamePackage( args[j].getName(), genclass ) )
-			    imports.add( CodegenUtils.unarrayClass( args[j] ) );
-		    }       
-		Class[] excClasses = methods[i].getExceptionTypes();
-		for (int j = 0, jlen = excClasses.length; j < jlen; ++j)
-		    {
-			if (! CodegenUtils.inSamePackage( excClasses[j].getName(), genclass ) )
-			    {
-				//System.err.println("Adding exception type: " + excClasses[j]);
-				imports.add( CodegenUtils.unarrayClass( excClasses[j] ) );
-			    }
-		    }       
-		if (! CodegenUtils.inSamePackage( methods[i].getReturnType().getName(), genclass ) )
-		    imports.add( CodegenUtils.unarrayClass( methods[i].getReturnType() ) );
-	    }
+
+	ensureImports(genclass, imports, methods );
+	
+	if ( reflectiveDelegateMethods != null )
+	    ensureImports(genclass, imports, reflectiveDelegateMethods );
+
 	generateBannerComment( iw );
 	iw.println("package " + pkg + ';');
 	iw.println();
@@ -186,10 +187,24 @@ public class DelegatorGenerator
 	iw.println("protected " + sin + " inner;");
 	iw.println();
 
+	if (reflectiveDelegateMethods != null)
+	    iw.println("protected Class __delegateClass = null;");
+	iw.println();
+
+	iw.println("private void __setInner( " + sin + " inner )");
+	iw.println("{");
+	iw.upIndent();
+	iw.println("this.inner = inner;");
+	if (reflectiveDelegateMethods != null)
+	    iw.println("this.__delegateClass = inner == null ? null : inner.getClass();");
+	iw.downIndent();
+	iw.println("}");
+	iw.println();
+	
 	if ( wrapping_constructor )
 	    {
 		iw.println("public" + ' ' + sgc + '(' + sin + " inner)");
-		iw.println("{ this.inner = inner; }");
+		iw.println("{ __setInner( inner ); }");
 	    }
 
 	if (default_constructor)
@@ -203,7 +218,7 @@ public class DelegatorGenerator
 	    {
 		iw.println();
 		iw.println( CodegenUtils.getModifierString( method_modifiers ) + " void setInner( " + sin + " inner )");
-		iw.println( "{ this.inner = inner; }" );
+		iw.println( "{ __setInner( inner ); }" );
 	    }
 	if (inner_getter)
 	    {
@@ -215,7 +230,6 @@ public class DelegatorGenerator
 	for (int i = 0, len = methods.length; i < len; ++i)
 	    {
 		Method method  = methods[i];
-		Class  retType = method.getReturnType();
 
 		if (i != 0) iw.println();
 		iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
@@ -229,6 +243,27 @@ public class DelegatorGenerator
 		iw.downIndent();
 		iw.println("}");
 	    }
+	
+	if ( reflectiveDelegateMethods != null )
+	{
+	    iw.println("// Methods not in core interface to be delegated via reflection");
+	    for (int i = 0, len = reflectiveDelegateMethods.length; i < len; ++i)
+	    {
+		Method method  = reflectiveDelegateMethods[i];
+
+		if (i != 0) iw.println();
+		iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
+		iw.println("{");
+		iw.upIndent();
+
+		generatePreDelegateCode( intfcl, genclass, method, iw );
+		generateReflectiveDelegateCode( intfcl, genclass, method, iw );
+		generatePostDelegateCode( intfcl, genclass, method, iw );
+	    
+		iw.downIndent();
+		iw.println("}");
+	    }
+	}
 
 	iw.println();
 	generateExtraDeclarations( intfcl, genclass, iw );
@@ -237,11 +272,85 @@ public class DelegatorGenerator
     	iw.println("}");
     }
 
+    private void ensureImports(String genclass, Set imports, Method[] methods )
+    {
+	for (int i = 0, len = methods.length; i < len; ++i)
+	{
+	    Class[] args = methods[i].getParameterTypes();
+	    for (int j = 0, jlen = args.length; j < jlen; ++j)
+		{
+		    if (! CodegenUtils.inSamePackage( args[j].getName(), genclass ) )
+			imports.add( CodegenUtils.unarrayClass( args[j] ) );
+		}       
+	    Class[] excClasses = methods[i].getExceptionTypes();
+	    for (int j = 0, jlen = excClasses.length; j < jlen; ++j)
+		{
+		    if (! CodegenUtils.inSamePackage( excClasses[j].getName(), genclass ) )
+			{
+			    //System.err.println("Adding exception type: " + excClasses[j]);
+			    imports.add( CodegenUtils.unarrayClass( excClasses[j] ) );
+			}
+		}       
+	    if (! CodegenUtils.inSamePackage( methods[i].getReturnType().getName(), genclass ) )
+		imports.add( CodegenUtils.unarrayClass( methods[i].getReturnType() ) );
+	}
+    }
+
     protected void generateDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException 
     {
 	Class  retType = method.getReturnType();
 	
 	iw.println( (retType == void.class ? "" : "return " ) + "inner." + CodegenUtils.methodCall( method ) + ";" );
+    }
+
+    protected void generateReflectiveDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException 
+    {
+	Class  retType = method.getReturnType();
+
+	String paramTypesArrayStr = CodegenUtils.reflectiveMethodParameterTypeArray( method );
+	String argArrayStr = CodegenUtils.reflectiveMethodObjectArray( method );
+
+	Class[] exceptionsArray = method.getExceptionTypes();
+	Set exceptionsSet = new HashSet();
+	exceptionsSet.addAll( Arrays.asList( exceptionsArray ) );
+
+	iw.println("try");
+	iw.println("{");
+	iw.upIndent();
+	iw.println("Method m = __delegateClass.getMethod(\042" + method.getName() + "\042, " + paramTypesArrayStr + ");");
+	iw.println( (retType == void.class ? "" : "return (" + ClassUtils.simpleClassName( retType ) + ") ") + 
+		    "m.invoke( inner, " + argArrayStr + " );" );
+	iw.downIndent();
+	iw.println("}");
+	if (! exceptionsSet.contains( IllegalAccessException.class ) )
+	{
+	    iw.println("catch (IllegalAccessException iae)");
+	    iw.println("{");
+	    iw.upIndent();
+	    iw.println( "throw new RuntimeException(\042A reflectively delegated method '" +
+			method.getName() +
+			"' cannot access the object to which the call is delegated\042, iae);" );
+	    iw.downIndent();
+	    iw.println("}");
+	}
+	iw.println("catch (InvocationTargetException ite)");
+	iw.println("{");
+	iw.upIndent();
+	iw.println("Throwable cause = ite.getCause();");
+	iw.println("if (cause instanceof RuntimeException) throw (RuntimeException) cause;");
+	iw.println("if (cause instanceof Error) throw (Error) cause;");
+	int len = exceptionsArray.length;
+	if (len > 0)
+	{
+	    for (int i = 0; i < len; ++i)
+	    {
+		String ecn = ClassUtils.simpleClassName( exceptionsArray[i] );
+		iw.println("if (cause instanceof " + ecn + ") throw (" + ecn + ") cause;");
+	    }
+	}
+	iw.println( "throw new RuntimeException(\042Target of reflectively delegated method '" + method.getName() + "' threw an Exception.\042, cause);" );
+	iw.downIndent();
+	iw.println("}");
     }
 
     protected void generateBannerComment( IndentedWriter iw ) throws IOException 

@@ -26,6 +26,11 @@ package com.mchange.v1.lang;
 import java.util.*;
 import com.mchange.v1.jvm.*;
 
+/**
+ *
+ * See also com.mchange.v2.codegen.ClassUtils for related methods.
+ *
+ */
 public final class ClassUtils
 {
     final static String[] EMPTY_SA = new String[0];
