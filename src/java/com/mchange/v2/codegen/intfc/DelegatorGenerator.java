@@ -43,9 +43,6 @@ public class DelegatorGenerator
     Class   superclass           = null;
     Class[] extraInterfaces      = null;
 
-    boolean delegate_extra_interfaces = false;
-    Method[] extraDelegateMethods     = null;
-
     final static Comparator classComp = new Comparator()
     {
        public int compare(Object a, Object b)
@@ -112,18 +109,6 @@ public class DelegatorGenerator
     public Class[] getExtraInterfaces()
     { return extraInterfaces; }
 
-    public void setDelegateExtraInterfaces( boolean delegate_extra_interfaces )
-    { this.delegate_extra_interfaces = delegate_extra_interfaces; }
-
-    public boolean isDelegateExtraInterfaces()
-    { return delegate_extra_interfaces; }
-
-    public void setExtraDelegateMethods( Method[] extraDelegateMethods )
-    { this.extraDelegateMethods = extraDelegateMethods; }
-
-    public Method[] getExtraDelegateMethods()
-    { return extraDelegateMethods; }
-
     public void writeDelegator(Class intfcl, String genclass, Writer w) throws IOException
     {
 	IndentedWriter iw = CodegenUtils.toIndentedWriter(w);
@@ -141,20 +126,8 @@ public class DelegatorGenerator
 	    }
 
 	Set    imports  = new TreeSet( classComp );
-
-	List methodsTmp = new ArrayList();
-	methodsTmp.addAll( Arrays.asList( intfcl.getMethods() ) );
 	
-	if ( delegate_extra_interfaces )
-	{
-	    for( int i = 0, len = extraInterfaces.length; i < len; ++i )
-		methodsTmp.addAll( Arrays.asList( extraInterfaces[ i ].getMethods() ) );
-	}
-
-	if (extraDelegateMethods != null)
-	    methodsTmp.addAll( Arrays.asList( extraDelegateMethods ) );
-	
-	Method[] methods = (Method[]) methodsTmp.toArray( new Method[ methodsTmp.size() ] ); 
+	Method[] methods = intfcl.getMethods();
 	
 	//TODO: don't add array classes!
 	//build import set
