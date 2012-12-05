@@ -381,10 +381,11 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                 for (Iterator ii = active.iterator(); ii.hasNext(); )
                 {
                     PoolThread pt = (PoolThread) ii.next();
-                    iw.print( pt.getCurrentTask() );
-                    iw.print( " (");
-                    iw.print( pt.getName() );
-                    iw.println(')');
+                    iw.println( pt.getCurrentTask() );
+		    iw.upIndent();
+                    iw.print( "on thread: ");
+                    iw.println( pt.getName() );
+		    iw.downIndent();
                 }
                 iw.downIndent();
                 iw.println("Pending Tasks: ");
@@ -706,16 +707,22 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
 
         public void run()
         {
+
             boolean run_stray_tasks = false;
             synchronized ( ThreadPoolAsynchronousRunner.this )
             { 
                 if (pendingTasks.size() == 0)
                 {
                     last = null;
+		    if ( logger.isLoggable( MLevel.FINEST ) )
+			logger.log( MLevel.FINEST, this + " -- Running DeadlockDetector[Exiting. No pending tasks.]");
                     return;
                 }
 
                 current = (LinkedList) pendingTasks.clone();
+		if ( logger.isLoggable( MLevel.FINEST ) )
+		    logger.log( MLevel.FINEST, this + " -- Running DeadlockDetector[last->" + last + ",current->" + current + ']');
+
                 if ( current.equals( last ) )
                 {
                     //System.err.println(this + " -- APPARENT DEADLOCK!!! Creating emergency threads for unassigned pending tasks!");
