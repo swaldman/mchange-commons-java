@@ -26,6 +26,9 @@ package com.mchange.v1.lang;
 import java.util.*;
 import com.mchange.v1.jvm.*;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+
 /**
  *
  * See also com.mchange.v2.codegen.ClassUtils for related methods.
@@ -51,6 +54,61 @@ public final class ClassUtils
 	tmp.put( "void", void.class );
 
 	primitivesToClasses = Collections.unmodifiableMap( tmp );
+    }
+
+    public static Set publicSupertypesForMethods(Class cl, Method[] methods)
+    {
+	Set testClasses = allAssignableFrom( cl );
+	Set out = new HashSet();
+	for (Iterator ii = testClasses.iterator(); ii.hasNext(); )
+	{
+	    Class check = (Class) ii.next();
+	    if ( isPublic( check ) && hasAllMethodsAsSupertype( check, methods ) )
+		out.add(check);
+	}
+	return Collections.unmodifiableSet( out );
+    }
+
+    public static boolean isPublic( Class cl )
+    { return ( (cl.getModifiers() & Modifier.PUBLIC) != 0 ); }
+
+    public static boolean hasAllMethodsAsSupertype(Class cl, Method[] methods)
+    { return hasAllMethods( cl, methods, true ); }
+
+    public static boolean hasAllMethodsAsSubtype(Class cl, Method[] methods)
+    { return hasAllMethods( cl, methods, false ); }
+
+    private static boolean hasAllMethods(Class cl, Method[] methods, boolean cl_as_supertype)
+    {
+	for (int i = 0, len = methods.length; i < len; ++i)
+	    if ( !containsMethod( cl, methods[i], cl_as_supertype) )
+		return false;
+	return true;
+    }
+
+    public static boolean containsMethodAsSupertype(Class cl, Method m)
+    { return containsMethod( cl, m, true ); }
+
+    public static boolean containsMethodAsSubtype(Class cl, Method m)
+    { return containsMethod( cl, m, false ); }
+
+    private static boolean containsMethod(Class cl, Method m, boolean cl_as_supertype)
+    {
+	Method check;
+
+	try 
+	{ 
+	    check = cl.getMethod( m.getName(), m.getParameterTypes() );
+	    Class mRetType = m.getReturnType();
+	    Class clRetType = check.getReturnType();
+
+	    // we deal with potentially covariant return types
+	    return ( ( mRetType.equals( clRetType ) ) ||
+		     ( cl_as_supertype && clRetType.isAssignableFrom( mRetType ) ) ||
+		     ( !cl_as_supertype && mRetType.isAssignableFrom( clRetType ) ) );
+	}
+	catch (NoSuchMethodException e)
+	{ return false; }
     }
 
     public static Set allAssignableFrom(Class type)
