@@ -44,7 +44,8 @@ public class DelegatorGenerator
     Class[] extraInterfaces      = null;
 
     // A rarely used feature, see below
-    Method[] reflectiveDelegateMethods = null;
+    Method[]                   reflectiveDelegateMethods  = null;  //by default, none of this
+    ReflectiveDelegationPolicy reflectiveDelegationPolicy = ReflectiveDelegationPolicy.USE_MAIN_DELEGATE_INTERFACE;
 
     final static Comparator classComp = new Comparator()
     {
@@ -117,12 +118,45 @@ public class DelegatorGenerator
 
     /**
      *  Reflectively delegated methods are methods that are not declared in the interface at
-     *  build time, but that should reflectively be delegated at runtime to the inner delegate.
+     *  build time, but that should reflectively be forwarded at runtime to the inner delegate.
      *  This permits support of public methods not exposed via the interface, or support of
      *  methods added to versions of the interface newer than the build version.
+     *
+     *  Note that the declaring class of these methods is simply ignored. Methods will ve
+     *  delegated solely by name and parameter.
      */
     public void setReflectiveDelegateMethods(Method[] reflectiveDelegateMethods)
     { this.reflectiveDelegateMethods = reflectiveDelegateMethods; }
+
+    public ReflectiveDelegationPolicy getReflectiveDelegationPolicy()
+    { return reflectiveDelegationPolicy; }
+
+    /**
+     *  If ReflectiveDelegationPolicy.USE_MAIN_DELEGATE_INTERFACE, delegate via the same interface we are generating methods against.
+     *  (This is useful for supporting methods in versions of the interface with methods that don't appear in the version we are generating against.)
+     *
+     *  If ReflectiveDelegationPolicy.USE_RUNTIME_CLASS, delegate via the runtime class of the delegate. (This is useful if
+     *  the methods come from multiple interfaces, or we want to be able to forward to methods of the delegate class not captured
+     *  by an interface.
+     *
+     *  Otherwise, use the delegateClass set in the constructor of ReflectiveDelegationPolicy.
+     *
+     *  Note that if the delegate class is not public or otherwise accessible to the generated proxy, IllegalAccessExceptions may ensue.
+     */
+    public void setReflectiveDelegationPolicy(ReflectiveDelegationPolicy reflectiveDelegationPolicy)
+    { this.reflectiveDelegationPolicy = reflectiveDelegationPolicy; }
+
+    // public boolean isDelegateViaRuntimeClass()
+    // { return delegate_via_runtime_class; }
+
+    // /**
+    //  * If true, reflective delegate methods are reflected via the runtime Class of the delegate object,
+    //  * rather than via an interface. Nice because the runtime class hopefully supports all the reflective
+    //  * delegates. Not so nice because the runtime class may not be accessible, so reflection may fail
+    //  * with IllegalAccessExceptions.
+    //  */
+    // public void setDelegateRuntimeClass( boolean delegate_via_runtime_class )
+    // { this.delegate_via_runtime_class = delegate_via_runtime_class; }
 
     public void writeDelegator(Class intfcl, String genclass, Writer w) throws IOException
     {
@@ -165,6 +199,9 @@ public class DelegatorGenerator
 	if ( reflectiveDelegateMethods != null )
 	    ensureImports(genclass, imports, reflectiveDelegateMethods );
 
+	if ( reflectiveDelegationPolicy.delegateClass != null && !CodegenUtils.inSamePackage( reflectiveDelegationPolicy.delegateClass.getName(), genclass ) )
+	    imports.add( reflectiveDelegationPolicy.delegateClass );	   
+
 	generateBannerComment( iw );
 	iw.println("package " + pkg + ';');
 	iw.println();
@@ -196,7 +233,18 @@ public class DelegatorGenerator
 	iw.upIndent();
 	iw.println("this.inner = inner;");
 	if (reflectiveDelegateMethods != null)
-	    iw.println("this.__delegateClass = inner == null ? null : inner.getClass();");
+	{
+	    String delegateClassExpr;
+
+	    if ( reflectiveDelegationPolicy == ReflectiveDelegationPolicy.USE_MAIN_DELEGATE_INTERFACE )
+		delegateClassExpr = sin + ".class";
+	    else if ( reflectiveDelegationPolicy == ReflectiveDelegationPolicy.USE_RUNTIME_CLASS )
+		delegateClassExpr = "inner.getClass()";
+	    else
+		delegateClassExpr = ClassUtils.simpleClassName( reflectiveDelegationPolicy.delegateClass ) + ".class";
+	        
+	    iw.println("this.__delegateClass = inner == null ? null : " + delegateClassExpr + ";");
+        }
 	iw.downIndent();
 	iw.println("}");
 	iw.println();
