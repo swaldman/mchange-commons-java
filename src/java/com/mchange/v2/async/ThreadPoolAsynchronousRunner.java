@@ -602,9 +602,17 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
         // no need to sync. Timer threadsafe, no other data access
         private void purgeTimer()
         { 
+	    // Timer.purge() is not supported under JDK 1.4
+	    //
+	    // Eliminating this leaves possible a rare resource leak
+	    // for very long-running processes that was fixed in the main
+	    // branch of c3p0-0.9.2
+
+	    /*
 	    myTimer.purge(); 
 	    if ( logger.isLoggable( MLevel.FINER ) )
 		logger.log(MLevel.FINER, this.getClass().getName() + " -- PURGING TIMER");
+	    */
 	}
 
         public void run()
