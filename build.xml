@@ -6,7 +6,7 @@
    <property file="../settings/build-mchange-commons-java.properties" />
    <property file="build.properties" />
 
-   <property name="mchange-commons-java.version" value="0.2.3.3" />
+   <property name="mchange-commons-java.version" value="0.2.4" />
    <property name="mchange-commons-java.name" value="mchange-commons-java-${mchange-commons-java.version}" />
    <property name="mchange-commons-java.copyright.year" value="2012" />
    <property name="src.dir" value="src" />
@@ -38,7 +38,7 @@
    </target>
 
    <target name="init" depends="jvm14_init">
-      <property name="jvm.target.version" value="1.5" /> 
+      <property name="jvm.target.version" value="1.6" /> 
       <mkdir dir="${build.dir}" />
       <mkdir dir="${dist.dir}" />
    </target>

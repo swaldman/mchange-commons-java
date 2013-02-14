@@ -112,7 +112,22 @@ public final class SqlUtils
 					 "[Cause: " + ThrowableUtils.extractStackTrace(t) + ']', sqlState); 
         }
     }
-    
+
+    public static SQLClientInfoException toSQLClientInfoException(Throwable t)
+    {
+	if (t instanceof SQLClientInfoException)
+	    return (SQLClientInfoException) t;
+	else if (t.getCause() instanceof SQLClientInfoException)
+	    return (SQLClientInfoException) t.getCause();
+	else if (t instanceof SQLException)
+	{
+	    SQLException sqle = (SQLException) t;
+	    return new SQLClientInfoException(sqle.getMessage(), sqle.getSQLState(), sqle.getErrorCode(), null, t);
+	}
+	else
+	    return new SQLClientInfoException(t.getMessage(), null, t);
+    }
+
     private SqlUtils()
     {}
 }
