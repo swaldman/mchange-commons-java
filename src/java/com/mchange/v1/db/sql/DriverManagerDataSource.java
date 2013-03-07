@@ -101,6 +101,10 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
 	return out;
     }
 
+    // JDK7 add-on
+    public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException
+    { throw new SQLFeatureNotSupportedException("javax.sql.DataSource.getParentLogger() is not currently supported by " + this.getClass().getName());}
+
     private Properties createProps(String user, String password)
     {
 	Properties props = new Properties();

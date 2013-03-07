@@ -62,7 +62,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
     { return inner; }
 
     /**
-     * @param version a three digit number -- for example Java 1.3.1 is 131
+     * @param java_version a three digit number -- for example Java 1.3.1 is 131
      */
     public synchronized void setJavaVersion(int java_version) 
     { this.java_version = java_version; }
