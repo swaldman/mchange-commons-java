@@ -27,6 +27,19 @@ import java.io.*;
 
 public final class FileUtils
 {
+    public static File findRelativeToParent(File parentDir, File file) throws IOException
+    {
+	String parentPath = parentDir.getPath();
+	String filePath = file.getPath();
+	if (! filePath.startsWith( parentPath ) )
+	    throw new IllegalArgumentException( filePath + " is not a child of " + parentPath + " [no transformations or canonicalizations tried]" );
+	String maybeRelative = filePath.substring( parentPath.length() );
+	File out = new File( maybeRelative );
+	if ( out.isAbsolute() )
+	    out = new File( out.getPath().substring(1) );
+	return out;
+    }
+
     public static long diskSpaceUsed( File maybeDir ) throws IOException
     {
 	long sum = 0;
