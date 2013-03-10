@@ -78,7 +78,7 @@ public final class Jdk14MLog extends MLog
         {
             StackTraceElement check = ste[i];
             String cn = check.getClassName();
-            if (cn != null && ! cn.startsWith("com.mchange.v2.log.jdk14logging"))
+            if (cn != null && !cn.startsWith("com.mchange.v2.log.jdk14logging") && !cn.startsWith("com.mchange.sc.v1.log")) //last one is the Scala wrapper to the library
                 return new String[] { check.getClassName(), check.getMethodName() };
         }
         return UNKNOWN_ARRAY;
