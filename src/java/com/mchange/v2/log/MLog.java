@@ -26,31 +26,20 @@ package com.mchange.v2.log;
 import java.util.List;
 import java.util.ArrayList;
 import com.mchange.v1.util.StringTokenizerUtils;
-import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 public abstract class MLog
 {
     final static NameTransformer transformer;
     final static MLog mlog;
 
-    final static MultiPropertiesConfig CONFIG;
-
     final static MLogger logger;
 
     static
     {
-	String[] defaults = new String[]
-	{
-	    "/com/mchange/v2/log/default-mchange-log.properties",
-	    "/mchange-log.properties",
-	    "/"
-	};
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, null );
-
-	String classnamesStr = CONFIG.getProperty("com.mchange.v2.log.MLog");
+	String classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.MLog");
 	String[] classnames = null;
 	if (classnamesStr == null)
-	    classnamesStr = CONFIG.getProperty("com.mchange.v2.log.mlog");
+	    classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.mlog");
 	if (classnamesStr != null)
 	    classnames = StringTokenizerUtils.tokenizeToArray( classnamesStr, ", \t\r\n" );
 
@@ -80,9 +69,9 @@ public abstract class MLog
 	    logger.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging.");
 
 	NameTransformer tmpt = null;
-	String tClassName = CONFIG.getProperty("com.mchange.v2.log.NameTransformer");
+	String tClassName = MLogConfig.getProperty("com.mchange.v2.log.NameTransformer");
 	if (tClassName == null)
-	    tClassName = CONFIG.getProperty("com.mchange.v2.log.nametransformer");
+	    tClassName = MLogConfig.getProperty("com.mchange.v2.log.nametransformer");
 	try
 	    { 
 		if (tClassName != null)

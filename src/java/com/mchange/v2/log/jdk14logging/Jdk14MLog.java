@@ -30,11 +30,34 @@ import com.mchange.v2.util.DoubleWeakHashMap;
 
 public final class Jdk14MLog extends MLog
 {
+    final static String SUPPRESS_STACK_WALK_KEY = "com.mchange.v2.log.jdk14logging.suppressStackWalk";
+
     private static String[] UNKNOWN_ARRAY = new String[] {"UNKNOWN_CLASS", "UNKNOWN_METHOD"};
 
     private final static String CHECK_CLASS = "java.util.logging.Logger";
 
     private final Map namedLoggerMap = new DoubleWeakHashMap();
+
+    private final static boolean suppress_stack_walk;
+
+    static
+    {
+	String suppressVal = MLogConfig.getProperty( SUPPRESS_STACK_WALK_KEY );
+	if (suppressVal == null || (suppressVal = suppressVal.trim()).length() == 0)
+	    suppress_stack_walk = false;
+	else
+	    {
+		if ( suppressVal.equalsIgnoreCase("true") )
+		    suppress_stack_walk = true;
+		else if  ( suppressVal.equalsIgnoreCase("false") )
+		    suppress_stack_walk = false;
+		else
+		    {
+			System.err.println("Bad value for " + SUPPRESS_STACK_WALK_KEY + ": '" + suppressVal + "'; defaulting to 'false'.");
+			suppress_stack_walk = false;
+		    }
+	    }
+    }
 
     MLogger global = null;
 
@@ -73,28 +96,53 @@ public final class Jdk14MLog extends MLog
      */
     private static String[] findCallingClassAndMethod()
     {
-        StackTraceElement[] ste = new Throwable().getStackTrace();
-        for (int i = 0, len = ste.length; i < len; ++i)
-        {
-            StackTraceElement check = ste[i];
-            String cn = check.getClassName();
-            if (cn != null && !cn.startsWith("com.mchange.v2.log.jdk14logging") && !cn.startsWith("com.mchange.sc.v1.log")) //last one is the Scala wrapper to the library
-                return new String[] { check.getClassName(), check.getMethodName() };
-        }
-        return UNKNOWN_ARRAY;
+	StackTraceElement[] ste = new Throwable().getStackTrace();
+	for (int i = 0, len = ste.length; i < len; ++i)
+	    {
+		StackTraceElement check = ste[i];
+		String cn = check.getClassName();
+		if (cn != null && !cn.startsWith("com.mchange.v2.log.jdk14logging") && !cn.startsWith("com.mchange.sc.v1.log")) //last one is the Scala wrapper to the library
+		    return new String[] { check.getClassName(), check.getMethodName() };
+	    }
+	return UNKNOWN_ARRAY;
     }
-
-
 
     private final static class Jdk14MLogger implements MLogger
     {
-        volatile Logger logger;
+        final Logger logger;
+	final String name;
+	final ClassAndMethodFinder cmFinder;
 
         Jdk14MLogger( Logger logger )
         { 
             this.logger = logger; 
             //System.err.println("LOGGER: " + this.logger);
+
+	    this.name = logger.getName();
+
+	    if ( suppress_stack_walk == true )
+		{
+		    this.cmFinder = new ClassAndMethodFinder()
+			{
+			    String[] fakedClassAndMethod = new String[]{ name, "" };
+
+			    public String[] find() { return fakedClassAndMethod; }
+			};
+		}
+	    else
+		{
+		    this.cmFinder = new ClassAndMethodFinder()
+			{
+			    public String[] find() { return findCallingClassAndMethod(); }
+			};
+		}
+
         }
+
+	interface ClassAndMethodFinder
+	{
+	    String[] find();
+	}
 
         private static Level level(MLevel lvl)
         { return (Level) lvl.asJdk14Level(); }
@@ -120,7 +168,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( level(l) )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( level(l), sa[0], sa[1], msg );
         }
 
@@ -128,7 +176,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( level(l) )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( level(l), sa[0], sa[1], msg, param );
         }
 
@@ -136,7 +184,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( level(l) )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( level(l), sa[0], sa[1], msg, params );
         }
 
@@ -144,7 +192,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( level(l) )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( level(l), sa[0], sa[1], msg, t );
         }
 
@@ -154,7 +202,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -167,7 +215,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -180,7 +228,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -193,7 +241,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -206,7 +254,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -219,7 +267,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -232,7 +280,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -245,7 +293,7 @@ public final class Jdk14MLog extends MLog
 
             if (srcClass == null && srcMeth == null)
             {
-                String[] sa = findCallingClassAndMethod();
+                String[] sa = cmFinder.find();
                 srcClass = sa[0];
                 srcMeth = sa[1];
             }
@@ -298,7 +346,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.SEVERE )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.SEVERE, sa[0], sa[1], msg );
         }
 
@@ -306,7 +354,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.WARNING )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.WARNING, sa[0], sa[1], msg );
         }
 
@@ -314,7 +362,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.INFO )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.INFO, sa[0], sa[1], msg );
         }
 
@@ -322,7 +370,7 @@ public final class Jdk14MLog extends MLog
         {
             if (! logger.isLoggable( Level.CONFIG )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.CONFIG, sa[0], sa[1], msg );
         }
 
@@ -330,7 +378,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.FINE )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.FINE, sa[0], sa[1], msg );
         }
 
@@ -338,7 +386,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.FINER )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.FINER, sa[0], sa[1], msg );
         }
 
@@ -346,7 +394,7 @@ public final class Jdk14MLog extends MLog
         { 
             if (! logger.isLoggable( Level.FINEST )) return;
 
-            String[] sa = findCallingClassAndMethod();
+            String[] sa = cmFinder.find();
             logger.logp( Level.FINEST, sa[0], sa[1], msg );
         }
 
@@ -360,7 +408,7 @@ public final class Jdk14MLog extends MLog
         { return logger.isLoggable( level(l) ); }
 
         public String getName()
-        { return logger.getName(); }
+        { return name; }
 
         public void addHandler(Object h) throws SecurityException
         { 

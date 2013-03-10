@@ -35,7 +35,7 @@ public final class FallbackMLog extends MLog
     static
     {
 	MLevel dflt = null;
-	String dfltName = MLog.CONFIG.getProperty( "com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL" );
+	String dfltName = MLogConfig.getProperty( "com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL" );
 	if (dfltName != null)
 	    dflt = MLevel.fromSeverity( dfltName );
 	if (dflt == null)
