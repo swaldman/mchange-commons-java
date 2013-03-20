@@ -6,9 +6,9 @@
    <property file="../settings/build-mchange-commons-java.properties" />
    <property file="build.properties" />
 
-   <property name="mchange-commons-java.version" value="0.2.3.3" />
+   <property name="mchange-commons-java.version" value="0.2.3.4" />
    <property name="mchange-commons-java.name" value="mchange-commons-java-${mchange-commons-java.version}" />
-   <property name="mchange-commons-java.copyright.year" value="2012" />
+   <property name="mchange-commons-java.copyright.year" value="2013" />
    <property name="src.dir" value="src" />
    <property name="java.src.dir" value="${src.dir}/java" />
    <property name="rsrc.src.dir" value="${src.dir}/resources" />
