@@ -6,5 +6,5 @@ package com.mchange.v3.decode;
  */
 public interface Decoder
 {
-    public Object decode( Object ) throws CannotDecodeException;
+    public Object decode( Object obj ) throws CannotDecodeException;
 }

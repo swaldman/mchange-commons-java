@@ -35,7 +35,7 @@
 
 package com.mchange.v3.decode;
 
-public class CannotDecodeException
+public class CannotDecodeException extends Exception
 {
     CannotDecodeException( String message )
     { super( message ); }
