@@ -1,5 +1,6 @@
 package com.mchange.v3.decode;
 
+import java.util.*;
 import java.lang.reflect.*;
 import com.mchange.v2.log.*;
 
@@ -13,66 +14,57 @@ public final class DecodeUtils
 
     private final static MLogger logger = MLog.getLogger( DecodeUtils.class );
 
-    //MT: protected by class lock
-    private static boolean no_scala_logged = false;
+    private final static List<DecoderFinder> finders;
 
-    private static synchronized void logNoScala( Exception e )
+    private final static String[] finderClassNames = {
+	"com.mchange.sc.v1.decode.ScalaMapDecoderFinder"
+    };
+
+    static 
     {
-	if (! no_scala_logged)
+	List<DecoderFinder> tmp = new LinkedList<DecoderFinder>();
+	tmp.add( new JavaMapDecoderFinder() );
+	for ( int i = 0, len = finderClassNames.length; i < len; ++i )
 	    {
-		no_scala_logged = true;
-
-		if ( logger.isLoggable( MLevel.INFO ) )
-		    logger.log( MLevel.INFO, "Scala classes seem not to be available.", e );
+		try { tmp.add( (DecoderFinder) Class.forName( finderClassNames[i] ).newInstance() ); }
+		catch( Exception e )
+		    {
+			if ( logger.isLoggable( MLevel.INFO ) )
+			    logger.log( MLevel.INFO, "Could not load DecoderFinder '" + finderClassNames[i] + "'", e );
+		    }
 	    }
+	finders = Collections.unmodifiableList( tmp );
+    }
+
+    static class JavaMapDecoderFinder implements DecoderFinder
+    {
+	public String decoderClassName( Object encoded ) throws CannotDecodeException
+	{
+	    if ( encoded instanceof Map )
+		{
+		    String className = null;
+		    Map<String,Object> map = (Map<String,Object>) encoded;
+		    className = (String) map.get( DECODER_CLASS_DOT_KEY );
+		    if ( className == null )
+			className = (String) map.get( DECODER_CLASS_NO_DOT_KEY );
+		    if ( className == null )
+			throw new CannotDecodeException( "Could not find the decoder class for java.util.Map: " + encoded );
+		    else
+			return className;
+		}
+	    else
+		return null;
+	}
     }
 
     final static String findDecoderClassName( Object encoded ) throws CannotDecodeException
     {
-	try
+	for ( DecoderFinder finder : finders )
 	    {
-		String className = null;
-		if ( encoded instanceof java.util.Map )
-		    {
-			java.util.Map<String,Object> map = (java.util.Map<String,Object>) encoded;
-			className = (String) map.get( DECODER_CLASS_DOT_KEY );
-			if ( className == null )
-			    className = (String) map.get( DECODER_CLASS_NO_DOT_KEY );
-		if ( className == null )
-		    throw new CannotDecodeException( "Could not find the decoder class for java.util.Map: " + encoded );
-		    }
-		else
-		    {
-			try
-			    {
-				Class<?> scalaMapClass = Class.forName("scala.collection.immutable.Map");
-				if ( scalaMapClass.isAssignableFrom( encoded.getClass() ) )
-				    {
-					Method m = scalaMapClass.getMethod( "apply", new Class[] { Object.class } );
-					try { className = (String) m.invoke( encoded, DECODER_CLASS_DOT_KEY_OBJ_ARRAY ); }
-					catch (Exception e) { /* ignore */ }
-					if (className == null)
-					    {
-						try { className = (String) m.invoke( encoded, DECODER_CLASS_NO_DOT_KEY_OBJ_ARRAY ); }
-						catch (Exception e) { /* ignore */ }
-					    }
-					if ( className == null )
-					    throw new CannotDecodeException( "Could not find the decoder class for scala.collection.immutable.Map: " + encoded );
-				    }
-			    }
-			catch (Exception e)
-			    { logNoScala(e); }
-		    }
-		
-		if ( className == null )
-		    throw new CannotDecodeException( "Could not find the decoder class for unexpected Object: " + encoded );
-		else
-		    return className;
+		String check = finder.decoderClassName( encoded );
+		if ( check != null ) return check;
 	    }
-	catch ( CannotDecodeException cde )
-	    { throw cde; }
-	catch ( Exception e )
-	    { throw new CannotDecodeException( "An exception occurred while trying to find the decoder class!", e ); }
+	throw new CannotDecodeException("Could not find a decoder class name for object: " + encoded);
     }
 
     public static Object decode( String decoderClassFqcn, Object encoded ) throws CannotDecodeException
