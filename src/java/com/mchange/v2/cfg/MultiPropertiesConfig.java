@@ -61,7 +61,7 @@ import com.mchange.v2.log.*;
  * be one resource path per line, with blank lines ignored and lines beginning
  * with '#' treated as comments.
  */
-public abstract class MultiPropertiesConfig
+public abstract class MultiPropertiesConfig implements SimplifiedConfig
 {
     final static MultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig( new String[0] );
 
@@ -131,7 +131,7 @@ public abstract class MultiPropertiesConfig
 	return vmConfig;
     }
 
-    public boolean foundVmConfig()
+    public static boolean foundVmConfig()
     { return vmConfig != EMPTY; }
 
     public abstract String[] getPropertiesResourcePaths();
