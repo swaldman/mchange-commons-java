@@ -33,39 +33,27 @@
  * 
  */
 
-package com.mchange.v2.log;
+package com.mchange.v2.cfg;
 
-import java.util.Iterator;
-import com.mchange.v2.cfg.MultiPropertiesConfig;
-import com.mchange.v2.cfg.ParseMessage;
+import com.mchange.v2.log.MLevel;
 
-public final class MLogConfig
+public class ParseMessage
 {
-    private final static MultiPropertiesConfig CONFIG;
-
-    static
+    private MLevel    level;
+    private String    text;
+    private Throwable exception;
+    
+    public MLevel    getLevel()     { return level; }
+    public String    getText()      { return text; }
+    public Throwable getException() { return exception; }
+    
+    public ParseMessage(MLevel level, String text, Throwable exception)
     {
-	String[] defaults = new String[]
-	{
-	    "/com/mchange/v2/log/default-mchange-log.properties",
-	    "/mchange-log.properties",
-	    "/"
-	};
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, null );
+	this.level     = level;
+	this.text      = text;
+	this.exception = exception;
     }
 
-    public static String getProperty( String key )
-    { return CONFIG.getProperty( key ); }
-
-    public static void logParseMessages( MLogger logger )
-    { 
-	for( Iterator ii = CONFIG.getParseMessages().iterator(); ii.hasNext(); )
-	{
-	    ParseMessage pm = (ParseMessage) ii.next();
-	    logger.log( pm.getLevel(), pm.getText(), pm.getException() );
-	}
-    }
-
-    private MLogConfig()
-    {}
+    public ParseMessage(MLevel level, String text)
+    { this( level, text, null ); }
 }

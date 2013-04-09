@@ -71,6 +71,9 @@ public abstract class MLog
 	    info("Using " + mlog.getClass().getName() + " -- Named logger's not supported, everything goes to System.err.");
 
 	logger = mlog.getLogger( MLog.class );
+	
+	MLogConfig.logParseMessages( logger );
+	
 	String loggerDesc = mlog.getClass().getName();
 	if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))
 	    loggerDesc = "java 1.4+ standard";

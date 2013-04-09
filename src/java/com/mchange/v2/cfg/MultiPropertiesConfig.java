@@ -61,7 +61,7 @@ import com.mchange.v2.log.*;
  * be one resource path per line, with blank lines ignored and lines beginning
  * with '#' treated as comments.
  */
-public abstract class MultiPropertiesConfig implements SimplifiedConfig
+public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
     final static MultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig( new String[0] );
 
@@ -141,4 +141,7 @@ public abstract class MultiPropertiesConfig implements SimplifiedConfig
     public abstract Properties getPropertiesByPrefix(String pfx);
 
     public abstract String getProperty( String key );
+
+    public abstract List getParseMessages();
+
 }

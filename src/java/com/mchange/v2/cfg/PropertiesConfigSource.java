@@ -33,39 +33,35 @@
  * 
  */
 
-package com.mchange.v2.log;
+package com.mchange.v2.cfg;
 
-import java.util.Iterator;
-import com.mchange.v2.cfg.MultiPropertiesConfig;
-import com.mchange.v2.cfg.ParseMessage;
+import java.util.*;
+import java.io.FileNotFoundException;
 
-public final class MLogConfig
+/**
+ * implementations should have no-arg constructors
+ */
+public interface PropertiesConfigSource
 {
-    private final static MultiPropertiesConfig CONFIG;
+    /**
+     *  An Exception signifies this source cannot be parsed at all;
+     *  it is a bad source. More local failures should be handled and
+     *  reported in parse messages.
+     */
+    public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception;
 
-    static
+    static class Parse
     {
-	String[] defaults = new String[]
-	{
-	    "/com/mchange/v2/log/default-mchange-log.properties",
-	    "/mchange-log.properties",
-	    "/"
-	};
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, null );
-    }
+	private Properties         properties;
+	private List<ParseMessage> parseMessages;
 
-    public static String getProperty( String key )
-    { return CONFIG.getProperty( key ); }
+	public Properties         getProperties()    { return properties; }
+	public List<ParseMessage> getParseMessages() { return parseMessages; }
 
-    public static void logParseMessages( MLogger logger )
-    { 
-	for( Iterator ii = CONFIG.getParseMessages().iterator(); ii.hasNext(); )
+	public Parse( Properties properties, List<ParseMessage> parseMessages )
 	{
-	    ParseMessage pm = (ParseMessage) ii.next();
-	    logger.log( pm.getLevel(), pm.getText(), pm.getException() );
+	    this.properties    = properties;
+	    this.parseMessages = parseMessages;
 	}
     }
-
-    private MLogConfig()
-    {}
 }

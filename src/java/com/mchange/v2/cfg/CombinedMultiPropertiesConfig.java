@@ -42,6 +42,8 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     MultiPropertiesConfig[] configs;
     String[] resourcePaths;
 
+    List parseMessages;
+
     CombinedMultiPropertiesConfig( MultiPropertiesConfig[] configs )
     { 
 	this.configs = configs; 
@@ -58,6 +60,11 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 		    }
 	    }
 	this.resourcePaths = (String[]) allPaths.toArray( new String[ allPaths.size() ] );
+
+	List pms = new LinkedList();
+	for ( int i = 0, len = configs.length; i < len; ++i )
+	    pms.addAll( configs[i].getParseMessages() );
+	this.parseMessages = Collections.unmodifiableList( pms );
     }
 
     public String[] getPropertiesResourcePaths()
@@ -110,5 +117,8 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	    }
 	return null;
     }
+
+    public List getParseMessages()
+    { return parseMessages; }
 }
 

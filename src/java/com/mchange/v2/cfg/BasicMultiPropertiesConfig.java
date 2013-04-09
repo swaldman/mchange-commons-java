@@ -39,11 +39,39 @@ import java.util.*;
 import java.io.*;
 import com.mchange.v2.log.*;
 
-public class BasicMultiPropertiesConfig extends MultiPropertiesConfig
+public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
+    final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
+
+    static final class SystemPropertiesConfigSource implements PropertiesConfigSource
+    {
+	public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
+	{
+	    if ( "/".equals( identifier ) )
+		return new Parse( System.getProperties(), Collections.<ParseMessage>emptyList() );
+	    else
+		throw new Exception(  String.format("Unexpected identifier for System properties: '%s'", identifier) );
+	}
+    }
+
+    static boolean isHoconPath( String identifier )
+    { return (identifier.length() > 6 && identifier.substring(0,6).toLowerCase().equals("hocon:")); }
+
+    private static PropertiesConfigSource configSource( String identifier ) throws Exception
+    {
+	if ( "/".equals(identifier) )
+	    return new SystemPropertiesConfigSource();
+	else if ( isHoconPath( identifier ) )
+	    return (PropertiesConfigSource) Class.forName( HOCON_CFG_SRC_CNAME ).newInstance();
+	else
+	    return new BasicPropertiesConfigSource();
+    }
+
     String[] rps;
     Map  propsByResourcePaths = new HashMap();
     Map  propsByPrefixes;
+
+    List parseMessages;
 
     Properties propsByKey;
 
@@ -53,9 +81,27 @@ public class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     public BasicMultiPropertiesConfig(String[] resourcePaths, MLogger logger)
     {
 	List goodPaths = new ArrayList();
+
+	List<ParseMessage> pms = new LinkedList<ParseMessage>();
+
 	for( int i = 0, len = resourcePaths.length; i < len; ++i )
 	    {
 		String rp = resourcePaths[i];
+
+		try
+		{
+		    PropertiesConfigSource cs = configSource( rp );
+		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
+		    propsByResourcePaths.put( rp, parse.getProperties() );
+		    goodPaths.add( rp );
+		    pms.addAll( parse.getParseMessages() );
+		}
+		catch ( FileNotFoundException fnfe )
+		{ pms.add( new ParseMessage( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found.", rp), fnfe) ); }
+		catch ( Exception e )
+		    { pms.add( new ParseMessage( MLevel.WARNING, String.format("An Exception occurred while processing configuration  for resource identifier '%s' could not be found.", rp), e) );	}
+
+		/*
 		if ("/".equals(rp))
 		    {
 			try
@@ -135,13 +181,23 @@ public class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 // 			    System.err.println("Configuration properties not found at ResourcePath '" + rp + "'." );
 			    }
 		    }
+		*/
 	    }
 	
 	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
 	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths) );
 	this.propsByResourcePaths = Collections.unmodifiableMap( propsByResourcePaths );
 	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths);
+	this.parseMessages = Collections.unmodifiableList( pms );
+
+	if ( logger != null )
+	    for ( ParseMessage pm : pms )
+		logger.log( pm.getLevel(), pm.getText(), pm.getException() );
     }
+
+    public List getParseMessages()
+    { return parseMessages; }
+
 
 
     private static String extractPrefix( String s )

@@ -35,7 +35,31 @@
 
 package com.mchange.v2.cfg;
 
-public interface SimplifiedConfig
+import java.util.*;
+import java.io.*;
+import com.mchange.v2.log.MLevel;
+
+public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 {
-    public String getProperty( String key );
+    public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
+    {
+	InputStream pis = new BufferedInputStream( MultiPropertiesConfig.class.getResourceAsStream( identifier ) );
+	if ( pis != null )
+	{
+	    Properties p = new Properties();
+	    List<ParseMessage> messages = new LinkedList<ParseMessage>();
+	    try
+	    { p.load( pis ); }
+	    finally
+	    {
+		try { if ( pis != null ) pis.close(); }
+		catch (IOException e) 
+		    { messages.add( new ParseMessage( MLevel.WARNING, "An IOException occurred while closing InputStream from resource path '" + identifier + "'.", e ) ); }
+	    }
+	    return new Parse(p, messages);
+	}
+	else
+	    throw new FileNotFoundException( String.format("Resource not found at path '%s'.", identifier) );
+    }
 }
+
