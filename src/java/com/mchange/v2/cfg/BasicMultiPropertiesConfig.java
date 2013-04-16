@@ -41,7 +41,8 @@ import com.mchange.v2.log.*;
 
 public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
-    final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
+    private final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
+    private final static int    HOCON_PFX_LEN       = 6; // includes colon, hocon:
 
     static final class SystemPropertiesConfigSource implements PropertiesConfigSource
     {
@@ -55,18 +56,31 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     }
 
     static boolean isHoconPath( String identifier )
-    { return (identifier.length() > 6 && identifier.substring(0,6).toLowerCase().equals("hocon:")); }
+    { return (identifier.length() > HOCON_PFX_LEN && identifier.substring(0,6).toLowerCase().equals("hocon:")); }
 
     private static PropertiesConfigSource configSource( String identifier ) throws Exception
     {
-	if ( "/".equals(identifier) )
-	    return new SystemPropertiesConfigSource();
-	else if ( isHoconPath( identifier ) )
+	boolean hocon = isHoconPath( identifier );
+
+	if (!hocon && ! identifier.startsWith("/"))
+	    throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a HOCON path. (Resource paths should be specified beginning with '/' or 'hocon:/')", identifier));
+
+	if ( hocon )
 	    {
 		try { return (PropertiesConfigSource) Class.forName( HOCON_CFG_SRC_CNAME ).newInstance(); }
-		catch (Exception e)
-		    { throw new FileNotFoundException( String.format("Could not decode file for identifier '%s' [original exception: %s]", identifier, e ) ); }
+		catch (ClassNotFoundException e)
+		    {
+			//Okay. Apparently the HOCON bridge lib is not available. Let's see if the resource is present.
+			int sfx_index = identifier.lastIndexOf('#');
+			String resourcePath = sfx_index > 0 ? identifier.substring( HOCON_PFX_LEN, sfx_index ) : identifier.substring( HOCON_PFX_LEN );
+			if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
+			    throw new FileNotFoundException( String.format("No resource available at '%s' for HOCON identifier '%s'. Also HOCON support lib (mchange-hocon-bridge) is not available.", resourcePath, identifier) );
+			else
+			    throw new Exception("Could not decode HOCON resource '%s', even though the resource exists, because HOCON support lib (mchange-hocon-bridge) is not available.", e);
+		    }
 	    }
+	else if ( "/".equals(identifier) )
+	    return new SystemPropertiesConfigSource();
 	else
 	    return new BasicPropertiesConfigSource();
     }
@@ -102,7 +116,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		    pms.addAll( parse.getDelayedLogItems() );
 		}
 		catch ( FileNotFoundException fnfe )
-		{ pms.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found.", rp), fnfe) ); }
+		{ pms.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
 		catch ( Exception e )
 		    { pms.add( new DelayedLogItem( MLevel.WARNING, String.format("An Exception occurred while processing configuration for resource identifier '%s' could not be found.", rp), e) );	}
 	    }
