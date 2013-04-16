@@ -90,6 +90,9 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
+    { return readVmConfig( defaultResources, preemptingResources, null ); }
+
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
 	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
@@ -198,6 +201,9 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	return rps;
     }
     
+    public synchronized static MultiPropertiesConfig readVmConfig()
+    { return readVmConfig( null ); }
+
     public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
     {
 	if ( vmConfig == null )
