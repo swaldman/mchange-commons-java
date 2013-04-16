@@ -97,6 +97,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     {
 	List items = new ArrayList();
 	MultiPropertiesConfig out = readVmConfig( defaultResources, preemptingResources, items );
+	items.add( out.getDelayedLogItems() );
 	for (Iterator ii = items.iterator(); ii.hasNext(); )
 	{
 	    DelayedLogItem item = (DelayedLogItem) ii.next();
@@ -220,6 +221,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     {
 	List items = new ArrayList();
 	MultiPropertiesConfig out = readVmConfig( items );
+	items.add( out.getDelayedLogItems() );
 	for (Iterator ii = items.iterator(); ii.hasNext(); )
 	{
 	    DelayedLogItem item = (DelayedLogItem) ii.next();
