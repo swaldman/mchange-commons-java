@@ -50,7 +50,7 @@ public interface PropertiesConfigSource
      */
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception;
 
-    static class Parse
+    public static class Parse
     {
 	private Properties         properties;
 	private List<ParseMessage> parseMessages;

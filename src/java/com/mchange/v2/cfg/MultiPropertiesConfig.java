@@ -76,7 +76,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     { return new BasicMultiPropertiesConfig( resourcePath ); }
 
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
-    { return new CombinedMultiPropertiesConfig( configs ); }
+    { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources)
     {
@@ -139,6 +139,8 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public abstract Properties getPropertiesByResourcePath(String path);
 
     public abstract Properties getPropertiesByPrefix(String pfx);
+
+//    public abstract Properties getProperties( String key );
 
     public abstract String getProperty( String key );
 

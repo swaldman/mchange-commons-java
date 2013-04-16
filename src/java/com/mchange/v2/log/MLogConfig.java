@@ -66,6 +66,9 @@ public final class MLogConfig
 	}
     }
 
+    public static String dump()
+    { return CONFIG.toString(); }
+
     private MLogConfig()
     {}
 }

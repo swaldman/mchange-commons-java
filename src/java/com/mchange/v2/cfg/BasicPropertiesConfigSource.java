@@ -43,16 +43,17 @@ public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 {
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     {
-	InputStream pis = new BufferedInputStream( MultiPropertiesConfig.class.getResourceAsStream( identifier ) );
-	if ( pis != null )
+	InputStream rawStream = MultiPropertiesConfig.class.getResourceAsStream( identifier );
+	if ( rawStream != null )
 	{
+	    InputStream pis = new BufferedInputStream( rawStream );
 	    Properties p = new Properties();
 	    List<ParseMessage> messages = new LinkedList<ParseMessage>();
 	    try
 	    { p.load( pis ); }
 	    finally
 	    {
-		try { if ( pis != null ) pis.close(); }
+		try { if ( pis != null ) pis.close(); } //ensures closuer of nested rawStream as well
 		catch (IOException e) 
 		    { messages.add( new ParseMessage( MLevel.WARNING, "An IOException occurred while closing InputStream from resource path '" + identifier + "'.", e ) ); }
 	    }

@@ -100,6 +100,10 @@ public abstract class MLog
 	transformer = tmpt;
 
 	//System.err.println(mlog);
+
+	if ( logger.isLoggable( MLevel.FINEST ) )
+	    logger.log( MLevel.FINEST, "Config available to MLog library: " + MLogConfig.dump() );
+
     }
 
     public static MLog findByClassnames( String[] classnames )

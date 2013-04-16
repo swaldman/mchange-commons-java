@@ -68,7 +68,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     }
 
     String[] rps;
-    Map  propsByResourcePaths = new HashMap();
+    Map  propsByResourcePaths;
     Map  propsByPrefixes;
 
     List parseMessages;
@@ -80,6 +80,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     public BasicMultiPropertiesConfig(String[] resourcePaths, MLogger logger)
     {
+	Map  pbrp = new HashMap();
 	List goodPaths = new ArrayList();
 
 	List<ParseMessage> pms = new LinkedList<ParseMessage>();
@@ -92,107 +93,43 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		{
 		    PropertiesConfigSource cs = configSource( rp );
 		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
-		    propsByResourcePaths.put( rp, parse.getProperties() );
+		    pbrp.put( rp, parse.getProperties() );
 		    goodPaths.add( rp );
 		    pms.addAll( parse.getParseMessages() );
 		}
 		catch ( FileNotFoundException fnfe )
 		{ pms.add( new ParseMessage( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found.", rp), fnfe) ); }
 		catch ( Exception e )
-		    { pms.add( new ParseMessage( MLevel.WARNING, String.format("An Exception occurred while processing configuration  for resource identifier '%s' could not be found.", rp), e) );	}
-
-		/*
-		if ("/".equals(rp))
-		    {
-			try
-			    {
-				propsByResourcePaths.put( rp, System.getProperties() );
-				goodPaths.add( rp );
-			    }
-			catch (SecurityException e)
-			    {
-				if (logger != null)
-				    {
-					if ( logger.isLoggable( MLevel.WARNING ) )
-					    logger.log( MLevel.WARNING, 
-							"Read of system Properties blocked -- " +
-							"ignoring any configuration via System properties, and using Empty Properties! " +
-							"(But any configuration via a resource properties files is still okay!)",
-							e );
-				    }
-				else
-				    {
-					System.err.println("Read of system Properties blocked -- " +
-							   "ignoring any configuration via System properties, and using Empty Properties! " +
-							   "(But any configuration via a resource properties files is still okay!)");
-					e.printStackTrace(); 
-				    }
-			    }
-		    }
-		else
-		    {
-			Properties p = new Properties();
-			InputStream pis = MultiPropertiesConfig.class.getResourceAsStream( rp );
-			if ( pis != null )
-			    {
-				try
-				    {
-					p.load( pis );
-					propsByResourcePaths.put( rp, p );
-					goodPaths.add( rp );
-				    }
-				catch (IOException e)
-				    {
-					if (logger != null)
-					    {
-						if ( logger.isLoggable( MLevel.WARNING ) )
-						    logger.log( MLevel.WARNING, 
-								"An IOException occurred while loading configuration properties from resource path '" + rp + "'.",
-								e );
-					    }
-					else
-					    e.printStackTrace(); 
-				    }
-				finally
-				    {
-					try { if ( pis != null ) pis.close(); }
-					catch (IOException e) 
-					    { 
-						if (logger != null)
-						    {
-							if ( logger.isLoggable( MLevel.WARNING ) )
-							    logger.log( MLevel.WARNING, 
-									"An IOException occurred while closing InputStream from resource path '" + rp + "'.",
-									e );
-						    }
-						else
-						    e.printStackTrace(); 
-					    }
-				    }
-			    }
-			else
-			    {
-				if (logger != null)
-				    {
-					if ( logger.isLoggable( MLevel.FINE ) )
-					    logger.fine( "Configuration properties not found at ResourcePath '" + rp + "'. [logger name: " + logger.getName() + ']' );
-				    }
-// 			else if (Debug.DEBUG && Debug.TRACE == Debug.TRACE_MAX)
-// 			    System.err.println("Configuration properties not found at ResourcePath '" + rp + "'." );
-			    }
-		    }
-		*/
+		    { pms.add( new ParseMessage( MLevel.WARNING, String.format("An Exception occurred while processing configuration for resource identifier '%s' could not be found.", rp), e) );	}
 	    }
 	
 	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
-	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths) );
-	this.propsByResourcePaths = Collections.unmodifiableMap( propsByResourcePaths );
-	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths);
+	this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
 	this.parseMessages = Collections.unmodifiableList( pms );
 
 	if ( logger != null )
 	    for ( ParseMessage pm : pms )
 		logger.log( pm.getLevel(), pm.getText(), pm.getException() );
+
+	finishInit();
+    }
+
+    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
+    {
+	this.rps                  = rps;
+	this.propsByResourcePaths = propsByResourcePaths;
+	this.parseMessages        = parseMessages;
+
+	finishInit();
+    }
+
+    /**
+     *  rps, propsByResourcePaths, and parseMessages should be set before finishInit()
+     */
+    private void finishInit()
+    {
+	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths) );
+	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths);
     }
 
     public List getParseMessages()
@@ -351,4 +288,14 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     public String getProperty( String key )
     { return propsByKey.getProperty( key ); }
+
+//    public Properties getProperties()
+//    { return (Properties) propsByKey.clone(); }
+
+    //TODO: Make this much prettier
+    public String dump()
+    { return String.format("[ propertiesByResourcePaths -> %s, propertiesByPrefixes -> %s ]", propsByResourcePaths, propsByPrefixes); }
+
+    public String toString()
+    { return super.toString() + " " + this.dump(); }
 }

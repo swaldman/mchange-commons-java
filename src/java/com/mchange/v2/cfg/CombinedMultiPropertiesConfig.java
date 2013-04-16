@@ -67,6 +67,26 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	this.parseMessages = Collections.unmodifiableList( pms );
     }
 
+    private Map getPropsByResourcePaths()
+    {
+	Map out = new HashMap();
+	for ( int i = 0, len = resourcePaths.length; i < len; ++i )
+	{
+	    String rp = resourcePaths[i];
+	    out.put( rp, getPropertiesByResourcePath(rp) );
+	}
+	return Collections.unmodifiableMap( out );
+    }
+
+    public BasicMultiPropertiesConfig toBasic()
+    {
+	String[] rps  = getPropertiesResourcePaths();
+	Map      pbrm = getPropsByResourcePaths();
+	List     pms  = getParseMessages();
+
+	return new BasicMultiPropertiesConfig( rps, pbrm, pms );
+    }
+
     public String[] getPropertiesResourcePaths()
     { return (String[]) resourcePaths.clone(); }
     
