@@ -35,19 +35,22 @@
 
 package com.mchange.v2.log;
 
-import java.util.Iterator;
+import java.util.*;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 public final class MLogConfig
 {
     private final static MultiPropertiesConfig CONFIG;
+    private final static List                  BOOTSTRAP_LOG_ITEMS;
 
     static
     {
 	String[] defaults = new String[] { "/com/mchange/v2/log/default-mchange-log.properties"  };
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
-       
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, preempts );
+
+	List bli = new ArrayList();
+	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, preempts, bli );
+	BOOTSTRAP_LOG_ITEMS = Collections.unmodifiableList( bli );
     }
 
     public static String getProperty( String key )
@@ -55,7 +58,10 @@ public final class MLogConfig
 
     public static void logDelayedItems( MLogger logger )
     { 
-	for( Iterator ii = CONFIG.getDelayedLogItems().iterator(); ii.hasNext(); )
+	List items = new ArrayList();
+	items.addAll( BOOTSTRAP_LOG_ITEMS );
+	items.addAll( CONFIG.getDelayedLogItems() );
+	for( Iterator ii = items.iterator(); ii.hasNext(); )
 	{
 	    DelayedLogItem pm = (DelayedLogItem) ii.next();
 	    logger.log( pm.getLevel(), pm.getText(), pm.getException() );

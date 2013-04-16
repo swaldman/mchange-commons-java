@@ -90,11 +90,24 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources)
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
 	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
 	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
-	List pathsList = condensePaths( new String[][]{ defaultResources, vmResourcePaths(), preemptingResources } );
+	List pathsList = condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } );
+	
+	if ( delayedLogItemsOut != null )
+	{
+	    StringBuffer sb = new StringBuffer(2048);
+	    for ( int i = 0, len = pathsList.size(); i < len; ++i)
+	    {
+		if ( i != 0 ) sb.append(", ");
+		sb.append( pathsList.get(i) );
+	    }
+
+	    delayedLogItemsOut.add( new DelayedLogItem(MLevel.FINER, "Reading VM config for path list " + sb.toString() ) );
+	}
+
 	return read( (String[]) pathsList.toArray(new String[pathsList.size()]) );
     }
 
@@ -121,7 +134,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	 return reverseMe;
     }
 
-    private static List readResourcePathsFromResourcePathsTextFile( String resourcePathsTextFileResourcePath )
+    private static List readResourcePathsFromResourcePathsTextFile( String resourcePathsTextFileResourcePath,  List delayedLogItemsOut )
     {
 	List rps = new ArrayList();
 
@@ -141,9 +154,12 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 				
 				rps.add( rp );
 			    }
+
+			if ( delayedLogItemsOut != null )
+			    delayedLogItemsOut.add( new DelayedLogItem( MLevel.FINEST, String.format( "Added paths from resource path text file at '%s'", resourcePathsTextFileResourcePath ) ) );
 		    }
-		//else
-		//    System.err.println( String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) );
+		else if ( delayedLogItemsOut != null )
+		    delayedLogItemsOut.add( new DelayedLogItem( MLevel.FINEST, String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) ) );
 
 	    }
 	catch (IOException e)
@@ -157,23 +173,23 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	return rps;
     }
 
-    private static List readResourcePathsFromResourcePathsTextFiles( String[] resourcePathsTextFileResourcePaths )
+    private static List readResourcePathsFromResourcePathsTextFiles( String[] resourcePathsTextFileResourcePaths, List delayedLogItemsOut )
     {
 	List out = new ArrayList();
 	for ( int i = 0, len = resourcePathsTextFileResourcePaths.length; i < len; ++i )
-	    out.addAll( readResourcePathsFromResourcePathsTextFile(  resourcePathsTextFileResourcePaths[i] ) );
+	    out.addAll( readResourcePathsFromResourcePathsTextFile(  resourcePathsTextFileResourcePaths[i], delayedLogItemsOut ) );
 	return out;
     }
 
-    private static String[] vmResourcePaths() 
+    private static String[] vmResourcePaths( List delayedLogItemsOut ) 
     {
-	List paths = vmResourcePathList();
+	List paths = vmResourcePathList(  delayedLogItemsOut );
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
-    private static List vmResourcePathList()
+    private static List vmResourcePathList( List delayedLogItemsOut )
     {
-	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_VM_RSRC_PATHFILES );
+	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_VM_RSRC_PATHFILES, delayedLogItemsOut );
 	List rps;
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;
@@ -182,11 +198,11 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	return rps;
     }
     
-    public synchronized static MultiPropertiesConfig readVmConfig()
+    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
     {
 	if ( vmConfig == null )
 	    {
-		List rps = vmResourcePathList();
+		List rps = vmResourcePathList( delayedLogItemsOut );
 		vmConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
 	    }
 	return vmConfig;
