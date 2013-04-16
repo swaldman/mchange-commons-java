@@ -63,7 +63,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
 	List pms = new LinkedList();
 	for ( int i = 0, len = configs.length; i < len; ++i )
-	    pms.addAll( configs[i].getParseMessages() );
+	    pms.addAll( configs[i].getDelayedLogItems() );
 	this.parseMessages = Collections.unmodifiableList( pms );
     }
 
@@ -82,7 +82,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     {
 	String[] rps  = getPropertiesResourcePaths();
 	Map      pbrm = getPropsByResourcePaths();
-	List     pms  = getParseMessages();
+	List     pms  = getDelayedLogItems();
 
 	return new BasicMultiPropertiesConfig( rps, pbrm, pms );
     }
@@ -138,7 +138,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	return null;
     }
 
-    public List getParseMessages()
+    public List getDelayedLogItems()
     { return parseMessages; }
 }
 

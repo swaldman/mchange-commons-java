@@ -72,7 +72,7 @@ public abstract class MLog
 
 	logger = mlog.getLogger( MLog.class );
 	
-	MLogConfig.logParseMessages( logger );
+	MLogConfig.logDelayedItems( logger );
 	
 	String loggerDesc = mlog.getClass().getName();
 	if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))

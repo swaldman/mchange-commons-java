@@ -48,7 +48,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
 	{
 	    if ( "/".equals( identifier ) )
-		return new Parse( System.getProperties(), Collections.<ParseMessage>emptyList() );
+		return new Parse( System.getProperties(), Collections.<DelayedLogItem>emptyList() );
 	    else
 		throw new Exception(  String.format("Unexpected identifier for System properties: '%s'", identifier) );
 	}
@@ -83,7 +83,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	Map  pbrp = new HashMap();
 	List goodPaths = new ArrayList();
 
-	List<ParseMessage> pms = new LinkedList<ParseMessage>();
+	List<DelayedLogItem> pms = new LinkedList<DelayedLogItem>();
 
 	for( int i = 0, len = resourcePaths.length; i < len; ++i )
 	    {
@@ -95,12 +95,12 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
 		    pbrp.put( rp, parse.getProperties() );
 		    goodPaths.add( rp );
-		    pms.addAll( parse.getParseMessages() );
+		    pms.addAll( parse.getDelayedLogItems() );
 		}
 		catch ( FileNotFoundException fnfe )
-		{ pms.add( new ParseMessage( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found.", rp), fnfe) ); }
+		{ pms.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found.", rp), fnfe) ); }
 		catch ( Exception e )
-		    { pms.add( new ParseMessage( MLevel.WARNING, String.format("An Exception occurred while processing configuration for resource identifier '%s' could not be found.", rp), e) );	}
+		    { pms.add( new DelayedLogItem( MLevel.WARNING, String.format("An Exception occurred while processing configuration for resource identifier '%s' could not be found.", rp), e) );	}
 	    }
 	
 	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
@@ -108,7 +108,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	this.parseMessages = Collections.unmodifiableList( pms );
 
 	if ( logger != null )
-	    for ( ParseMessage pm : pms )
+	    for ( DelayedLogItem pm : pms )
 		logger.log( pm.getLevel(), pm.getText(), pm.getException() );
 
 	finishInit();
@@ -132,7 +132,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths);
     }
 
-    public List getParseMessages()
+    public List getDelayedLogItems()
     { return parseMessages; }
 
 

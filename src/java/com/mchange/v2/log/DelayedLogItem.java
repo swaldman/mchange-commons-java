@@ -33,11 +33,11 @@
  * 
  */
 
-package com.mchange.v2.cfg;
+package com.mchange.v2.log;
 
 import com.mchange.v2.log.MLevel;
 
-public class ParseMessage
+public class DelayedLogItem
 {
     private MLevel    level;
     private String    text;
@@ -47,13 +47,13 @@ public class ParseMessage
     public String    getText()      { return text; }
     public Throwable getException() { return exception; }
     
-    public ParseMessage(MLevel level, String text, Throwable exception)
+    public DelayedLogItem(MLevel level, String text, Throwable exception)
     {
 	this.level     = level;
 	this.text      = text;
 	this.exception = exception;
     }
 
-    public ParseMessage(MLevel level, String text)
+    public DelayedLogItem(MLevel level, String text)
     { this( level, text, null ); }
 }

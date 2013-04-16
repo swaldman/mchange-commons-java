@@ -37,6 +37,7 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.FileNotFoundException;
+import com.mchange.v2.log.DelayedLogItem;
 
 /**
  * implementations should have no-arg constructors
@@ -52,13 +53,13 @@ public interface PropertiesConfigSource
 
     public static class Parse
     {
-	private Properties         properties;
-	private List<ParseMessage> parseMessages;
+	private Properties           properties;
+	private List<DelayedLogItem> parseMessages;
 
-	public Properties         getProperties()    { return properties; }
-	public List<ParseMessage> getParseMessages() { return parseMessages; }
+	public Properties           getProperties()    { return properties; }
+	public List<DelayedLogItem> getDelayedLogItems() { return parseMessages; }
 
-	public Parse( Properties properties, List<ParseMessage> parseMessages )
+	public Parse( Properties properties, List<DelayedLogItem> parseMessages )
 	{
 	    this.properties    = properties;
 	    this.parseMessages = parseMessages;

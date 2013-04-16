@@ -37,7 +37,6 @@ package com.mchange.v2.log;
 
 import java.util.Iterator;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
-import com.mchange.v2.cfg.ParseMessage;
 
 public final class MLogConfig
 {
@@ -45,23 +44,20 @@ public final class MLogConfig
 
     static
     {
-	String[] defaults = new String[]
-	{
-	    "/com/mchange/v2/log/default-mchange-log.properties",
-	    "/mchange-log.properties",
-	    "/"
-	};
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, null );
+	String[] defaults = new String[] { "/com/mchange/v2/log/default-mchange-log.properties"  };
+	String[] preempts = new String[] { "/mchange-log.properties", "/" };
+       
+	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, preempts );
     }
 
     public static String getProperty( String key )
     { return CONFIG.getProperty( key ); }
 
-    public static void logParseMessages( MLogger logger )
+    public static void logDelayedItems( MLogger logger )
     { 
-	for( Iterator ii = CONFIG.getParseMessages().iterator(); ii.hasNext(); )
+	for( Iterator ii = CONFIG.getDelayedLogItems().iterator(); ii.hasNext(); )
 	{
-	    ParseMessage pm = (ParseMessage) ii.next();
+	    DelayedLogItem pm = (DelayedLogItem) ii.next();
 	    logger.log( pm.getLevel(), pm.getText(), pm.getException() );
 	}
     }

@@ -51,22 +51,34 @@ import com.mchange.v2.log.*;
  * earlier definitions, and files are loaded in the order of the list of
  * resource paths provided a constructor.
  *
- * The rescource path "/" is a special case that always refers to System
+ * The resource path "/" is a special case that always refers to System
  * properties. No actual resource will be loaded.
-
+ *
+ * If the mchange-hocon-bridge jar file is available, resource paths specified
+ * as "hocon:/path/to/resource" will be parsed as 
+ * <a href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON</a>,
+ * whenever values can be interpreted as Strings. 
+ *
  * The class manages a special instance called "vmConfig" which is accessable
  * via a static method. It's resource path is list specified by a text-file,
- * itself a ClassLoader managed resource, which must be located at
- * <tt>/com/mchange/v2/cfg/vmConfigResourcePaths.txt</tt>. This file should
+ * itself a ClassLoader managed resource, which may be located at
+ * <tt>/com/mchange/v2/cfg/vmConfigResourcePaths.txt</tt> or <tt>/mchange-config-resource-paths.txt</tt>.
+ * This file should
  * be one resource path per line, with blank lines ignored and lines beginning
  * with '#' treated as comments.
+ *
+ * If no text file of resource paths are available, the following resources are
+ * checked: "hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"
  */
 public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
     final static MultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig( new String[0] );
 
-    final static String VM_CONFIG_RSRC_PATHS = "/com/mchange/v2/cfg/vmConfigResourcePaths.txt";
+    final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+    final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] {"hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"};
+    final static String[] NO_PATHS                  = new String[0];
 
+    //MT: protected by class' lock
     static MultiPropertiesConfig vmConfig = null;
 
     public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
@@ -80,58 +92,107 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources)
     {
-	List l = new LinkedList();
-	if (defaultResources != null)
-	    l.add( read( defaultResources ) );
-	l.add( readVmConfig() );
-	if (preemptingResources != null)
-	    l.add( read( preemptingResources ) );
-	return combine( (MultiPropertiesConfig[]) l.toArray( new MultiPropertiesConfig[ l.size() ] ) );
+	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
+	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
+	List pathsList = condensePaths( new String[][]{ defaultResources, vmResourcePaths(), preemptingResources } );
+	return read( (String[]) pathsList.toArray(new String[pathsList.size()]) );
     }
 
-    public static MultiPropertiesConfig readVmConfig()
+    private static List condensePaths(String[][] pathLists)
+    {
+	// we do this in reverse, so that the "first" time
+	// we encounter a path becomes the last in the resultant
+	// list. that is, we want redundantly specified paths 
+	// to have their maximum specified preference
+
+	Set pathSet = new HashSet();
+	List reverseMe = new ArrayList();
+	for ( int i = pathLists.length; --i >= 0; )
+	    for( int j = pathLists[i].length; --j >= 0; )
+	    {
+		String path = pathLists[i][j];
+		if (! pathSet.contains( path ) )
+		{
+		    pathSet.add( path );
+		    reverseMe.add( path );
+		}
+	    }
+	 Collections.reverse( reverseMe );
+	 return reverseMe;
+    }
+
+    private static List readResourcePathsFromResourcePathsTextFile( String resourcePathsTextFileResourcePath )
+    {
+	List rps = new ArrayList();
+
+	BufferedReader br = null;
+	try
+	    {
+		InputStream is = MultiPropertiesConfig.class.getResourceAsStream( resourcePathsTextFileResourcePath );
+		if ( is != null )
+		    {
+			br = new BufferedReader( new InputStreamReader( is, "8859_1" ) );
+			String rp;
+			while ((rp = br.readLine()) != null)
+			    {
+				rp = rp.trim();
+				if ("".equals( rp ) || rp.startsWith("#"))
+				    continue;
+				
+				rps.add( rp );
+			    }
+		    }
+		//else
+		//    System.err.println( String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) );
+
+	    }
+	catch (IOException e)
+	    { e.printStackTrace(); }
+	finally
+	    {
+		try { if ( br != null ) br.close(); }
+		catch (IOException e) { e.printStackTrace(); }
+	    }
+
+	return rps;
+    }
+
+    private static List readResourcePathsFromResourcePathsTextFiles( String[] resourcePathsTextFileResourcePaths )
+    {
+	List out = new ArrayList();
+	for ( int i = 0, len = resourcePathsTextFileResourcePaths.length; i < len; ++i )
+	    out.addAll( readResourcePathsFromResourcePathsTextFile(  resourcePathsTextFileResourcePaths[i] ) );
+	return out;
+    }
+
+    private static String[] vmResourcePaths() 
+    {
+	List paths = vmResourcePathList();
+	return (String[]) paths.toArray( new String[ paths.size() ] );
+    }
+
+    private static List vmResourcePathList()
+    {
+	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_VM_RSRC_PATHFILES );
+	List rps;
+	if ( pathsFromFiles.size() > 0 )
+	    rps = pathsFromFiles;
+	else
+	    rps = Arrays.asList( HARDCODED_DFLT_RSRC_PATHS );
+	return rps;
+    }
+    
+    public synchronized static MultiPropertiesConfig readVmConfig()
     {
 	if ( vmConfig == null )
 	    {
-		List rps = new ArrayList();
-
-		BufferedReader br = null;
-		try
-		    {
-			InputStream is = MultiPropertiesConfig.class.getResourceAsStream( VM_CONFIG_RSRC_PATHS );
-			if ( is != null )
-			    {
-				br = new BufferedReader( new InputStreamReader( is, "8859_1" ) );
-				String rp;
-				while ((rp = br.readLine()) != null)
-				    {
-					rp = rp.trim();
-					if ("".equals( rp ) || rp.startsWith("#"))
-					    continue;
-					
-					rps.add( rp );
-				    }
-				vmConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
-			    }
-			else
-			    {
-				System.err.println("com.mchange.v2.cfg.MultiPropertiesConfig: Resource path list could not be found at resource path: " + VM_CONFIG_RSRC_PATHS);
-				System.err.println("com.mchange.v2.cfg.MultiPropertiesConfig: Using empty vmconfig.");
-				vmConfig = EMPTY;
-			    }
-		    }
-		catch (IOException e)
-		    { e.printStackTrace(); }
-		finally
-		    {
-			try { if ( br != null ) br.close(); }
-			catch (IOException e) { e.printStackTrace(); }
-		    }
+		List rps = vmResourcePathList();
+		vmConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
 	    }
 	return vmConfig;
     }
 
-    public static boolean foundVmConfig()
+    public static synchronized boolean foundVmConfig()
     { return vmConfig != EMPTY; }
 
     public abstract String[] getPropertiesResourcePaths();
@@ -144,6 +205,6 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 
     public abstract String getProperty( String key );
 
-    public abstract List getParseMessages();
+    public abstract List getDelayedLogItems();
 
 }
