@@ -62,7 +62,11 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	if ( "/".equals(identifier) )
 	    return new SystemPropertiesConfigSource();
 	else if ( isHoconPath( identifier ) )
-	    return (PropertiesConfigSource) Class.forName( HOCON_CFG_SRC_CNAME ).newInstance();
+	    {
+		try { return (PropertiesConfigSource) Class.forName( HOCON_CFG_SRC_CNAME ).newInstance(); }
+		catch (Exception e)
+		    { throw new FileNotFoundException( String.format("Could not decode file for identifier '%s' [original exception: %s]", identifier, e ) ); }
+	    }
 	else
 	    return new BasicPropertiesConfigSource();
     }
