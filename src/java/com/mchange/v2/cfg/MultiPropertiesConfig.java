@@ -91,7 +91,19 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
-    { return readVmConfig( defaultResources, preemptingResources, null ); }
+    { return readVmConfig( defaultResources, preemptingResources, (List) null ); }
+
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, MLogger logger)
+    {
+	List items = new ArrayList();
+	MultiPropertiesConfig out = readVmConfig( defaultResources, preemptingResources, items );
+	for (Iterator ii = items.iterator(); ii.hasNext(); )
+	{
+	    DelayedLogItem item = (DelayedLogItem) ii.next();
+	    logger.log( item.getLevel(), item.getText(), item.getException() );
+	}
+	return out;
+    }
 
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
@@ -202,7 +214,19 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     }
     
     public synchronized static MultiPropertiesConfig readVmConfig()
-    { return readVmConfig( null ); }
+    { return readVmConfig( (List) null ); }
+
+    public synchronized static MultiPropertiesConfig readVmConfig( MLogger logger )
+    {
+	List items = new ArrayList();
+	MultiPropertiesConfig out = readVmConfig( items );
+	for (Iterator ii = items.iterator(); ii.hasNext(); )
+	{
+	    DelayedLogItem item = (DelayedLogItem) ii.next();
+	    logger.log( item.getLevel(), item.getText(), item.getException() );
+	}
+	return out;
+    }
 
     public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
     {
