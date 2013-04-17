@@ -84,6 +84,9 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
     { return new BasicMultiPropertiesConfig( resourcePath, logger ); }
 
+    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems)
+    { return new BasicMultiPropertiesConfig( resourcePath, delayedLogItems ); }
+
     public static MultiPropertiesConfig read(String[] resourcePath)
     { return new BasicMultiPropertiesConfig( resourcePath ); }
 
@@ -106,25 +109,30 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	return out;
     }
 
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    static List vmCondensedPaths(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } ); }
+
+    static String stringFromPathsList( List pathsList )
     {
-	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
-	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
-	List pathsList = condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } );
-	
-	if ( delayedLogItemsOut != null )
-	{
-	    StringBuffer sb = new StringBuffer(2048);
-	    for ( int i = 0, len = pathsList.size(); i < len; ++i)
+	StringBuffer sb = new StringBuffer(2048);
+	for ( int i = 0, len = pathsList.size(); i < len; ++i)
 	    {
 		if ( i != 0 ) sb.append(", ");
 		sb.append( pathsList.get(i) );
 	    }
+	return sb.toString();
+    }
 
-	    delayedLogItemsOut.add( new DelayedLogItem(MLevel.FINER, "Reading VM config for path list " + sb.toString() ) );
-	}
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    {
+	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
+	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
+	List pathsList = vmCondensedPaths( defaultResources, preemptingResources, delayedLogItemsOut );
+	
+	if ( delayedLogItemsOut != null )
+	    delayedLogItemsOut.add( new DelayedLogItem(MLevel.FINER, "Reading VM config for path list " + stringFromPathsList( pathsList ) ) );
 
-	return read( (String[]) pathsList.toArray(new String[pathsList.size()]) );
+    return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
     }
 
     private static List condensePaths(String[][] pathLists)

@@ -94,40 +94,26 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     Properties propsByKey;
 
     public BasicMultiPropertiesConfig(String[] resourcePaths)
-    { this( resourcePaths, null ); }
+    { this( resourcePaths, (MLogger) null ); }
+
+    BasicMultiPropertiesConfig(String[] resourcePaths, List delayedLogItems)
+    {
+	firstInit( resourcePaths, delayedLogItems );
+	finishInit();
+    }
 
     public BasicMultiPropertiesConfig(String[] resourcePaths, MLogger logger)
     {
-	Map  pbrp = new HashMap();
-	List goodPaths = new ArrayList();
+	List delayedLogItems = new LinkedList();
 
-	List<DelayedLogItem> pms = new LinkedList<DelayedLogItem>();
-
-	for( int i = 0, len = resourcePaths.length; i < len; ++i )
-	    {
-		String rp = resourcePaths[i];
-
-		try
-		{
-		    PropertiesConfigSource cs = configSource( rp );
-		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
-		    pbrp.put( rp, parse.getProperties() );
-		    goodPaths.add( rp );
-		    pms.addAll( parse.getDelayedLogItems() );
-		}
-		catch ( FileNotFoundException fnfe )
-		{ pms.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
-		catch ( Exception e )
-		    { pms.add( new DelayedLogItem( MLevel.WARNING, String.format("An Exception occurred while trying to read configuraion data at resource identifier '%s'.", rp), e) ); }
-	    }
-	
-	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
-	this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
-	this.parseMessages = Collections.unmodifiableList( pms );
+	firstInit( resourcePaths, delayedLogItems );
 
 	if ( logger != null )
-	    for ( DelayedLogItem pm : pms )
-		logger.log( pm.getLevel(), pm.getText(), pm.getException() );
+	    for ( Iterator ii = delayedLogItems.iterator(); ii.hasNext(); )
+	    {
+		DelayedLogItem item = (DelayedLogItem) ii.next();
+		logger.log( item.getLevel(), item.getText(), item.getException() );
+	    }
 
 	finishInit();
     }
@@ -139,6 +125,34 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	this.parseMessages        = parseMessages;
 
 	finishInit();
+    }
+
+    private void firstInit( String[] resourcePaths, List delayedLogItems )
+    {
+	Map  pbrp = new HashMap();
+	List goodPaths = new ArrayList();
+
+	for( int i = 0, len = resourcePaths.length; i < len; ++i )
+	    {
+		String rp = resourcePaths[i];
+
+		try
+		{
+		    PropertiesConfigSource cs = configSource( rp );
+		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
+		    pbrp.put( rp, parse.getProperties() );
+		    goodPaths.add( rp );
+		    delayedLogItems.addAll( parse.getDelayedLogItems() );
+		}
+		catch ( FileNotFoundException fnfe )
+		{ delayedLogItems.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
+		catch ( Exception e )
+		    { delayedLogItems.add( new DelayedLogItem( MLevel.WARNING, String.format("An Exception occurred while trying to read configuraion data at resource identifier '%s'.", rp), e) ); }
+	    }
+	
+	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
+	this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
+	this.parseMessages = Collections.unmodifiableList( delayedLogItems );
     }
 
     /**
