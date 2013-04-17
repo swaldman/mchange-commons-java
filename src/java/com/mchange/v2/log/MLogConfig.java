@@ -61,10 +61,18 @@ public final class MLogConfig
 	List items = new ArrayList();
 	items.addAll( BOOTSTRAP_LOG_ITEMS );
 	items.addAll( CONFIG.getDelayedLogItems() );
+
+	Set uniquerizer = new HashSet();
+	uniquerizer.addAll( items );
+
 	for( Iterator ii = items.iterator(); ii.hasNext(); )
 	{
-	    DelayedLogItem pm = (DelayedLogItem) ii.next();
-	    logger.log( pm.getLevel(), pm.getText(), pm.getException() );
+	    DelayedLogItem item = (DelayedLogItem) ii.next();
+	    if ( uniquerizer.contains( item ) )
+	    {
+		uniquerizer.remove( item );
+		logger.log( item.getLevel(), item.getText(), item.getException() );
+	    }
 	}
     }
 

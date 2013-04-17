@@ -35,9 +35,10 @@
 
 package com.mchange.v2.log;
 
+import com.mchange.v2.lang.ObjectUtils;
 import com.mchange.v2.log.MLevel;
 
-public class DelayedLogItem
+public final class DelayedLogItem
 {
     private MLevel    level;
     private String    text;
@@ -56,4 +57,26 @@ public class DelayedLogItem
 
     public DelayedLogItem(MLevel level, String text)
     { this( level, text, null ); }
+
+    public boolean equals( Object o )
+    {
+	if (o instanceof DelayedLogItem)
+	{
+	    DelayedLogItem other = (DelayedLogItem) o;
+	    return
+		this.level.equals( other.level ) &&
+		this.text.equals( other.text ) &&
+		ObjectUtils.eqOrBothNull( this.exception, other.exception );
+	}
+	else
+	    return false;
+    }
+
+    public int hashCode()
+    {
+	return
+	    this.level.hashCode() ^
+	    this.text.hashCode() ^
+	    ObjectUtils.hashOrZero( this.exception );
+    }
 }
