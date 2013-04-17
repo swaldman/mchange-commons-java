@@ -79,4 +79,12 @@ public final class DelayedLogItem
 	    this.text.hashCode() ^
 	    ObjectUtils.hashOrZero( this.exception );
     }
+
+    public String toString()
+    {
+	StringBuffer sb = new StringBuffer();
+	sb.append( this.getClass().getName() );
+	sb.append( String.format(" [ level -> %s, text -> \042%s\042, exception -> %s]", level, text, exception ) );
+	return sb.toString();
+    }
 }

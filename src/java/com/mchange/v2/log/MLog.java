@@ -44,7 +44,7 @@ public abstract class MLog
     final static NameTransformer transformer;
     final static MLog mlog;
 
-    final static MLogger logger;
+    private final static MLogger logger;
 
     static
     {

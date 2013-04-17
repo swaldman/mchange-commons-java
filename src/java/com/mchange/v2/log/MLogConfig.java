@@ -64,11 +64,12 @@ public final class MLogConfig
 
 	Set uniquerizer = new HashSet();
 	uniquerizer.addAll( items );
-
+	
 	for( Iterator ii = items.iterator(); ii.hasNext(); )
 	{
 	    DelayedLogItem item = (DelayedLogItem) ii.next();
-	    if ( uniquerizer.contains( item ) )
+
+	    if (uniquerizer.contains( item ) )
 	    {
 		uniquerizer.remove( item );
 		logger.log( item.getLevel(), item.getText(), item.getException() );
