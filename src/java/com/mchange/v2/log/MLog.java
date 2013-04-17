@@ -72,8 +72,6 @@ public abstract class MLog
 
 	logger = mlog.getLogger( MLog.class );
 	
-	MLogConfig.logDelayedItems( logger );
-	
 	String loggerDesc = mlog.getClass().getName();
 	if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))
 	    loggerDesc = "java 1.4+ standard";
@@ -101,6 +99,8 @@ public abstract class MLog
 
 	//System.err.println(mlog);
 
+	MLogConfig.logDelayedItems( logger );
+	
 	if ( logger.isLoggable( MLevel.FINEST ) )
 	    logger.log( MLevel.FINEST, "Config available to MLog library: " + MLogConfig.dump() );
 
