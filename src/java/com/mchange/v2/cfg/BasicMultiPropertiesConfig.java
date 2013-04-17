@@ -76,7 +76,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
 			    throw new FileNotFoundException( String.format("No resource available at '%s' for HOCON identifier '%s'. Also HOCON support lib (mchange-hocon-bridge) is not available.", resourcePath, identifier) );
 			else
-			    throw new Exception("Could not decode HOCON resource '%s', even though the resource exists, because HOCON support lib (mchange-hocon-bridge) is not available.", e);
+			    throw new Exception(String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON support lib (mchange-hocon-bridge) is not available.", identifier), e);
 		    }
 	    }
 	else if ( "/".equals(identifier) )
