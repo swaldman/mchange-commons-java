@@ -37,7 +37,7 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 
-class CombinedMultiPropertiesConfig implements MultiPropertiesConfig
+class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 {
     MultiPropertiesConfig[] configs;
     String[] resourcePaths;

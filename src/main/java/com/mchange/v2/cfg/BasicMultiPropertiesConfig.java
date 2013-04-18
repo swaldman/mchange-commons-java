@@ -40,7 +40,7 @@ import java.io.*;
 
 import static com.mchange.v2.cfg.DelayedLogItem.*;
 
-final class BasicMultiPropertiesConfig implements MultiPropertiesConfig
+final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
     private final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
     private final static int    HOCON_PFX_LEN       = 6; // includes colon, hocon:

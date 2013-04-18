@@ -69,18 +69,29 @@ import java.util.Properties;
  * If no text file of resource paths are available, the following resources are
  * checked: "hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"
  */
-public interface MultiPropertiesConfig extends PropertiesConfig
+public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
-    public String[] getPropertiesResourcePaths();
+    /**
+     * @deprecated Please use the MConfig facade class to acquire configuration
+     */
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
+    { return ConfigUtils.readVmConfig( defaultResources, preemptingResources ); }
 
-    public Properties getPropertiesByResourcePath(String path);
+    /**
+     * @deprecated Please use the MConfig facade class to acquire configuration
+     */
+    public static MultiPropertiesConfig readVmConfig()
+    { return ConfigUtils.readVmConfig(); }
 
-    public Properties getPropertiesByPrefix(String pfx);
+    public abstract String[] getPropertiesResourcePaths();
+
+    public abstract Properties getPropertiesByResourcePath(String path);
+
+    public abstract Properties getPropertiesByPrefix(String pfx);
 
 //    public abstract Properties getProperties( String key );
 
-    public String getProperty( String key );
+    public abstract String getProperty( String key );
 
-    public List getDelayedLogItems();
-
+    public abstract List getDelayedLogItems();
 }
