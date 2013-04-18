@@ -28,6 +28,8 @@ object MchangeCommonsJavaBuild extends Build {
   );
 
   val dependencies = Seq(
+    "junit" % "junit" % "4.1+",
+    "log4j" % "log4j" % "1.2.14+"
     //"com.typesafe" % "config" % "1.0.0"
   );
 
