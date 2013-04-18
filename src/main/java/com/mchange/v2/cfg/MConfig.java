@@ -78,7 +78,7 @@ public final class MConfig
     }
 
     public static MultiPropertiesConfig readVmConfig()
-    { return readVmConfig( MultiPropertiesConfig.NO_PATHS, MultiPropertiesConfig.NO_PATHS ); }
+    { return readVmConfig( ConfigUtils.NO_PATHS, ConfigUtils.NO_PATHS ); }
 
     public static MultiPropertiesConfig readConfig( String[] resourcePaths )
     { 
@@ -114,7 +114,7 @@ public final class MConfig
 	{
 	    this.delayedLogItems = new ArrayList();
 
-	    List pathList = MultiPropertiesConfig.vmCondensedPaths( defaults, preempts, delayedLogItems );
+	    List pathList = ConfigUtils.vmCondensedPaths( defaults, preempts, delayedLogItems );
 	    this.paths = (String[]) pathList.toArray( new String[ pathList.size() ] );
 	}
 
@@ -144,7 +144,7 @@ public final class MConfig
 
 	    List<DelayedLogItem> items = new ArrayList<DelayedLogItem>();
 	    items.addAll( pk.delayedLogItems );
-	    Object out =  MultiPropertiesConfig.read( pk.paths, items );
+	    Object out =  ConfigUtils.read( pk.paths, items );
 	    dumpToLogger( items, logger );
 	    return out;
 	}

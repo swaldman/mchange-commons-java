@@ -38,6 +38,7 @@ package com.mchange.v2.log;
 
 import java.util.*;
 import java.lang.reflect.Method;
+import com.mchange.v2.cfg.MLogConfigSource;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 public final class MLogConfig
@@ -54,7 +55,7 @@ public final class MLogConfig
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
 	List bli = new ArrayList();
-	CONFIG = MultiPropertiesConfig.readVmConfig( defaults, preempts, bli );
+	CONFIG = MLogConfigSource.readVmConfig( defaults, preempts, bli );
 	BOOTSTRAP_LOG_ITEMS = Collections.unmodifiableList( bli );
     }
 
