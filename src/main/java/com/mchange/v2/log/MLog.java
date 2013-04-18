@@ -41,20 +41,11 @@ import com.mchange.v1.util.StringTokenizerUtils;
 
 public abstract class MLog
 {
-    //MT: protected by class' lock
     private static NameTransformer transformer;
     private static MLog mlog;
     private static MLogger logger;
-    private static boolean initialized = false;
 
-    public synchronized static boolean isInitialized()
-    { return initialized; }
-
-    private synchronized static void ensureInitialized()
-    { if (! initialized) initialize(); } 
-
-    // should be called only whule holding MLog.class' lock
-    private static void initialize()
+    static
     {
 	String classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.MLog");
 	String[] classnames = null;
@@ -94,13 +85,10 @@ public abstract class MLog
 	    }
 	transformer = tmpt;
 
-	logger = mlog._getLogger( MLog.class );
-
-	initialized = true;
-	MLog.class.notifyAll();
+	logger = mlog.getLogger( MLog.class );
 
 	// at this point we are initialized; what follows is essentially client code
-	// which we run in a throwaway Thread not holding the class' lock
+	// which we run in a throwaway Thread not holding the class' / classloading lock
 	
 	Thread bannerThread = new Thread()
 	    {
@@ -149,16 +137,10 @@ public abstract class MLog
     }
 
     public static MLog instance()
-    { 
-	ensureInitialized();
-
-	return mlog; 
-    }
+    { return mlog; }
 
     public static MLogger getLogger(String name) 
     {
-	ensureInitialized();
-
 	MLogger out;
 	if ( transformer == null )
 	    out = instance().getMLogger( name );
@@ -175,8 +157,6 @@ public abstract class MLog
 
     public static MLogger getLogger(Class cl)
     {
-	ensureInitialized();
-
 	MLogger out;
 	if ( transformer == null )
 	    out = instance().getMLogger( cl );
@@ -191,29 +171,8 @@ public abstract class MLog
 	return out;
     }
 
-    // no intialization check, for use only within initializer
-    private static MLogger _getLogger(Class cl)
-    {
-	MLogger out;
-	if ( transformer == null )
-	    out = mlog.getMLogger( cl );
-	else
-	    {
-		String xname = transformer.transformName( cl );
-		if (xname != null)
-		    out = mlog.getMLogger( xname );
-		else
-		    out = mlog.getMLogger( cl );
-	    }
-	return out;
-    }
-
-
-
     public static MLogger getLogger()
     {
-	ensureInitialized();
-
 	MLogger out;
 	if ( transformer == null )
 	    out = instance().getMLogger();
@@ -227,12 +186,6 @@ public abstract class MLog
 	    }
 	return out;
     }
-
-    /*
-     *
-     * For all methods below, calls to instance() ensure initialization
-     *
-     */
 
     public static void log(MLevel l, String msg)
     { instance().getLogger().log( l, msg ); }

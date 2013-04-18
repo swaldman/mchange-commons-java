@@ -38,7 +38,7 @@ package com.mchange.v2.cfg.junit;
 import junit.framework.*;
 import com.mchange.v2.cfg.*;
 
-public final class BasicMultiPropertiesConfigJUnitTestCase extends TestCase
+public final class MConfigJUnitTestCase extends TestCase
 {
     //private final static com.mchange.v2.log.MLogger logger = com.mchange.v2.log.MLog.getLogger( com.mchange.v2.log.MLog.class );
 

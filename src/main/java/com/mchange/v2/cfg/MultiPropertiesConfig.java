@@ -71,7 +71,7 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  * If no text file of resource paths are available, the following resources are
  * checked: "hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"
  */
-abstract class MultiPropertiesConfig implements PropertiesConfig
+public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
     private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] {"hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"};
