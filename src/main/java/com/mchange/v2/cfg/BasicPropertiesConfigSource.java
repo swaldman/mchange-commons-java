@@ -37,7 +37,8 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.*;
-import com.mchange.v2.log.*;
+
+import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 {
@@ -55,7 +56,7 @@ public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 	    {
 		try { if ( pis != null ) pis.close(); } //ensures closuer of nested rawStream as well
 		catch (IOException e) 
-		    { messages.add( new DelayedLogItem( MLevel.WARNING, "An IOException occurred while closing InputStream from resource path '" + identifier + "'.", e ) ); }
+		    { messages.add( new DelayedLogItem( Level.WARNING, "An IOException occurred while closing InputStream from resource path '" + identifier + "'.", e ) ); }
 	    }
 	    return new Parse(p, messages);
 	}

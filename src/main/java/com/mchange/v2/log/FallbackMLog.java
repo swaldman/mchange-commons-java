@@ -60,10 +60,6 @@ public final class FallbackMLog extends MLog
     public MLogger getMLogger(String name)
     { return logger; }
 
-    public MLogger getMLogger(Class cl)
-    { return getLogger( cl.getName() ); }
-
-
     public MLogger getMLogger()
     { return logger; } 
 

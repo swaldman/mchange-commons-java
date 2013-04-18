@@ -90,10 +90,6 @@ public final class Jdk14MLog extends MLog
         return out;
     }
 
-    public synchronized MLogger getMLogger(Class cl)
-    { return getLogger( cl.getName() ); }
-
-
     public synchronized MLogger getMLogger()
     {
         if (global == null)

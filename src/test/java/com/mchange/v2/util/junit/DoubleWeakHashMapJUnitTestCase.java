@@ -44,7 +44,8 @@ import junit.framework.TestCase;
 
 public class DoubleWeakHashMapJUnitTestCase extends TestCase
 {
-    final static int ARRAY_SZ = 1024 * 1024  /* * 32 * 1024 */;
+    // only needed for disabled testWeakness below
+    //final static int ARRAY_SZ = 1024 * 1024  /* * 32 * 1024 */;
 
     public void testGetNeverAdded()
     {
@@ -82,7 +83,9 @@ public class DoubleWeakHashMapJUnitTestCase extends TestCase
         m.values().remove(poop);
         assertEquals("After removing a doubled value, size should be 2", m.size(), 2);
     }
-    
+
+    /*
+    //this often fails, because System.gc() is not reliable
     public void testWeakness()
     {
         Integer a = new Integer(1);
@@ -121,4 +124,5 @@ public class DoubleWeakHashMapJUnitTestCase extends TestCase
 
         assertEquals("4) Weak key should have been automatically removed (but not guaranteed! sometimes fails without a defect!)", m.size(), 1);
     }
+    */
 }

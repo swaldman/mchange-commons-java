@@ -37,7 +37,8 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.*;
-import com.mchange.v2.log.*;
+
+import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 /**
  * MultiPropertiesConfig allows applications to accept configuration data
@@ -70,19 +71,18 @@ import com.mchange.v2.log.*;
  * If no text file of resource paths are available, the following resources are
  * checked: "hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"
  */
-public abstract class MultiPropertiesConfig implements PropertiesConfig
+abstract class MultiPropertiesConfig implements PropertiesConfig
 {
-    final static MultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig( new String[0] );
+    private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+    private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] {"hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"};
 
-    final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
-    final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] {"hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "/"};
     final static String[] NO_PATHS                  = new String[0];
 
     //MT: protected by class' lock
     static MultiPropertiesConfig vmConfig = null;
 
-    public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
-    { return new BasicMultiPropertiesConfig( resourcePath, logger ); }
+    //public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
+    //{ return new BasicMultiPropertiesConfig( resourcePath, logger ); }
 
     static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems)
     { return new BasicMultiPropertiesConfig( resourcePath, delayedLogItems ); }
@@ -96,6 +96,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
     { return readVmConfig( defaultResources, preemptingResources, (List) null ); }
 
+    /*
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, MLogger logger)
     {
 	List items = new ArrayList();
@@ -108,6 +109,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	}
 	return out;
     }
+    */
 
     static List vmCondensedPaths(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     { return condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } ); }
@@ -130,7 +132,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	List pathsList = vmCondensedPaths( defaultResources, preemptingResources, delayedLogItemsOut );
 	
 	if ( delayedLogItemsOut != null )
-	    delayedLogItemsOut.add( new DelayedLogItem(MLevel.FINER, "Reading VM config for path list " + stringFromPathsList( pathsList ) ) );
+	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading VM config for path list " + stringFromPathsList( pathsList ) ) );
 
     return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
     }
@@ -180,10 +182,10 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 			    }
 
 			if ( delayedLogItemsOut != null )
-			    delayedLogItemsOut.add( new DelayedLogItem( MLevel.FINEST, String.format( "Added paths from resource path text file at '%s'", resourcePathsTextFileResourcePath ) ) );
+			    delayedLogItemsOut.add( new DelayedLogItem( Level.FINEST, String.format( "Added paths from resource path text file at '%s'", resourcePathsTextFileResourcePath ) ) );
 		    }
 		else if ( delayedLogItemsOut != null )
-		    delayedLogItemsOut.add( new DelayedLogItem( MLevel.FINEST, String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) ) );
+		    delayedLogItemsOut.add( new DelayedLogItem( Level.FINEST, String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) ) );
 
 	    }
 	catch (IOException e)
@@ -225,6 +227,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public synchronized static MultiPropertiesConfig readVmConfig()
     { return readVmConfig( (List) null ); }
 
+    /*
     public synchronized static MultiPropertiesConfig readVmConfig( MLogger logger )
     {
 	List items = new ArrayList();
@@ -237,6 +240,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 	}
 	return out;
     }
+    */
 
     public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
     {
@@ -249,7 +253,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     }
 
     public static synchronized boolean foundVmConfig()
-    { return vmConfig != EMPTY; }
+    { return vmConfig != null; }
 
     public abstract String[] getPropertiesResourcePaths();
 

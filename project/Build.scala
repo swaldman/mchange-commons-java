@@ -12,6 +12,8 @@ object MchangeCommonsJavaBuild extends Build {
     Keys.organization := "com.mchange",
     Keys.name := projectName, 
     Keys.version := "0.2.5-SNAPSHOT", 
+    //Keys.scalaVersion := "2.10.1",
+    //Keys.scalaVersion := "2.9.2",
     Keys.autoScalaLibrary := false, // this is a pure Java library, don't depend on Scala
     Keys.crossPaths := false,       //don't include _<scala-version> in artifact names
     Keys.publishTo <<= Keys.version { 
@@ -24,12 +26,16 @@ object MchangeCommonsJavaBuild extends Build {
     },
     Keys.resolvers += ("snapshots" at nexusSnapshots ),
     //Keys.scalacOptions += "-deprecation",
+    //Keys.fork in Test := true,
+    Keys.logLevel in Test := Level.Debug,
+    Keys.testOptions += Tests.Argument(TestFrameworks.JUnit, "-a -v"),
     Keys.pomExtra := pomExtraXml
   );
 
   val dependencies = Seq(
-    "junit" % "junit" % "4.1+",
-    "log4j" % "log4j" % "1.2.14+"
+    "log4j" % "log4j" % "1.2.14+" % "compile,optional",
+    "junit" % "junit" % "4.1+" % "test",
+    "com.novocode" % "junit-interface" % "0.10-M3" % "test" 
     //"com.typesafe" % "config" % "1.0.0"
   );
 

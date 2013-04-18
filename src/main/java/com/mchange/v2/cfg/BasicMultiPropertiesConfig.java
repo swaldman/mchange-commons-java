@@ -37,12 +37,15 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.*;
-import com.mchange.v2.log.*;
 
-public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
+import static com.mchange.v2.cfg.DelayedLogItem.*;
+
+final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
     private final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
     private final static int    HOCON_PFX_LEN       = 6; // includes colon, hocon:
+
+    final static BasicMultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig();
 
     static final class SystemPropertiesConfigSource implements PropertiesConfigSource
     {
@@ -94,14 +97,15 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     Properties propsByKey;
 
     public BasicMultiPropertiesConfig(String[] resourcePaths)
-    { this( resourcePaths, (MLogger) null ); }
+    { this( resourcePaths, null ); }
 
     BasicMultiPropertiesConfig(String[] resourcePaths, List delayedLogItems)
     {
 	firstInit( resourcePaths, delayedLogItems );
-	finishInit();
+	finishInit( delayedLogItems );
     }
 
+    /*
     public BasicMultiPropertiesConfig(String[] resourcePaths, MLogger logger)
     {
 	List delayedLogItems = new LinkedList();
@@ -117,18 +121,41 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
 	finishInit();
     }
+    */
 
     BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
     {
 	this.rps                  = rps;
 	this.propsByResourcePaths = propsByResourcePaths;
-	this.parseMessages        = parseMessages;
 
-	finishInit();
+	List dlis = new ArrayList();
+	dlis.addAll( parseMessages );
+	finishInit( dlis );
+
+	this.parseMessages = dlis;
+    }
+
+    // EMPTY
+    private BasicMultiPropertiesConfig()
+    {
+	this.rps = new String[0];
+	Map propsByResourcePaths = Collections.emptyMap();
+	Map propsByPrefixes = Collections.emptyMap();
+	
+	List parseMessages = Collections.emptyList();
+	
+	Properties propsByKey = new Properties();
     }
 
     private void firstInit( String[] resourcePaths, List delayedLogItems )
     {
+	boolean syserr = false;
+	if (delayedLogItems == null)
+	    {
+		delayedLogItems = new ArrayList();
+		syserr = true;
+	    }
+
 	Map  pbrp = new HashMap();
 	List goodPaths = new ArrayList();
 
@@ -145,29 +172,46 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		    delayedLogItems.addAll( parse.getDelayedLogItems() );
 		}
 		catch ( FileNotFoundException fnfe )
-		{ delayedLogItems.add( new DelayedLogItem( MLevel.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
+		{ delayedLogItems.add( new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
 		catch ( Exception e )
-		    { delayedLogItems.add( new DelayedLogItem( MLevel.WARNING, String.format("An Exception occurred while trying to read configuraion data at resource identifier '%s'.", rp), e) ); }
+		    { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuraion data at resource identifier '%s'.", rp), e) ); }
 	    }
 	
 	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
 	this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
 	this.parseMessages = Collections.unmodifiableList( delayedLogItems );
+
+	if ( syserr )
+	    dumpToSysErr( delayedLogItems );
     }
 
     /**
      *  rps, propsByResourcePaths, and parseMessages should be set before finishInit()
      */
-    private void finishInit()
+    private void finishInit( List delayedLogItems )
     {
-	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths) );
-	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths);
+	boolean syserr = false;
+	if (delayedLogItems == null)
+	    {
+		delayedLogItems = new ArrayList();
+		syserr = true;
+	    }
+
+	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths, delayedLogItems ) );
+	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths, delayedLogItems );
+
+	if ( syserr )
+	    dumpToSysErr( delayedLogItems );
     }
 
     public List getDelayedLogItems()
     { return parseMessages; }
 
-
+    private static void dumpToSysErr( List delayedLogMessages )
+    {
+	for (Object o : delayedLogMessages)
+	    System.err.println( o );
+    }
 
     private static String extractPrefix( String s )
     {
@@ -206,7 +250,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	return p;
     }
 
-    private static Properties extractPropsByKey( String[] resourcePaths, Map pbrp )
+    private static Properties extractPropsByKey( String[] resourcePaths, Map pbrp, List delayedLogItems )
     {
 	Properties out = new Properties();
 	for (int i = 0, len = resourcePaths.length; i < len; ++i)
@@ -215,7 +259,8 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		Properties p = findProps( rp, pbrp );
 		if (p == null)
 		    {
-			System.err.println("Could not find loaded properties for resource path: " + rp);
+			delayedLogItems.add( new DelayedLogItem( Level.WARNING, BasicMultiPropertiesConfig.class.getName() + ".extractPropsByKey(): Could not find loaded properties for resource path: " + rp) );
+			//System.err.println("Could not find loaded properties for resource path: " + rp);
 			continue;
 		    }
 		for (Iterator ii = p.keySet().iterator(); ii.hasNext(); )
@@ -223,6 +268,15 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			Object kObj = ii.next();
 			if (!(kObj instanceof String))
 			    {
+				String message = 
+				    BasicMultiPropertiesConfig.class.getName() + ": " +
+				    "Properties object found at resource path " +
+				    ("/".equals(rp) ? "[system properties]" : "'" + rp + "'") +
+				    "' contains a key that is not a String: " +
+				    kObj +
+				    "; Skipping...";
+
+				/*
 				// note that we can not use the MLog library here, because initialization
 				// of that library depends on this function.
 				System.err.println( BasicMultiPropertiesConfig.class.getName() + ": " +
@@ -231,11 +285,22 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 						    "' contains a key that is not a String: " +
 						    kObj);
 				System.err.println("Skipping...");
+				*/
+				delayedLogItems.add( new DelayedLogItem( Level.WARNING, message) );
 				continue;
 			    }
 			Object vObj = p.get( kObj );
 			if (vObj != null && !(vObj instanceof String))
 			    {
+				String message =
+				    BasicMultiPropertiesConfig.class.getName() + ": " +
+				    "Properties object found at resource path " +
+				    ("/".equals(rp) ? "[system properties]" : "'" + rp + "'") +
+				    " contains a value that is not a String: " +
+				    vObj +
+				    "; Skipping...";
+
+				/*
 				// note that we can not use the MLog library here, because initialization
 				// of that library depends on this function.
 				System.err.println( BasicMultiPropertiesConfig.class.getName() + ": " +
@@ -244,6 +309,8 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 						    " contains a value that is not a String: " +
 						    vObj);
 				System.err.println("Skipping...");
+				*/
+				delayedLogItems.add( new DelayedLogItem( Level.WARNING, message) );
 				continue;
 			    }
 
@@ -255,7 +322,7 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	return out;
     }
 
-    private static Map extractPrefixMapFromRsrcPathMap(String[] resourcePaths, Map pbrp)
+    private static Map extractPrefixMapFromRsrcPathMap(String[] resourcePaths, Map pbrp, List delayedLogItems )
     {
 	Map out = new HashMap();
 	//for( Iterator ii = pbrp.values().iterator(); ii.hasNext(); )
@@ -265,7 +332,9 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		Properties p = findProps( rp, pbrp );
 		if (p == null)
 		    {
-			System.err.println(BasicMultiPropertiesConfig.class.getName() + " -- Could not find loaded properties for resource path: " + rp);
+			String message = BasicMultiPropertiesConfig.class.getName() + ".extractPrefixMapFromRsrcPathMap(): Could not find loaded properties for resource path: " + rp;
+			//System.err.println(BasicMultiPropertiesConfig.class.getName() + " -- Could not find loaded properties for resource path: " + rp);
+			delayedLogItems.add( new DelayedLogItem( Level.WARNING, message) );
 			continue;
 		    }
 		for (Iterator jj = p.keySet().iterator(); jj.hasNext(); )
@@ -273,6 +342,15 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			Object kObj = jj.next();
 			if (! (kObj instanceof String))
 			    {
+				String message =
+				    BasicMultiPropertiesConfig.class.getName() + ": " +
+				    "Properties object found at resource path " +
+				    ("/".equals(rp) ? "[system properties]" : "'" + rp + "'") +
+				    "' contains a key that is not a String: " +
+				    kObj +
+				    "; Skipping...";
+
+				/*
 				// note that we can not use the MLog library here, because initialization
 				// of that library depends on this function.
 				System.err.println( BasicMultiPropertiesConfig.class.getName() + ": " +
@@ -281,6 +359,9 @@ public final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 						    "' contains a key that is not a String: " +
 						    kObj);
 				System.err.println("Skipping...");
+				*/
+
+				delayedLogItems.add( new DelayedLogItem( Level.WARNING, message) );
 				continue;
 			    }
 

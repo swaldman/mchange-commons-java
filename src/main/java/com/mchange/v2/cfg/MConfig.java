@@ -42,7 +42,30 @@ import com.mchange.v1.util.ArrayUtils;
 
 public final class MConfig
 {
-    final static MLogger logger = MLog.getLogger( MConfig.class );
+    private final static MLogger logger = MLog.getLogger( MConfig.class );
+
+    private final static Map<DelayedLogItem.Level,MLevel> levelMap;
+
+    static
+    {
+	try
+	{
+	    Map<DelayedLogItem.Level,MLevel> lm = new HashMap();
+	    for( DelayedLogItem.Level level : DelayedLogItem.Level.values() )
+		lm.put( level, (MLevel) (MLevel.class.getField( level.toString() ).get( null )) );
+	    levelMap = Collections.unmodifiableMap( lm );
+	}
+	catch ( RuntimeException e )
+	    {
+		e.printStackTrace();
+		throw e;
+	    }
+	catch ( Exception e )
+	    { 
+		e.printStackTrace();
+		throw new RuntimeException( e ); 
+	    }
+    }
 
     final static CachedStore cache = CachedStoreUtils.synchronizedCachedStore( CachedStoreFactory.createNoCleanupCachedStore( new CSManager() ) );
 
@@ -64,6 +87,12 @@ public final class MConfig
 	catch (CachedStoreException e)
 	{ throw new RuntimeException( e ); }
     }
+
+    public static void dumpToLogger(List<DelayedLogItem> items, MLogger logger)
+    { for( DelayedLogItem item : items ) dumpToLogger( item, logger ); }
+
+    public static void dumpToLogger( DelayedLogItem item, MLogger logger )
+    { logger.log( levelMap.get( item.getLevel() ), item.getText(), item.getException() ); }
 
     private final static class PathsKey
     {
@@ -104,12 +133,20 @@ public final class MConfig
 	public Object recreateFromKey(Object key) throws Exception
 	{
 	    PathsKey pk = (PathsKey) key;
+
+	    /*
 	    for( Iterator ii = pk.delayedLogItems.iterator(); ii.hasNext(); )
 	    {
 		DelayedLogItem pm = (DelayedLogItem) ii.next();
 		logger.log( pm.getLevel(), pm.getText(), pm.getException() );
 	    }
-	    return MultiPropertiesConfig.read( pk.paths, logger );
+	    */
+
+	    List<DelayedLogItem> items = new ArrayList<DelayedLogItem>();
+	    items.addAll( pk.delayedLogItems );
+	    Object out =  MultiPropertiesConfig.read( pk.paths, items );
+	    dumpToLogger( items, logger );
+	    return out;
 	}
     }
 

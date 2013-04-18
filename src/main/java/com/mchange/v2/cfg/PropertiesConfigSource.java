@@ -37,7 +37,6 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.FileNotFoundException;
-import com.mchange.v2.log.DelayedLogItem;
 
 /**
  * implementations should have no-arg constructors

@@ -33,29 +33,31 @@
  * 
  */
 
-package com.mchange.v2.log;
+package com.mchange.v2.cfg;
 
 import com.mchange.v2.lang.ObjectUtils;
-import com.mchange.v2.log.MLevel;
 
 public final class DelayedLogItem
 {
-    private MLevel    level;
+    public static enum Level
+    { ALL, CONFIG, FINE, FINER, FINEST, INFO, OFF, SEVERE, WARNING }
+
+    private Level     level;
     private String    text;
     private Throwable exception;
     
-    public MLevel    getLevel()     { return level; }
+    public Level     getLevel()     { return level; }
     public String    getText()      { return text; }
     public Throwable getException() { return exception; }
     
-    public DelayedLogItem(MLevel level, String text, Throwable exception)
+    public DelayedLogItem(Level level, String text, Throwable exception)
     {
 	this.level     = level;
 	this.text      = text;
 	this.exception = exception;
     }
 
-    public DelayedLogItem(MLevel level, String text)
+    public DelayedLogItem(Level level, String text)
     { this( level, text, null ); }
 
     public boolean equals( Object o )

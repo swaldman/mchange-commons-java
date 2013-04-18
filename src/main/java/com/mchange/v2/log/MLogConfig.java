@@ -35,13 +35,18 @@
 
 package com.mchange.v2.log;
 
+
 import java.util.*;
+import java.lang.reflect.Method;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 public final class MLogConfig
 {
     private final static MultiPropertiesConfig CONFIG;
     private final static List                  BOOTSTRAP_LOG_ITEMS;
+
+    //MT protected by class' lock
+    private static Method delayedDumpToLogger = null;
 
     static
     {
@@ -53,11 +58,38 @@ public final class MLogConfig
 	BOOTSTRAP_LOG_ITEMS = Collections.unmodifiableList( bli );
     }
 
+    synchronized static void ensureDelayedDumpToLogger()
+    {
+	try
+	{
+	    if ( delayedDumpToLogger == null )
+	    {
+		Class mConfigClass = Class.forName( "com.mchange.v2.cfg.MConfig" );
+		Class delayedLogItemClass = Class.forName( "com.mchange.v2.cfg.DelayedLogItem" );
+		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class[] { delayedLogItemClass, MLogger.class } );
+
+		System.err.println( delayedDumpToLogger );
+	    }
+	}
+	catch ( RuntimeException e )
+	{ 
+	    e.printStackTrace();
+	    throw e; 
+	}
+	catch ( Exception e )
+	{ 
+	    e.printStackTrace();
+	    throw new RuntimeException( e ); 
+	}
+    }
+
     public static String getProperty( String key )
     { return CONFIG.getProperty( key ); }
 
     public static void logDelayedItems( MLogger logger )
     { 
+	ensureDelayedDumpToLogger();
+
 	List items = new ArrayList();
 	items.addAll( BOOTSTRAP_LOG_ITEMS );
 	items.addAll( CONFIG.getDelayedLogItems() );
@@ -67,12 +99,19 @@ public final class MLogConfig
 	
 	for( Iterator ii = items.iterator(); ii.hasNext(); )
 	{
-	    DelayedLogItem item = (DelayedLogItem) ii.next();
+	    Object item = ii.next();
 
 	    if (uniquerizer.contains( item ) )
 	    {
 		uniquerizer.remove( item );
-		logger.log( item.getLevel(), item.getText(), item.getException() );
+
+		try { delayedDumpToLogger.invoke( null, new Object[] { item, logger } ); }
+		catch ( Exception e )
+		    {
+			// bad, bad, shouldn't happen
+			e.printStackTrace();
+			throw new Error(e);
+		    }
 	    }
 	}
     }
