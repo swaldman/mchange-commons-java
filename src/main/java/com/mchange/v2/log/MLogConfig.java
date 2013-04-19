@@ -68,8 +68,6 @@ public final class MLogConfig
 		Class mConfigClass = Class.forName( "com.mchange.v2.cfg.MConfig" );
 		Class delayedLogItemClass = Class.forName( "com.mchange.v2.cfg.DelayedLogItem" );
 		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class[] { delayedLogItemClass, MLogger.class } );
-
-		System.err.println( delayedDumpToLogger );
 	    }
 	}
 	catch ( RuntimeException e )
