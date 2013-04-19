@@ -12,10 +12,16 @@ object MchangeCommonsJavaBuild extends Build {
     Keys.organization := "com.mchange",
     Keys.name := projectName, 
     Keys.version := "0.2.5-SNAPSHOT", 
+
     //Keys.scalaVersion := "2.10.1",
     //Keys.scalaVersion := "2.9.2",
+
     Keys.autoScalaLibrary := false, // this is a pure Java library, don't depend on Scala
     Keys.crossPaths := false,       //don't include _<scala-version> in artifact names
+
+    Keys.javacOptions in (Compile, Keys.compile) ++= Seq("-source","1.6","-target","1.6"),
+    Keys.javacOptions in (Compile, Keys.doc) ++= Seq("-source","1.6"),
+
     Keys.publishTo <<= Keys.version { 
       (v: String) => {
 	if (v.trim.endsWith("SNAPSHOT"))
@@ -25,6 +31,7 @@ object MchangeCommonsJavaBuild extends Build {
       }
     },
     Keys.resolvers += ("snapshots" at nexusSnapshots ),
+
     //Keys.scalacOptions += "-deprecation",
     //Keys.fork in Test := true,
     Keys.logLevel in Test := Level.Debug,
@@ -33,10 +40,10 @@ object MchangeCommonsJavaBuild extends Build {
   );
 
   val dependencies = Seq(
+    "com.typesafe" % "config" % "1.0.0" % "compile,optional",
     "log4j" % "log4j" % "1.2.14+" % "compile,optional",
     "junit" % "junit" % "4.1+" % "test",
     "com.novocode" % "junit-interface" % "0.10-M3" % "test" 
-    //"com.typesafe" % "config" % "1.0.0"
   );
 
   override lazy val settings = super.settings ++ mySettings;
