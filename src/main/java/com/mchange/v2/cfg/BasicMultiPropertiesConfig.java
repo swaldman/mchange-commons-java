@@ -38,12 +38,14 @@ package com.mchange.v2.cfg;
 import java.util.*;
 import java.io.*;
 
+import com.mchange.v3.hocon.HoconPropertiesConfigSource;
+
 import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
-    private final static String HOCON_CFG_SRC_CNAME = "com.mchange.v3.hocon.HoconPropertiesConfigSource";
-    private final static int    HOCON_PFX_LEN       = 6; // includes colon, hocon:
+    private final static String HOCON_CFG_CNAME = "com.typesafe.config.Config";
+    private final static int    HOCON_PFX_LEN   = 6; // includes colon, hocon:
 
     final static BasicMultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig();
 
@@ -70,7 +72,11 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
 	if ( hocon )
 	    {
-		try { return (PropertiesConfigSource) Class.forName( HOCON_CFG_SRC_CNAME ).newInstance(); }
+		try 
+		    {
+			Class.forName( HOCON_CFG_CNAME );
+			return new HoconPropertiesConfigSource();
+		    }
 		catch (ClassNotFoundException e)
 		    {
 			//Okay. Apparently the HOCON bridge lib is not available. Let's see if the resource is present.
