@@ -83,9 +83,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			int sfx_index = identifier.lastIndexOf('#');
 			String resourcePath = sfx_index > 0 ? identifier.substring( HOCON_PFX_LEN, sfx_index ) : identifier.substring( HOCON_PFX_LEN );
 			if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
-			    throw new FileNotFoundException( String.format("No resource available at '%s' for HOCON identifier '%s'. Also HOCON support lib (mchange-hocon-bridge) is not available.", resourcePath, identifier) );
+			    throw new FileNotFoundException( String.format("No resource available at '%s' for HOCON identifier '%s'. Also HOCON lib (typesafe-config) is not available.", resourcePath, identifier) );
 			else
-			    throw new Exception(String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON support lib (mchange-hocon-bridge) is not available.", identifier), e);
+			    throw new Exception(String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON lib (typesafe-config) is not available.", identifier), e);
 		    }
 	    }
 	else if ( "/".equals(identifier) )
