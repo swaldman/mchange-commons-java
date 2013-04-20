@@ -128,8 +128,8 @@ public abstract class MLog
 			if (attempts == null)
 			    attempts = new ArrayList();
 			attempts.add( classnames[i] );
- 			System.err.println("com.mchange.v2.log.MLog '" + classnames[i] + "' could not be loaded!"); 
- 			e.printStackTrace();
+ 			//System.err.println("com.mchange.v2.log.MLog '" + classnames[i] + "' could not be loaded!"); 
+ 			//e.printStackTrace();
 		    }
 	    }
 	System.err.println("Tried without success to load the following MLog classes:");
