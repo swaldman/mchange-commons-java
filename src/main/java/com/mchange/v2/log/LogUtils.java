@@ -35,6 +35,9 @@
 
 package com.mchange.v2.log;
 
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
+
 public final class LogUtils
 {
     public static String createParamsList(Object[] params)
@@ -54,7 +57,55 @@ public final class LogUtils
 	    }
 	sb.append(']');
     }
+
+    public static String createMessage(String srcClass, String srcMeth, String msg)
+    {
+	StringBuffer sb = new StringBuffer(511);
+	sb.append("[class: ");
+	sb.append( srcClass );
+	sb.append("; method: ");
+	sb.append( srcMeth );
+	if (! srcMeth.endsWith(")"))
+	    sb.append("()");
+	sb.append("] ");
+	sb.append( msg );
+	return sb.toString();
+    }
     
+    public static String createMessage(String srcMeth, String msg)
+    {
+	StringBuffer sb = new StringBuffer(511);
+	sb.append("[method: ");
+	sb.append( srcMeth );
+	if (! srcMeth.endsWith(")"))
+	    sb.append("()");
+	sb.append("] ");
+	sb.append( msg );
+	return sb.toString();
+    }
+
+    public static String formatMessage( String rbname, String msg, Object[] params )
+    {
+        if ( msg == null )
+        {
+            if (params == null)
+                return "";
+            else
+                return LogUtils.createParamsList( params );
+        }
+        else
+        {
+            ResourceBundle rb = ResourceBundle.getBundle( rbname );
+            if (rb != null)
+            {
+                String check = rb.getString( msg );
+                if (check != null)
+                    msg = check;
+            }
+            return (params == null ? msg : MessageFormat.format( msg, params ));
+        }
+    } 
+
     private LogUtils()
     {}
 }

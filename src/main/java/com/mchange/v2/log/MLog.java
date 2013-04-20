@@ -99,6 +99,8 @@ public abstract class MLog
 			loggerDesc = "java 1.4+ standard";
 		    else if ("com.mchange.v2.log.log4j.Log4jMLog".equals( loggerDesc ))
 			loggerDesc = "log4j";
+		    else if ("com.mchange.v2.log.slf4j.Slf4jMLog".equals( loggerDesc ))
+			loggerDesc = "slf4j";
 	
 		    if (logger.isLoggable( MLevel.INFO ))
 			logger.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging.");

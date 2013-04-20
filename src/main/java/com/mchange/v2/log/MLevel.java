@@ -52,6 +52,16 @@ public final class MLevel
     private final static Map integersToMLevels;
     private final static Map namesToMLevels;
 
+    private final static int ALL_INTVAL     = Integer.MIN_VALUE;
+    private final static int CONFIG_INTVAL  = 700;
+    private final static int FINE_INTVAL    = 500;
+    private final static int FINER_INTVAL   = 400;
+    private final static int FINEST_INTVAL  = 300;
+    private final static int INFO_INTVAL    = 800;
+    private final static int OFF_INTVAL     = Integer.MAX_VALUE;
+    private final static int SEVERE_INTVAL  = 900;
+    private final static int WARNING_INTVAL = 1000;
+
     public static MLevel fromIntValue(int intval)
     { return (MLevel) integersToMLevels.get( new Integer( intval ) ); }
 
@@ -86,15 +96,15 @@ public final class MLevel
 	try
 	    { 
 		// numeric values match the intvalues from java.util.logging.Level
-		all = new MLevel( (jdk14api ? lvlClass.getField("ALL").get(null) : null), Integer.MIN_VALUE, "ALL" );
-		config = new MLevel( (jdk14api ? lvlClass.getField("CONFIG").get(null) : null), 700, "CONFIG" );
-		fine = new MLevel( (jdk14api ? lvlClass.getField("FINE").get(null) : null), 500, "FINE" );
-		finer = new MLevel( (jdk14api ? lvlClass.getField("FINER").get(null) : null), 400, "FINER" );
-		finest = new MLevel( (jdk14api ? lvlClass.getField("FINEST").get(null) : null), 300, "FINEST" );
-		info = new MLevel( (jdk14api ? lvlClass.getField("INFO").get(null) : null), 800, "INFO" );
-		off = new MLevel( (jdk14api ? lvlClass.getField("OFF").get(null) : null), Integer.MAX_VALUE, "OFF" );
-		severe = new MLevel( (jdk14api ? lvlClass.getField("SEVERE").get(null) : null), 900, "SEVERE" );
-		warning = new MLevel( (jdk14api ? lvlClass.getField("WARNING").get(null) : null), 1000, "WARNING" );
+		all = new MLevel( (jdk14api ? lvlClass.getField("ALL").get(null) : null), ALL_INTVAL, "ALL" );
+		config = new MLevel( (jdk14api ? lvlClass.getField("CONFIG").get(null) : null), CONFIG_INTVAL, "CONFIG" );
+		fine = new MLevel( (jdk14api ? lvlClass.getField("FINE").get(null) : null), FINE_INTVAL, "FINE" );
+		finer = new MLevel( (jdk14api ? lvlClass.getField("FINER").get(null) : null), FINER_INTVAL, "FINER" );
+		finest = new MLevel( (jdk14api ? lvlClass.getField("FINEST").get(null) : null), FINEST_INTVAL, "FINEST" );
+		info = new MLevel( (jdk14api ? lvlClass.getField("INFO").get(null) : null), INFO_INTVAL, "INFO" );
+		off = new MLevel( (jdk14api ? lvlClass.getField("OFF").get(null) : null), OFF_INTVAL, "OFF" );
+		severe = new MLevel( (jdk14api ? lvlClass.getField("SEVERE").get(null) : null), SEVERE_INTVAL, "SEVERE" );
+		warning = new MLevel( (jdk14api ? lvlClass.getField("WARNING").get(null) : null), WARNING_INTVAL, "WARNING" );
 	    }
 	catch ( Exception e )
 	    { 

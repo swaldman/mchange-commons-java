@@ -48,10 +48,8 @@ import java.util.*;
  */
 public interface MLogger
 {
-    public ResourceBundle getResourceBundle();
-    public String getResourceBundleName();
-    public void setFilter(Object java14Filter) throws SecurityException;
-    public Object getFilter();
+    public String getName();
+
     public void log(MLevel l, String msg);
     public void log(MLevel l, String msg, Object param);
     public void log(MLevel l,String msg, Object[] params);
@@ -77,14 +75,41 @@ public interface MLogger
     public void fine(String msg);
     public void finer(String msg);
     public void finest(String msg);
+
+    /** @deprecated stick to common denominator logging through MLog facade */
+    public ResourceBundle getResourceBundle();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
+    public String getResourceBundleName();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
+    public void setFilter(Object java14Filter) throws SecurityException;
+
+    /** @deprecated stick to common denominator logging through MLog facade */
+    public Object getFilter();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public void setLevel(MLevel l) throws SecurityException;
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public MLevel getLevel();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public boolean isLoggable(MLevel l);
-    public String getName();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public void addHandler(Object h) throws SecurityException;
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public void removeHandler(Object h) throws SecurityException;
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public Object[] getHandlers();
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public void setUseParentHandlers(boolean uph);
+
+    /** @deprecated stick to common denominator logging through MLog facade */
     public boolean getUseParentHandlers();
  }
 

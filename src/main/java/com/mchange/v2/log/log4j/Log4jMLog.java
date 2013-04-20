@@ -42,11 +42,11 @@ import com.mchange.v2.log.*;
 
 import org.apache.log4j.*;
 
+import static com.mchange.v2.log.LogUtils.*;
+
 public final class Log4jMLog extends MLog
 {
     final static String CHECK_CLASS = "org.apache.log4j.Logger";
-
-    MLogger global = null;
 
     public Log4jMLog() throws ClassNotFoundException
     { Class.forName( CHECK_CLASS ); }
@@ -153,32 +153,6 @@ public final class Log4jMLog extends MLog
                 return Level.WARN;
             else
                 throw new IllegalArgumentException("Unknown MLevel: " + lvl);
-        }
-
-        private static String createMessage(String srcClass, String srcMeth, String msg)
-        {
-            StringBuffer sb = new StringBuffer(511);
-            sb.append("[class: ");
-            sb.append( srcClass );
-            sb.append("; method: ");
-            sb.append( srcMeth );
-            if (! srcMeth.endsWith(")"))
-                sb.append("()");
-            sb.append("] ");
-            sb.append( msg );
-            return sb.toString();
-        }
-
-        private static String createMessage(String srcMeth, String msg)
-        {
-            StringBuffer sb = new StringBuffer(511);
-            sb.append("[method: ");
-            sb.append( srcMeth );
-            if (! srcMeth.endsWith(")"))
-                sb.append("()");
-            sb.append("] ");
-            sb.append( msg );
-            return sb.toString();
         }
 
         public ResourceBundle getResourceBundle()
@@ -324,26 +298,4 @@ public final class Log4jMLog extends MLog
         public boolean getUseParentHandlers()
         { return logger.getAdditivity(); }
     }
-
-    private static String formatMessage( String rbname, String msg, Object[] params )
-    {
-        if ( msg == null )
-        {
-            if (params == null)
-                return "";
-            else
-                return LogUtils.createParamsList( params );
-        }
-        else
-        {
-            ResourceBundle rb = ResourceBundle.getBundle( rbname );
-            if (rb != null)
-            {
-                String check = rb.getString( msg );
-                if (check != null)
-                    msg = check;
-            }
-            return (params == null ? msg : MessageFormat.format( msg, params ));
-        }
-    } 
 }
