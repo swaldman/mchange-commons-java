@@ -40,7 +40,7 @@ import java.util.*;
 public final class MLogClasses
 {
     static final String LOG4J_CNAME = "com.mchange.v2.log.log4j.Log4jMLog";
-    static final String SLF4J_CNAME = "com.mchange.v2.log.log4j.Slf4jMLog";
+    static final String SLF4J_CNAME = "com.mchange.v2.log.slf4j.Slf4jMLog";
     static final String JDK14_CNAME = "com.mchange.v2.log.jdk14logging.Jdk14MLog";
 
     final static String[] SEARCH_CLASSNAMES = { LOG4J_CNAME, SLF4J_CNAME, JDK14_CNAME };
