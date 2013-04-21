@@ -90,7 +90,7 @@ public abstract class MLog
 	// at this point we are initialized; what follows is essentially client code
 	// which we run in a throwaway Thread not holding the class' / classloading lock
 	
-	Thread bannerThread = new Thread()
+	Thread bannerThread = new Thread("MLog-Init-Reporter")
 	    {
 		public void run()
 		{
