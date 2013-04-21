@@ -53,6 +53,7 @@ public final class MLogClasses
 	map.put("log4j", LOG4J_CNAME);
 	map.put("slf4j", SLF4J_CNAME);
 	map.put("jdk14", JDK14_CNAME);
+	map.put("jul", JDK14_CNAME);
 	map.put("java.util.logging", JDK14_CNAME);
 	map.put("fallback", "com.mchange.v2.log.FallbackMLog");
 	ALIASES = Collections.unmodifiableMap( map );
