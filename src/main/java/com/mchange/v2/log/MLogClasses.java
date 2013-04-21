@@ -42,7 +42,6 @@ public final class MLogClasses
 	"com.mchange.v2.log.log4j.Log4jMLog",
 	"com.mchange.v2.log.slf4j.Slf4jMLog",
 	"com.mchange.v2.log.jdk14logging.Jdk14MLog",
-	"com.mchange.v2.log.FallbackMLog"
     };
 
     private MLogClasses()

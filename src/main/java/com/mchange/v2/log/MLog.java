@@ -57,9 +57,9 @@ public abstract class MLog
 	boolean warn = false;
 	MLog tmpml = null;
 	if (classnames != null)
-	    tmpml = findByClassnames( classnames );
+	    tmpml = findByClassnames( classnames, true );
 	if (tmpml == null)
-	    tmpml = findByClassnames( MLogClasses.CLASSNAMES );
+	    tmpml = findByClassnames( MLogClasses.CLASSNAMES, false );
 	if (tmpml == null)
 	    {
 		warn = true;
@@ -117,7 +117,7 @@ public abstract class MLog
     }
 
     // does not require statics to be initialized
-    public static MLog findByClassnames( String[] classnames )
+    public static MLog findByClassnames( String[] classnames, boolean log_attempts_to_stderr )
     {
 	List attempts = null;
 	for (int i = 0, len = classnames.length; i < len; ++i)
@@ -128,8 +128,11 @@ public abstract class MLog
 			if (attempts == null)
 			    attempts = new ArrayList();
 			attempts.add( classnames[i] );
- 			//System.err.println("com.mchange.v2.log.MLog '" + classnames[i] + "' could not be loaded!"); 
- 			//e.printStackTrace();
+			if ( log_attempts_to_stderr )
+			{
+			    System.err.println("com.mchange.v2.log.MLog '" + classnames[i] + "' could not be loaded!"); 
+			    e.printStackTrace();
+			}
 		    }
 	    }
 	System.err.println("Tried without success to load the following MLog classes:");
