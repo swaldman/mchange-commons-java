@@ -59,7 +59,7 @@ public abstract class MLog
 	if (classnames != null)
 	    tmpml = findByClassnames( classnames, true );
 	if (tmpml == null)
-	    tmpml = findByClassnames( MLogClasses.CLASSNAMES, false );
+	    tmpml = findByClassnames( MLogClasses.SEARCH_CLASSNAMES, false );
 	if (tmpml == null)
 	    {
 		warn = true;
@@ -122,7 +122,7 @@ public abstract class MLog
 	List attempts = null;
 	for (int i = 0, len = classnames.length; i < len; ++i)
 	    {
-		try { return (MLog) Class.forName( classnames[i] ).newInstance(); }
+		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).newInstance(); }
 		catch (Exception e)
 		    { 
 			if (attempts == null)
