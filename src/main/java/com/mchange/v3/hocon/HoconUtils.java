@@ -60,7 +60,7 @@ public final class HoconUtils
 	    String value = null;
 	    try
 	    { value = config.getString( path ); }
-	    catch( ConfigException.Missing e )
+	    catch( ConfigException.WrongType e )
 	    { unrenderable.add( path ); }
 
 	    if ( value != null )

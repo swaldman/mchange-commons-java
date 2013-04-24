@@ -43,6 +43,7 @@ import com.mchange.lang.ThrowableUtils;
 public final class FallbackMLog extends MLog
 {
     final static MLevel DEFAULT_CUTOFF_LEVEL;
+    final static String SEP;
 
     static
     {
@@ -53,6 +54,8 @@ public final class FallbackMLog extends MLog
 	if (dflt == null)
 	    dflt = MLevel.INFO;
 	DEFAULT_CUTOFF_LEVEL = dflt;
+
+	SEP = System.getProperty( "line.separator" );
     }
 
     MLogger logger = new FallbackMLogger();
@@ -137,7 +140,10 @@ public final class FallbackMLog extends MLog
 		}
 	    
 	    if (t != null)
+	    {
+		sb.append( SEP );
 		sb.append( ThrowableUtils.extractStackTrace( t ) );
+	    }
 
 	    return sb.toString();
 	}

@@ -97,7 +97,7 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 
 	List<DelayedLogItem> pms = new LinkedList<DelayedLogItem>();
 	for( String path : pc.unrenderable )
-	    pms.add( new DelayedLogItem( Level.FINE, String.format("Value at path '%s' could not be converted to a String.", path) ) );
+	    pms.add( new DelayedLogItem( Level.FINE, String.format("Value at path '%s' could not be converted to a String. Skipping.", path) ) );
 
 	return new Parse( pc.properties, pms );
     }

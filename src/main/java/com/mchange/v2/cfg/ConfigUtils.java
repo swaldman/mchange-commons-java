@@ -154,7 +154,7 @@ final class ConfigUtils
 			    delayedLogItemsOut.add( new DelayedLogItem( Level.FINEST, String.format( "Added paths from resource path text file at '%s'", resourcePathsTextFileResourcePath ) ) );
 		    }
 		else if ( delayedLogItemsOut != null )
-		    delayedLogItemsOut.add( new DelayedLogItem( Level.FINEST, String.format( "Could not find resource path text file for path '%s'", resourcePathsTextFileResourcePath ) ) );
+		    delayedLogItemsOut.add( new DelayedLogItem( Level.FINEST, String.format( "Could not find resource path text file for path '%s'. Skipping.", resourcePathsTextFileResourcePath ) ) );
 
 	    }
 	catch (IOException e)

@@ -76,6 +76,8 @@ public interface MLogger
     public void finer(String msg);
     public void finest(String msg);
 
+    public boolean isLoggable(MLevel l);
+
     /** @deprecated stick to common denominator logging through MLog facade */
     public ResourceBundle getResourceBundle();
 
@@ -93,9 +95,6 @@ public interface MLogger
 
     /** @deprecated stick to common denominator logging through MLog facade */
     public MLevel getLevel();
-
-    /** @deprecated stick to common denominator logging through MLog facade */
-    public boolean isLoggable(MLevel l);
 
     /** @deprecated stick to common denominator logging through MLog facade */
     public void addHandler(Object h) throws SecurityException;
