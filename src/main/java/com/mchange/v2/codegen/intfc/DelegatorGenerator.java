@@ -263,14 +263,15 @@ public class DelegatorGenerator
 	
 	if ( wrapping_constructor )
 	    {
-		iw.println("public" + ' ' + sgc + '(' + sin + " inner)");
+		//System.err.println("WRAPPING CTOR MODIFIERS: " + CodegenUtils.getModifierString( wrapping_ctor_modifiers ) + " (intval: " + wrapping_ctor_modifiers + ")");
+		iw.println(CodegenUtils.getModifierString( wrapping_ctor_modifiers ) + ' ' + sgc + '(' + sin + " inner)");
 		iw.println("{ __setInner( inner ); }");
 	    }
 
 	if (default_constructor)
 	    {
 		iw.println();
-		iw.println("public" + ' ' + sgc + "()");
+		iw.println(CodegenUtils.getModifierString( default_ctor_modifiers ) + ' ' + sgc + "()");
 		iw.println("{}");
 	    }
 
