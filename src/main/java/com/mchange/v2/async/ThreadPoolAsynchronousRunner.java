@@ -316,6 +316,8 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
     // BE SURE CALLER OWNS ThreadPoolAsynchronousRunner.this' lock
     private String getStackTraces(int initial_indent)
     {
+	assert Thread.holdsLock( this );
+
         if (managed == null)
             return null;
 
@@ -331,11 +333,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
             {
                 Object poolThread = ii.next();
                 Object[] stackTraces = (Object[]) m.invoke( poolThread, null );
-                iw.println( poolThread );
-                iw.upIndent();
-                for (int i = 0, len = stackTraces.length; i < len; ++i)
-                    iw.println( stackTraces[i] );
-                iw.downIndent();
+		printStackTraces( iw, poolThread, stackTraces );
             }
             for (int i = 0; i < initial_indent; ++i)
                 iw.downIndent();
@@ -347,7 +345,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
         catch (NoSuchMethodException e)
         {
             if ( logger.isLoggable( MLevel.FINE ) )
-                logger.fine( this + ": strack traces unavailable because this is a pre-Java 1.5 VM.");
+                logger.fine( this + ": stack traces unavailable because this is a pre-Java 1.5 VM.");
             return null;
         }
         catch (Exception e)
@@ -356,6 +354,56 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                 logger.log( MLevel.FINE, this + ": An Exception occurred while trying to extract PoolThread stack traces.", e);
             return null;
         }
+    }
+
+    // no pre-synchronization required
+    private String getJvmStackTraces(int initial_indent)
+    {
+        try
+        {
+            Method m = Thread.class.getMethod("getAllStackTraces", null);
+	    Map threadMap = (Map) m.invoke( null, null );
+
+            StringWriter sw = new StringWriter(2048);
+            IndentedWriter iw = new IndentedWriter( sw );
+            for (int i = 0; i < initial_indent; ++i)
+                iw.upIndent();
+            for (Iterator ii = threadMap.entrySet().iterator(); ii.hasNext(); )
+            {
+		Map.Entry entry = (Map.Entry) ii.next();
+                Object poolThread = entry.getKey();
+                Object[] stackTraces = (Object[]) entry.getValue();
+		printStackTraces( iw, poolThread, stackTraces );
+            }
+            for (int i = 0; i < initial_indent; ++i)
+                iw.downIndent();
+            iw.flush(); // useless, but I feel better
+            String out = sw.toString();
+            iw.close(); // useless, but I feel better;
+            return out;
+        }
+        catch (NoSuchMethodException e)
+        {
+            if ( logger.isLoggable( MLevel.FINE ) )
+                logger.fine( this + ": JVM stack traces unavailable because this is a pre-Java 1.5 VM.");
+            return null;
+        }
+        catch (Exception e)
+        {
+            if ( logger.isLoggable( MLevel.FINE ) )
+                logger.log( MLevel.FINE, this + ": An Exception occurred while trying to extract PoolThread stack traces.", e);
+            return null;
+        }
+    }
+
+    // no pre-synchronization required
+    private void printStackTraces(IndentedWriter iw, Object thread, Object[] stackTraces) throws IOException
+    {
+	iw.println( thread );
+	iw.upIndent();
+	for (int i = 0, len = stackTraces.length; i < len; ++i)
+	    iw.println( stackTraces[i] );
+	iw.downIndent();
     }
 
     public synchronized String getMultiLineStatusString()
@@ -754,11 +802,26 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                         if (stackTraces == null)
                             pw.println("\t[Stack traces of deadlocked task threads not available.]");
                         else
-                            pw.println( stackTraces );
+                            pw.print( stackTraces ); //already has an end-of-line
                         pw.flush(); //superfluous, but I feel better
                         logger.warning( sw.toString() );
                         pw.close(); //superfluous, but I feel better
                     }
+		    if ( logger.isLoggable( MLevel.FINEST ) )
+		    {
+                        StringWriter sw = new StringWriter( 4096 );
+                        PrintWriter pw = new PrintWriter( sw );
+                        pw.print( this );
+                        pw.println( " -- APPARENT DEADLOCK extra info, full JVM thread dump: ");
+                        String stackTraces = getJvmStackTraces( 1 );
+                        if (stackTraces == null)
+                            pw.println("\t[Full JVM thread dump not available.]");
+                        else
+                            pw.print( stackTraces ); //already has an end-of-line
+                        pw.flush(); //superfluous, but I feel better
+                        logger.finest( sw.toString() );
+                        pw.close(); //superfluous, but I feel better
+		    }
                     recreateThreadsAndTasks();
                     run_stray_tasks = true;
                 }

@@ -32,10 +32,18 @@ object MchangeCommonsJavaBuild extends Build {
     },
     Keys.resolvers += ("snapshots" at nexusSnapshots ),
 
+    /*
+     * For some mysterious reasons, forking to test and setting java options on
+     * the forked JVM is misbehaving. Workaround is to not fork at all, but
+     * test with commands like
+     *    $ export _JAVA_OPTIONS="-ea -Djava.util.logging.config.file=./src/test/resources/logging.properties"; sbt clean test; unset _JAVA_OPTIONS
+     */ 
     //Keys.scalacOptions += "-deprecation",
     //Keys.fork in Test := true,
+    //Keys.javaOptions in test += "-ea",
     Keys.logLevel in Test := Level.Debug,
     Keys.testOptions += Tests.Argument(TestFrameworks.JUnit, "-a -v"),
+
     Keys.pomExtra := pomExtraXml
   );
 
