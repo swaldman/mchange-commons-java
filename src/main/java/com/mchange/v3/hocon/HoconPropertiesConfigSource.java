@@ -84,7 +84,7 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 	    if (scopePath != null)
 		config = config.getConfig( scopePath );
 
-	    return config;
+	    return config.resolve();
 	}
 	else
 	    throw new IllegalArgumentException( String.format("Invalid resource identifier for hocon config file: '%s'", identifier) );
