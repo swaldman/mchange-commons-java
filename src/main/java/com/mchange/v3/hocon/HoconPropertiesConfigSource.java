@@ -48,43 +48,65 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 {
-    private static Config extractConfig( String identifier ) throws FileNotFoundException, Exception
+    private static Config extractConfig( String identifier, List<DelayedLogItem> dlis ) throws FileNotFoundException, Exception
     {
 	int pfx_index = identifier.indexOf(':');
+
+	List <Config> configs = new ArrayList<Config>();
+
 	if ( pfx_index >= 0 && "hocon".equals( identifier.substring(0, pfx_index).toLowerCase() ) )
 	{
-	    String resourcePath;
-	    String scopePath;
+	    String allFilesStr = identifier.substring( pfx_index ).trim();
+	    String[] allFiles = allFilesStr.split("\\s*,\\s*");
 
-	    int sfx_index = identifier.lastIndexOf('#');
-	    if ( sfx_index > 0 )
+	    for ( String file : allFiles ) 
+	    {
+		String resourcePath;
+		String scopePath;
+		
+		int sfx_index = file.lastIndexOf('#');
+		if ( sfx_index > 0 )
+		    {
+			resourcePath = file.substring( 0, sfx_index );
+			scopePath = file.substring( sfx_index + 1 ).replace('/','.').trim();
+		    }
+		else
+		    {
+			resourcePath = file;
+			scopePath = null;
+		    }
+		
+		Config config = null;
+		
+		if ( "/".equals( resourcePath ) || "".equals( resourcePath ) )
+		    config = ConfigFactory.load();
+		else
+		    {
+			URL u = HoconPropertiesConfigSource.class.getResource( resourcePath );
+			if ( u == null )
+			    dlis.add( new DelayedLogItem( Level.FINE, String.format("Could not find HOCON configuration for resource path '%s'.", resourcePath) ) );
+			else
+			    config = ConfigFactory.parseURL( u );
+		    }
+		
+		if (config != null) 
 		{
-		    resourcePath = identifier.substring( pfx_index + 1, sfx_index ).trim();
-		    scopePath = identifier.substring( sfx_index + 1 ).replace('/','.').trim();
+		    if (scopePath != null)
+			config = config.getConfig( scopePath );
+		    
+		    configs.add( config );
 		}
+	    }
+
+	    if ( configs.size() == 0)
+		throw new FileNotFoundException( String.format("Could not find HOCON configuration at any of the listed resources in '%s'", identifier) );
 	    else
 		{
-		    resourcePath = identifier.substring( pfx_index + 1 );
-		    scopePath = null;
+		    Config bigConfig = ConfigFactory.empty();
+		    for (int i = configs.size(); --i >= 0; )
+			bigConfig = bigConfig.withFallback( configs.get(i) );
+		    return bigConfig.resolve();
 		}
-
-	    Config config;
-
-	    if ( "/".equals( resourcePath ) || "".equals( resourcePath ) )
-		config = ConfigFactory.load();
-	    else
-		{
-		    URL u = HoconPropertiesConfigSource.class.getResource( resourcePath );
-		    if ( u == null )
-			throw new FileNotFoundException( String.format("Could not find HOCON configuration for resource path '%s'.", resourcePath) );
-		    else
-			config = ConfigFactory.parseURL( u );
-		}
-	    
-	    if (scopePath != null)
-		config = config.getConfig( scopePath );
-
-	    return config.resolve();
 	}
 	else
 	    throw new IllegalArgumentException( String.format("Invalid resource identifier for hocon config file: '%s'", identifier) );
@@ -92,14 +114,15 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     {
-	Config config = extractConfig( identifier );
+	List<DelayedLogItem> dlis = new LinkedList<DelayedLogItem>();
+
+	Config config = extractConfig( identifier, dlis );
 	PropertiesConversion pc = configToProperties( config );
 
-	List<DelayedLogItem> pms = new LinkedList<DelayedLogItem>();
 	for( String path : pc.unrenderable )
-	    pms.add( new DelayedLogItem( Level.FINE, String.format("Value at path '%s' could not be converted to a String. Skipping.", path) ) );
+	    dlis.add( new DelayedLogItem( Level.FINE, String.format("Value at path '%s' could not be converted to a String. Skipping.", path) ) );
 
-	return new Parse( pc.properties, pms );
+	return new Parse( pc.properties, dlis );
     }
 }
 

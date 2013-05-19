@@ -45,11 +45,8 @@ final class ConfigUtils
     private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 
 	{
-	    "hocon:/reference.conf", 
 	    "/mchange-commons.properties", 
-	    "hocon:/application.conf", 
-	    "hocon:/application.json", 
-	    "hocon:/application.properties", 
+	    "hocon:/reference.conf,/application.conf,/application.json,/application.properties", 
 	    "/"
 	};
 
