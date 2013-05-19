@@ -67,7 +67,7 @@ import java.util.Properties;
  * with '#' treated as comments.
  *
  * If no text file of resource paths are available, the following resources are
- * checked: "hocon:/reference.conf", "/mchange-commons.properties", "hocon:/application.conf", "hocon:/application.json", "hocon:/application.properties", "/"
+ * checked: "/mchange-commons.properties", "hocon:/reference.conf,/application.conf,/application.json,/application.properties,/", "/"
  */
 public abstract class MultiPropertiesConfig implements PropertiesConfig
 {

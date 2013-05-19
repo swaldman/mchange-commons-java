@@ -78,8 +78,8 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 		
 		Config config = null;
 		
-		if ( "/".equals( resourcePath ) || "".equals( resourcePath ) )
-		    config = ConfigFactory.load();
+		if ( "/".equals( resourcePath ) )
+		    config = ConfigFactory.systemProperties();
 		else
 		    {
 			URL u = HoconPropertiesConfigSource.class.getResource( resourcePath );

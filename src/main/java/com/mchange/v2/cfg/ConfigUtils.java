@@ -46,7 +46,7 @@ final class ConfigUtils
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 
 	{
 	    "/mchange-commons.properties", 
-	    "hocon:/reference.conf,/application.conf,/application.json,/application.properties", 
+	    "hocon:/reference.conf,/application.conf,/application.json,/application.properties,/", 
 	    "/"
 	};
 
