@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java v.0.2.5
+ * Distributed as part of mchange-commons-java 0.2.6
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
