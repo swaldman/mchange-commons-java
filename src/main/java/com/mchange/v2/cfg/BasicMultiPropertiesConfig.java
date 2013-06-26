@@ -54,7 +54,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
 	{
 	    if ( "/".equals( identifier ) )
-		return new Parse( System.getProperties(), Collections.<DelayedLogItem>emptyList() );
+		return new Parse( (Properties) System.getProperties().clone(), Collections.<DelayedLogItem>emptyList() );
 	    else
 		throw new Exception(  String.format("Unexpected identifier for System properties: '%s'", identifier) );
 	}
