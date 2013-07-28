@@ -152,9 +152,14 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	IndirectPolicy policy = indirectingPolicy( prop, propType );
 	if (policy == IndirectPolicy.DEFINITELY_INDIRECT || policy == IndirectPolicy.INDIRECT_ON_EXCEPTION)
 	    {
+		iw.println("// we create an artificial scope so that we can use the name o for all indirectly serialized objects.");
+		iw.println("{");
+		iw.upIndent();
 		iw.println("Object o = ois.readObject();");
 		iw.println("if (o instanceof IndirectlySerialized) o = ((IndirectlySerialized) o).getObject();");
 		iw.println("this." + prop.getName() + " = (" + prop.getSimpleTypeName() + ") o;");
+		iw.downIndent();
+		iw.println("}");
 	    }
 	else if (policy == IndirectPolicy.DEFINITELY_DIRECT)
 	    super.writeUnstoreObject( prop, propType, iw );
