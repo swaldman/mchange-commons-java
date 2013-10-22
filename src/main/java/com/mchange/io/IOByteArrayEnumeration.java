@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.1
+ * Distributed as part of mchange-commons-java 0.2.6.2
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -32,6 +32,7 @@
  *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php 
  * 
  */
+
 package com.mchange.io;
 
 import java.io.*;
