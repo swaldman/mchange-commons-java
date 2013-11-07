@@ -100,7 +100,7 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 
 	if ( pfx_index >= 0 && "hocon".equals( identifier.substring(0, pfx_index).toLowerCase() ) )
 	{
-	    String allFilesStr = identifier.substring( pfx_index ).trim();
+	    String allFilesStr = identifier.substring( pfx_index + 1 ).trim();
 	    String[] allFiles = allFilesStr.split("\\s*,\\s*");
 
 	    for ( String file : allFiles ) 
