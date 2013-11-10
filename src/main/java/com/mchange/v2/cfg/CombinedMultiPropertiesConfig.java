@@ -92,14 +92,25 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     
     public Properties getPropertiesByResourcePath(String path)
     {
-	for (int i = configs.length - 1; i >= 0; --i)
+	// Not robust to overlapping resource paths
+	//
+	// for (int i = configs.length - 1; i >= 0; --i)
+	//     {
+	// 	MultiPropertiesConfig config = configs[i];
+	// 	Properties check = config.getPropertiesByResourcePath(path);
+	// 	if (check != null) 
+	// 	    return check;
+	//     }
+	// return null;
+
+	Properties out = new Properties();
+	for ( int i = 0, len = configs.length; i < len; ++i )
 	    {
 		MultiPropertiesConfig config = configs[i];
 		Properties check = config.getPropertiesByResourcePath(path);
-		if (check != null) 
-		    return check;
+		if ( check != null ) out.putAll( check );
 	    }
-	return null;
+	return ( out.size() > 0 ? out : null );
     }
     
     public Properties getPropertiesByPrefix(String pfx)

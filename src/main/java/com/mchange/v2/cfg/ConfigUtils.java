@@ -40,7 +40,7 @@ import java.io.*;
 
 import static com.mchange.v2.cfg.DelayedLogItem.*;
 
-final class ConfigUtils
+public final class ConfigUtils
 {
     private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 
@@ -64,6 +64,9 @@ final class ConfigUtils
     public static MultiPropertiesConfig read(String[] resourcePath)
     { return new BasicMultiPropertiesConfig( resourcePath ); }
 
+    /**
+     *  Later entries in the configs array override earlier entries.
+     */
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
@@ -108,7 +111,7 @@ final class ConfigUtils
 	if ( delayedLogItemsOut != null )
 	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading VM config for path list " + stringFromPathsList( pathsList ) ) );
 
-    return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
+	return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
     }
 
     private static List condensePaths(String[][] pathLists)
