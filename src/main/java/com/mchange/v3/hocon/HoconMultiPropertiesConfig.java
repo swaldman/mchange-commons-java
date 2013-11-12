@@ -17,7 +17,7 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     //MT: Protected by this' lock
     Map<String,Properties> propsByPrefix = new HashMap<String,Properties>();
 
-    HoconMultiPropertiesConfig( String quasiResourcePath, Config config )
+    public HoconMultiPropertiesConfig( String quasiResourcePath, Config config )
     {
 	this.quasiResourcePath = quasiResourcePath;
 	this.props = propsForConfig( config );
