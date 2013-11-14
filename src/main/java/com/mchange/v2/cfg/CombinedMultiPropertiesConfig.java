@@ -49,6 +49,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	this.configs = configs; 
 
 	List allPaths = new LinkedList();
+	
 	for (int i = configs.length - 1; i >= 0; --i)
 	    {
 		String[] rps = configs[i].getPropertiesResourcePaths();

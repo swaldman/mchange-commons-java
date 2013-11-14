@@ -232,6 +232,18 @@ public final class ConfigUtils
     public static synchronized boolean foundVmConfig()
     { return vmConfig != null; }
 
+    public static void dumpByPrefix( MultiPropertiesConfig mpc, String pfx )
+    {
+	Properties props = mpc.getPropertiesByPrefix(pfx);
+	Map m = new TreeMap();
+	m.putAll( props );
+	for ( Iterator ii = m.entrySet().iterator(); ii.hasNext(); )
+	{
+	    Map.Entry entry = (Map.Entry) ii.next();
+	    System.err.println( entry.getKey() + " --> " + entry.getValue() );
+	}
+    }
+
     private ConfigUtils()
     {}
 }

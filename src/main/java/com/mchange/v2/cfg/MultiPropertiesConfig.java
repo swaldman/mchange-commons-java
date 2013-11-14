@@ -90,6 +90,10 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 
     public abstract Properties getPropertiesByResourcePath(String path);
 
+
+    /**
+     *  The special prefix "" returns all the Properties
+     */
     public abstract Properties getPropertiesByPrefix(String pfx);
 
 //    public abstract Properties getProperties( String key );

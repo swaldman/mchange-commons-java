@@ -223,7 +223,12 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     {
 	int lastdot = s.lastIndexOf('.');
 	if ( lastdot < 0 )
-	    return null;
+	{
+	    if ( "".equals( s ) )
+		return null;
+	    else
+		return "";
+        }
 	else
 	    return s.substring(0, lastdot);
     }

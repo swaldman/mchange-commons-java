@@ -105,12 +105,17 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
 	{
 	    outish = new Properties();
 
-	    String dottedPfx = pfx + '.';
-	    for ( Map.Entry entry : props.entrySet() )
+	    if ( "".equals( pfx ) )
+		outish.putAll( props );
+	    else
 	    {
-		String key = (String) entry.getKey();
-		if ( key.startsWith( dottedPfx ) )
-		    outish.put( key, entry.getValue() );
+		String dottedPfx = pfx + '.';
+		for ( Map.Entry entry : props.entrySet() )
+		{
+		    String key = (String) entry.getKey();
+		    if ( key.startsWith( dottedPfx ) )
+			outish.put( key, entry.getValue() );
+		}
 	    }
 
 	    propsByPrefix.put( pfx, outish );
