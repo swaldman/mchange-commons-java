@@ -129,6 +129,16 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     }
     */
 
+    public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
+    { this( new String[] { notionalResourcePath }, resourcePathToPropertiesMap( notionalResourcePath, props ), Collections.emptyList() ); }
+
+    private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
+    {
+	Map out = new HashMap();
+	out.put( notionalResourcePath, props );
+	return out;
+    }
+
     BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
     {
 	this.rps                  = rps;

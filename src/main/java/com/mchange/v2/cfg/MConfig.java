@@ -88,6 +88,12 @@ public final class MConfig
 	{ throw new RuntimeException( e ); }
     }
 
+    /**
+     *  Later entries in the configs array override earlier entries.
+     */
+    public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
+    { return ConfigUtils.combine( configs ); }
+
     public static void dumpToLogger(List<DelayedLogItem> items, MLogger logger)
     { for( DelayedLogItem item : items ) dumpToLogger( item, logger ); }
 

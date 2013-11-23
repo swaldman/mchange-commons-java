@@ -40,7 +40,8 @@ import java.io.*;
 
 import static com.mchange.v2.cfg.DelayedLogItem.*;
 
-public final class ConfigUtils
+// external clients should go through the MConfig facade.
+final class ConfigUtils
 {
     private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 

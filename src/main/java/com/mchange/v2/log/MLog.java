@@ -38,15 +38,26 @@ package com.mchange.v2.log;
 import java.util.List;
 import java.util.ArrayList;
 import com.mchange.v1.util.StringTokenizerUtils;
+import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 public abstract class MLog
 {
-    private static NameTransformer transformer;
-    private static MLog mlog;
-    private static MLogger logger;
+    // MT: Protected by MLog.class' lock
+    private static NameTransformer _transformer;
+    private static MLog _mlog;
+    private static MLogger _logger;
 
     static
+    { refreshConfig( null, null ); }
+
+    private static synchronized NameTransformer transformer() { return _transformer; }
+    private static synchronized MLog            mlog()        { return _mlog; }
+    private static synchronized MLogger         logger()      { return _logger; }
+
+    public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
+	MLogConfig.refresh( overrides, overridesDescription );
+
 	String classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.MLog");
 	String[] classnames = null;
 	if (classnamesStr == null)
@@ -65,9 +76,9 @@ public abstract class MLog
 		warn = true;
 		tmpml = new FallbackMLog();
 	    }
-	mlog = tmpml;
+	_mlog = tmpml;
 	if (warn)
-	    info("Using " + mlog.getClass().getName() + " -- Named logger's not supported, everything goes to System.err.");
+	    info("Using " + _mlog.getClass().getName() + " -- Named logger's not supported, everything goes to System.err.");
 
 	NameTransformer tmpt = null;
 	String tClassName = MLogConfig.getProperty("com.mchange.v2.log.NameTransformer");
@@ -83,18 +94,25 @@ public abstract class MLog
 		System.err.println("Failed to instantiate com.mchange.v2.log.NameTransformer '" + tClassName + "'!"); 
 		e.printStackTrace();
 	    }
-	transformer = tmpt;
+	_transformer = tmpt;
 
-	logger = mlog.getLogger( MLog.class );
+	_logger = _mlog.getLogger( MLog.class );
 
-	// at this point we are initialized; what follows is essentially client code
+	// at this point we are initialized; except for the initilaizer, what follows is essentially client code
 	// which we run in a throwaway Thread not holding the class' / classloading lock
 	
 	Thread bannerThread = new Thread("MLog-Init-Reporter")
 	    {
+		final MLogger logo;
+		String  loggerDesc;
+
+		{
+		    logo       = _logger;
+		    loggerDesc = _mlog.getClass().getName();
+		}
+
 		public void run()
 		{
-		    String loggerDesc = mlog.getClass().getName();
 		    if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))
 			loggerDesc = "java 1.4+ standard";
 		    else if ("com.mchange.v2.log.log4j.Log4jMLog".equals( loggerDesc ))
@@ -102,15 +120,15 @@ public abstract class MLog
 		    else if ("com.mchange.v2.log.slf4j.Slf4jMLog".equals( loggerDesc ))
 			loggerDesc = "slf4j";
 	
-		    if (logger.isLoggable( MLevel.INFO ))
-			logger.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging.");
+		    if (logo.isLoggable( MLevel.INFO ))
+			logo.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging.");
 
 		    //System.err.println(mlog);
 
-		    MLogConfig.logDelayedItems( logger );
+		    MLogConfig.logDelayedItems( logo );
 	
-		    if ( logger.isLoggable( MLevel.FINEST ) )
-			logger.log( MLevel.FINEST, "Config available to MLog library: " + MLogConfig.dump() );
+		    if ( logo.isLoggable( MLevel.FINEST ) )
+			logo.log( MLevel.FINEST, "Config available to MLog library: " + MLogConfig.dump() );
 		}
 	    };
 	bannerThread.start();
@@ -142,52 +160,79 @@ public abstract class MLog
     }
 
     public static MLog instance()
-    { return mlog; }
+    { return mlog(); }
 
     public static MLogger getLogger(String name) 
     {
+	NameTransformer xformer = null;
+	MLog            insty   = null;
+
+	synchronized ( MLog.class )
+	{
+	    xformer = transformer();
+	    insty = instance();
+	}
+
 	MLogger out;
-	if ( transformer == null )
+	if ( xformer == null )
 	    out = instance().getMLogger( name );
 	else
 	    {
-		String xname = transformer.transformName( name );
+		String xname = xformer.transformName( name );
 		if (xname != null)
-		    out = instance().getMLogger( xname );
+		    out = insty.getMLogger( xname );
 		else
-		    out = instance().getMLogger( name );
+		    out = insty.getMLogger( name );
 	    }
 	return out;
     }
 
     public static MLogger getLogger(Class cl)
     {
+	NameTransformer xformer = null;
+	MLog            insty   = null;
+
+	synchronized ( MLog.class )
+	{
+	    xformer = transformer();
+	    insty = instance();
+	}
+
 	MLogger out;
-	if ( transformer == null )
-	    out = instance().getMLogger( cl );
+	if ( xformer == null )
+	    out = insty.getMLogger( cl );
 	else
 	    {
-		String xname = transformer.transformName( cl );
+		String xname = xformer.transformName( cl );
 		if (xname != null)
-		    out = instance().getMLogger( xname );
+		    out = insty.getMLogger( xname );
 		else
-		    out = instance().getMLogger( cl );
+		    out = insty.getMLogger( cl );
 	    }
 	return out;
     }
 
     public static MLogger getLogger()
     {
+	NameTransformer xformer = null;
+	MLog            insty   = null;
+
+	synchronized ( MLog.class )
+	{
+	    xformer = transformer();
+	    insty = instance();
+	}
+
 	MLogger out;
-	if ( transformer == null )
-	    out = instance().getMLogger();
+	if ( xformer == null )
+	    out = insty.getMLogger();
 	else
 	    {
-		String xname = transformer.transformName();
+		String xname = xformer.transformName();
 		if (xname != null)
-		    out = instance().getMLogger( xname );
+		    out = insty.getMLogger( xname );
 		else
-		    out = instance().getMLogger();
+		    out = insty.getMLogger();
 	    }
 	return out;
     }
