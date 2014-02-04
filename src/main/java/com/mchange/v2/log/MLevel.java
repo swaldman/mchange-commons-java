@@ -59,8 +59,8 @@ public final class MLevel
     private final static int FINEST_INTVAL  = 300;
     private final static int INFO_INTVAL    = 800;
     private final static int OFF_INTVAL     = Integer.MAX_VALUE;
-    private final static int SEVERE_INTVAL  = 900;
-    private final static int WARNING_INTVAL = 1000;
+    private final static int SEVERE_INTVAL  = 1000;
+    private final static int WARNING_INTVAL = 900;
 
     public static MLevel fromIntValue(int intval)
     { return (MLevel) integersToMLevels.get( new Integer( intval ) ); }
