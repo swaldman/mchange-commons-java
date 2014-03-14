@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.2
+ * Distributed as part of mchange-commons-java 0.2.6.3
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -87,6 +87,12 @@ public final class MConfig
 	catch (CachedStoreException e)
 	{ throw new RuntimeException( e ); }
     }
+
+    /**
+     *  Later entries in the configs array override earlier entries.
+     */
+    public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
+    { return ConfigUtils.combine( configs ); }
 
     public static void dumpToLogger(List<DelayedLogItem> items, MLogger logger)
     { for( DelayedLogItem item : items ) dumpToLogger( item, logger ); }

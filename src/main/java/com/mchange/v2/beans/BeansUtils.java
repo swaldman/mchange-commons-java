@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.2
+ * Distributed as part of mchange-commons-java 0.2.6.3
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -77,7 +77,7 @@ public final class BeansUtils
     { return equalsByAccessibleProperties( bean0, bean1, Collections.EMPTY_SET ); }
 
     public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection ignoreProps )
-    throws IntrospectionException
+	throws IntrospectionException
     {
         Map m0 = new HashMap();
         Map m1 = new HashMap();
@@ -88,12 +88,64 @@ public final class BeansUtils
         return m0.equals(m1);
     }
 
+    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection ignoreProps )
+	throws IntrospectionException
+    {
+        Map m0 = new HashMap();
+        Map m1 = new HashMap();
+        extractAccessiblePropertiesToMap( m0, bean0, ignoreProps );
+        extractAccessiblePropertiesToMap( m1, bean1, ignoreProps );
+
+	boolean out = true;
+
+	//System.err.println("m0 keys:");
+	//for ( Iterator ii = m0.keySet().iterator(); ii.hasNext(); )
+	//    System.err.println( ii.next() );
+
+	if ( m0.size() != m1.size() )
+	{
+	    System.err.println( "Unequal sizes --> Map0: " + m0.size() + "; m1: " + m1.size() );
+	    Set s0extras = m0.keySet();
+	    s0extras.removeAll( m1.keySet() );
+
+	    Set s1extras = m1.keySet();
+	    s1extras.removeAll( m0.keySet() );
+
+	    if (s0extras.size() > 0)
+	    {
+		System.err.println("Map0 extras:");
+		for (Iterator ii = s0extras.iterator(); ii.hasNext(); )
+		    System.err.println( '\t' + ii.next().toString() );
+	    }
+	    if (s1extras.size() > 0)
+	    {
+		System.err.println("Map1 extras:");
+		for (Iterator ii = s1extras.iterator(); ii.hasNext(); )
+		    System.err.println( '\t' + ii.next().toString() );
+	    }
+	    out = false;
+	}
+	for ( Iterator ii = m0.keySet().iterator(); ii.hasNext(); )
+	{
+	    String key = (String) ii.next();
+	    Object val0 = m0.get( key );
+	    Object val1 = m1.get( key );
+	    if ( (val0 == null && val1 != null) || (val0 != null && ! val0.equals( val1 )) )
+	    {
+		System.err.println( '\t' + key + ": " + val0 + " != " + val1 );
+		out = false;
+	    }
+	}
+
+	return out;
+    }
+
     public static void overwriteAccessibleProperties( Object sourceBean, Object destBean )
-    throws IntrospectionException
+	throws IntrospectionException
     { overwriteAccessibleProperties( sourceBean, destBean, Collections.EMPTY_SET ); }
 
     public static void overwriteAccessibleProperties( Object sourceBean, Object destBean, Collection ignoreProps )
-    throws IntrospectionException
+	throws IntrospectionException
     {
         try
         {

@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.2
+ * Distributed as part of mchange-commons-java 0.2.6.3
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -128,6 +128,16 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	finishInit();
     }
     */
+
+    public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
+    { this( new String[] { notionalResourcePath }, resourcePathToPropertiesMap( notionalResourcePath, props ), Collections.emptyList() ); }
+
+    private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
+    {
+	Map out = new HashMap();
+	out.put( notionalResourcePath, props );
+	return out;
+    }
 
     BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
     {

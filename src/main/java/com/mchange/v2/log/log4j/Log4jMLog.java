@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.2
+ * Distributed as part of mchange-commons-java 0.2.6.3
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -145,7 +145,7 @@ public final class Log4jMLog extends MLog
                 return Level.DEBUG;
             else if (lvl == MLevel.INFO)
                 return Level.INFO;
-            else if (lvl == MLevel.INFO)
+            else if (lvl == MLevel.OFF)
                 return Level.OFF;
             else if (lvl == MLevel.SEVERE)
                 return Level.ERROR;

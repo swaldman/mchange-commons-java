@@ -1,5 +1,5 @@
 /*
- * Distributed as part of mchange-commons-java 0.2.6.2
+ * Distributed as part of mchange-commons-java 0.2.6.3
  *
  * Copyright (C) 2013 Machinery For Change, Inc.
  *
@@ -40,26 +40,51 @@ import java.util.*;
 import java.lang.reflect.Method;
 import com.mchange.v2.cfg.MLogConfigSource;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
+import com.mchange.v2.cfg.DelayedLogItem;
+import com.mchange.v2.cfg.MConfig;
 
 public final class MLogConfig
 {
-    private final static MultiPropertiesConfig CONFIG;
-    private final static List                  BOOTSTRAP_LOG_ITEMS;
+    // MT: all now mutable references, protected by class' lock
+    private static MultiPropertiesConfig CONFIG              = null;
+    private static List                  BOOTSTRAP_LOG_ITEMS = null;
+    private static Method                delayedDumpToLogger = null;
 
-    //MT protected by class' lock
-    private static Method delayedDumpToLogger = null;
-
-    static
+    public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
 	String[] defaults = new String[] { "/com/mchange/v2/log/default-mchange-log.properties"  };
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
 	List bli = new ArrayList();
-	CONFIG = MLogConfigSource.readVmConfig( defaults, preempts, bli );
-	BOOTSTRAP_LOG_ITEMS = Collections.unmodifiableList( bli );
+	MultiPropertiesConfig tmpCONFIG = MLogConfigSource.readVmConfig( defaults, preempts, bli );
+
+	boolean firstLoad = (CONFIG == null);
+
+	if ( overrides != null )
+	{
+	    int olen = overrides.length;
+	    MultiPropertiesConfig[] combineMe = new MultiPropertiesConfig[ olen + 1 ];
+	    combineMe[0] = tmpCONFIG;
+	    for ( int i = 0; i < olen; ++i )
+		combineMe[ i + 1 ] = overrides[i];
+	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (firstLoad ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
+	    CONFIG = MConfig.combine( combineMe );
+	}
+	else
+	{
+	    if ( !firstLoad )
+		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without overrides.") );
+	    CONFIG = tmpCONFIG;
+	}
+	BOOTSTRAP_LOG_ITEMS = bli;
     }
 
-    synchronized static void ensureDelayedDumpToLogger()
+    // should be called only from static synchronized methods
+    private static void ensureLoad()
+    { if (CONFIG == null) refresh( null, null); }
+
+    // should be called only from static synchronized methods
+    private static void ensureDelayedDumpToLogger()
     {
 	try
 	{
@@ -82,11 +107,16 @@ public final class MLogConfig
 	}
     }
 
-    public static String getProperty( String key )
-    { return CONFIG.getProperty( key ); }
+    public synchronized static String getProperty( String key )
+    {
+	ensureLoad();
+	return CONFIG.getProperty( key ); 
+    }
 
-    public static void logDelayedItems( MLogger logger )
+    // should not be called during static init to avoid cyclic dependency issues
+    public synchronized static void logDelayedItems( MLogger logger )
     { 
+	ensureLoad();
 	ensureDelayedDumpToLogger();
 
 	List items = new ArrayList();
@@ -115,7 +145,7 @@ public final class MLogConfig
 	}
     }
 
-    public static String dump()
+    public synchronized static String dump()
     { return CONFIG.toString(); }
 
     private MLogConfig()
