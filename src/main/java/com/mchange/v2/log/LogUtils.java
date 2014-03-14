@@ -50,11 +50,14 @@ public final class LogUtils
     public static void appendParamsList(StringBuffer sb, Object[] params)
     {
 	sb.append("[params: ");
-	for (int i = 0, len = params.length; i < len; ++i)
+	if ( params != null )
+	{
+	    for (int i = 0, len = params.length; i < len; ++i)
 	    {
 		if (i != 0) sb.append(", ");
 		sb.append( params[i] );
 	    }
+	}
 	sb.append(']');
     }
 
@@ -95,13 +98,16 @@ public final class LogUtils
         }
         else
         {
-            ResourceBundle rb = ResourceBundle.getBundle( rbname );
-            if (rb != null)
-            {
-                String check = rb.getString( msg );
-                if (check != null)
-                    msg = check;
-            }
+	    if ( rbname != null )
+	    {
+		ResourceBundle rb = ResourceBundle.getBundle( rbname );
+		if (rb != null)
+		{
+		    String check = rb.getString( msg );
+		    if (check != null)
+			msg = check;
+		}
+	    }
             return (params == null ? msg : MessageFormat.format( msg, params ));
         }
     } 
