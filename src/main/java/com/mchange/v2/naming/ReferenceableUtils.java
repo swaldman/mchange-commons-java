@@ -75,14 +75,17 @@ public final class ReferenceableUtils
 	    {
 		String fClassName = ref.getFactoryClassName();
 		String fClassLocation = ref.getFactoryClassLocation();
+
+		ClassLoader defaultClassLoader = Thread.currentThread().getContextClassLoader();
+		if ( defaultClassLoader == null ) defaultClassLoader = ReferenceableUtils.class.getClassLoader();
 		
 		ClassLoader cl;
 		if ( fClassLocation == null )
-		    cl = ClassLoader.getSystemClassLoader();
+		    cl = defaultClassLoader;
 		else
 		    {
 			URL u = new URL( fClassLocation );
-			cl = new URLClassLoader( new URL[] { u }, ClassLoader.getSystemClassLoader() );
+			cl = new URLClassLoader( new URL[] { u }, defaultClassLoader );
 		    }
 		
 		Class fClass = Class.forName( fClassName, true, cl );
