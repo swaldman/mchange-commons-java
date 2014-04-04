@@ -323,7 +323,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
 
         try
         {
-            Method m = Thread.class.getMethod("getStackTrace", null);
+            Method m = Thread.class.getMethod("getStackTrace", (Class[]) null); // cast to suppress inexact type warning
 
             StringWriter sw = new StringWriter(2048);
             IndentedWriter iw = new IndentedWriter( sw );
@@ -332,7 +332,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
             for (Iterator ii = managed.iterator(); ii.hasNext(); )
             {
                 Object poolThread = ii.next();
-                Object[] stackTraces = (Object[]) m.invoke( poolThread, null );
+                Object[] stackTraces = (Object[]) m.invoke( poolThread, (Object[]) null ); // cast to suppress inexact type warning
 		printStackTraces( iw, poolThread, stackTraces );
             }
             for (int i = 0; i < initial_indent; ++i)
@@ -361,8 +361,8 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
     {
         try
         {
-            Method m = Thread.class.getMethod("getAllStackTraces", null);
-	    Map threadMap = (Map) m.invoke( null, null );
+            Method m = Thread.class.getMethod("getAllStackTraces", (Class[]) null); // cast to suppress inexact type warning
+	    Map threadMap = (Map) m.invoke( null, (Object[]) null ); // cast to suppress inexact type warning
 
             StringWriter sw = new StringWriter(2048);
             IndentedWriter iw = new IndentedWriter( sw );
