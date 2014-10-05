@@ -74,6 +74,8 @@ import java.util.Properties;
  */
 public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
+    private static String PROGRAMMATICALLY_SUPPLIED_PROPERTIES = "PROGRAMMATICALLY_SUPPLIED_PROPERTIES";
+
     /**
      * @deprecated Please use the MConfig facade class to acquire configuration
      */
@@ -85,6 +87,12 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
      */
     public static MultiPropertiesConfig readVmConfig()
     { return ConfigUtils.readVmConfig(); }
+
+    public static MultiPropertiesConfig fromProperties(String notionalResourcePath, Properties props)
+    { return new BasicMultiPropertiesConfig( notionalResourcePath, props ); }
+
+    public static MultiPropertiesConfig fromProperties(Properties props)
+    { return fromProperties( PROGRAMMATICALLY_SUPPLIED_PROPERTIES, props ); }
 
     public abstract String[] getPropertiesResourcePaths();
 
