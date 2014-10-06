@@ -62,8 +62,13 @@ public final class Slf4jMLog extends MLog
 
     final static String DFLT_LOGGER_NAME = "global";
 
-    public Slf4jMLog() throws ClassNotFoundException
-    { Class.forName( CHECK_CLASS ); }
+    public Slf4jMLog() throws ClassNotFoundException, MLogInitializationException
+    { 
+	Class.forName( CHECK_CLASS );
+	ILoggerFactory ilf = LoggerFactory.getILoggerFactory();
+	if ( ilf == null || ilf.getClass().getName() == "org.slf4j.helpers.NOPLoggerFactory" ) // if NOP (no-op) logger is configured, that means no meaningful binding is available
+	    throw new MLogInitializationException("slf4j found no binding or threatened to use its (dangerously silent) NOPLogger. We consider the slf4j library not found.");
+    }
 
     public MLogger getMLogger(String name)
     {

@@ -142,7 +142,10 @@ public abstract class MLog
 	    {
 		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).newInstance(); }
 		catch (Exception e)
-		    { 
+		    {
+			if ( e instanceof MLogInitializationException )
+			    System.err.println("MLog initialization issue: " + e.getMessage());
+ 
 			if (attempts == null)
 			    attempts = new ArrayList();
 			attempts.add( classnames[i] );
