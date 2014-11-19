@@ -49,6 +49,8 @@ public final class MLevel
     public final static MLevel SEVERE;
     public final static MLevel WARNING;
 
+    public final static MLevel TRACE;
+
     private final static Map integersToMLevels;
     private final static Map namesToMLevels;
 
@@ -121,6 +123,8 @@ public final class MLevel
 	OFF = off;
 	SEVERE = severe;
 	WARNING = warning;
+
+	TRACE = finest;
 
 	Map tmp = new HashMap();
 	tmp.put( new Integer(all.intValue()), all);
