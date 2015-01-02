@@ -49,6 +49,7 @@ public final class MLevel
     public final static MLevel SEVERE;
     public final static MLevel WARNING;
 
+    public final static MLevel DEBUG;
     public final static MLevel TRACE;
 
     private final static Map integersToMLevels;
@@ -124,6 +125,7 @@ public final class MLevel
 	SEVERE = severe;
 	WARNING = warning;
 
+	DEBUG = fine;
 	TRACE = finest;
 
 	Map tmp = new HashMap();
