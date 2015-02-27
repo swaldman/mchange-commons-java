@@ -127,12 +127,19 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 		else
 		    {
 			Config rawConfig = null;
-			
-			// following typesafe-config standard behavior, we override
-			// the standard identifier "application" if System properties
-			// "config.resource", "config.file", or "config.url" are set.
+
+			// XXX: This code has been extracted into HoconUtils, but not refactored out.
+			//      ( If there is something wrong here, don't forget to check there also
+			//        for the same issue. )
+			//
+			// TODO: Refactor the two classes, maybe using a Callable<String> in the main
+			//       utility to deal with heterogeneous failure responses
 			if ("application".equals( resourcePath ) || "/application".equals( resourcePath ))
 			    {
+				// following typesafe-config standard behavior, we override
+				// the standard identifier "application" if System properties
+				// "config.resource", "config.file", or "config.url" are set.
+
 				String check; 
 				if ( ( check = System.getProperty("config.resource") ) != null )
 				    resourcePath = check;
