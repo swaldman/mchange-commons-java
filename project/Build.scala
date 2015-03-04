@@ -21,6 +21,7 @@ object MchangeCommonsJavaBuild extends Build {
 
     Keys.javacOptions in (Compile, Keys.compile) ++= Seq("-source","1.6","-target","1.6"),
     Keys.javacOptions in (Compile, Keys.doc) ++= Seq("-source","1.6"),
+    Keys.javacOptions in (Keys.doc) += "-Xdoclint:none",
 
     Keys.publishTo <<= Keys.version { 
       (v: String) => {
