@@ -188,7 +188,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 		    delayedLogItems.addAll( parse.getDelayedLogItems() );
 		}
 		catch ( FileNotFoundException fnfe )
-		{ delayedLogItems.add( new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp), fnfe) ); }
+		{ delayedLogItems.add( new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping.", rp) ) ); }
 		catch ( Exception e )
 		    { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
 	    }
