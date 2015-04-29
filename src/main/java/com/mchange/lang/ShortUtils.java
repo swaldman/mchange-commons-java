@@ -39,7 +39,7 @@ public class ShortUtils
 {
   public final static int UNSIGNED_MAX_VALUE = (Short.MAX_VALUE * 2) + 1;
 
-  public static int shortFromByteArray(byte[] bytes, int offset)
+  public static short shortFromByteArray(byte[] bytes, int offset)
     {
       int out = 0;
       out |= ((int) ByteUtils.toUnsigned(bytes[offset + 0])) <<  8;
