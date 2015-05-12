@@ -64,10 +64,10 @@ public final class IntegerUtils
     public static int intFromByteArray(byte[] bytes, int offset)
     {
 	int out = 0;
-	out |= ((int) ByteUtils.toUnsigned(bytes[offset + 0])) << 24;
-	out |= ((int) ByteUtils.toUnsigned(bytes[offset + 1])) << 16;
-	out |= ((int) ByteUtils.toUnsigned(bytes[offset + 2])) <<  8;
-	out |= ((int) ByteUtils.toUnsigned(bytes[offset + 3])) <<  0;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 0])) << 24;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 1])) << 16;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 2])) <<  8;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 3])) <<  0;
 	return out;
     }
 
@@ -86,8 +86,25 @@ public final class IntegerUtils
 	bytes[offset + 3] = (byte) ((i >>>  0) & 0xFF);
     }
 
-    public static long toUnsigned(int i)
-    {return (i < 0 ? (UNSIGNED_MAX_VALUE + 1) + i : i);}
+    public static int intFromByteArrayLittleEndian(byte[] bytes, int offset)
+    {
+	int out = 0;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 3])) << 24;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 2])) << 16;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 1])) <<  8;
+	out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 0])) <<  0;
+	return out;
+    }
+
+    public static void intIntoByteArrayLittleEndian(int i, int offset, byte[] bytes)
+    {
+	bytes[offset + 3] = (byte) ((i >>> 24) & 0xFF);
+	bytes[offset + 2] = (byte) ((i >>> 16) & 0xFF);
+	bytes[offset + 1] = (byte) ((i >>>  8) & 0xFF);
+	bytes[offset + 0] = (byte) ((i >>>  0) & 0xFF);
+    }
+
+    public static long toUnsigned(int i) { return 0x00000000FFFFFFFFL & i; } 
 
     private IntegerUtils()
     {}
