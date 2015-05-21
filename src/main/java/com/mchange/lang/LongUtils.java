@@ -73,6 +73,32 @@ public class LongUtils
       bytes[offset + 7] = (byte) ((l >>>  0) & 0xFF);
     }
 
+  public static long longFromByteArrayLittleEndian(byte[] bytes, int offset)
+    {
+      long out = 0;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 7])) << 56;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 6])) << 48;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 5])) << 40;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 4])) << 32;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 3])) << 24;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 2])) << 16;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 1])) <<  8;
+      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 0])) <<  0;
+      return out;
+    }
+
+  public static void longIntoByteArrayLittleEndian(long l, int offset, byte[] bytes)
+    {
+      bytes[offset + 7] = (byte) ((l >>> 56) & 0xFF);
+      bytes[offset + 6] = (byte) ((l >>> 48) & 0xFF);
+      bytes[offset + 5] = (byte) ((l >>> 40) & 0xFF);
+      bytes[offset + 4] = (byte) ((l >>> 32) & 0xFF);
+      bytes[offset + 3] = (byte) ((l >>> 24) & 0xFF);
+      bytes[offset + 2] = (byte) ((l >>> 16) & 0xFF);
+      bytes[offset + 1] = (byte) ((l >>>  8) & 0xFF);
+      bytes[offset + 0] = (byte) ((l >>>  0) & 0xFF);
+    }
+
     public static int fullHashLong( long l )
     { return hashLong( l ); }
 
