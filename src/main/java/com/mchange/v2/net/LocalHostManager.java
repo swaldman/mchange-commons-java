@@ -70,7 +70,7 @@ public class LocalHostManager
     {
 	if ( knownGoodNames.contains( name ) )
 	    return true;
-	else if ( knownGoodNames.contains( name ) )
+	else if ( knownBadNames.contains( name ) )
 	    return false;
 	else
 	    {
