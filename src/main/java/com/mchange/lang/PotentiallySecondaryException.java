@@ -50,7 +50,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
 
     public PotentiallySecondaryException(String msg, Throwable t)
     {
-	super(msg);
+	super(msg, t);
 	this.nested = t;
     }
 
