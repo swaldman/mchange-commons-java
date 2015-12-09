@@ -132,38 +132,47 @@ public final class Slf4jMLog extends MLog
 	
 	private MLevel guessMLevel()
         {
-	    if ( logger.isErrorEnabled() )
-		return MLevel.SEVERE;
-	    else if ( logger.isWarnEnabled() )
-		return MLevel.WARNING;
-	    else if ( logger.isInfoEnabled() )
-		return MLevel.INFO;
+	    if ( logger.isTraceEnabled() )
+		return MLevel.FINEST;
 	    else if ( logger.isDebugEnabled() )
 		return MLevel.FINER;
-	    else if ( logger.isTraceEnabled() )
-		return MLevel.FINEST;
+	    else if ( logger.isInfoEnabled() )
+		return MLevel.INFO;
+	    else if ( logger.isWarnEnabled() )
+		return MLevel.WARNING;
+	    else if ( logger.isErrorEnabled() )
+		return MLevel.SEVERE;
 	    else
 		return MLevel.OFF;
         }
 
-	private synchronized boolean myLevelIsLoggable( int intval )
+	private synchronized boolean myLevelMayBeLoggable( int intval )
 	{ return ( myLevel == null || intval >= myLevel.intValue() ); }
 
 	private LevelLogger levelLogger( MLevel l )
 	{
+	    LevelLogger outL = offL; // if nothing is proved loggable, we return the non-logger
+
 	    int n = l.intValue();
 
 	    // if a log level has been explicitly set on this logger
-	    // and the level we are asked to log at is below this level
-	    // don't log anything, i.e. use OffLogger
-	    if (! myLevelIsLoggable( n ) ) return offL;
+	    // and the level we are asked to log at is below this level,
+	    // we know we should not log anything, i.e. stick with OffLogger
+	    if ( myLevelMayBeLoggable( n ) && n >= FINEST_INTVAL) 
+	    {
+		if (n < FINER_INTVAL) 
+		    { if (logger.isTraceEnabled()) outL = traceL; }
+		else if (n < INFO_INTVAL) 
+		    { if (logger.isDebugEnabled()) outL = debugL; }
+		else if (n < WARNING_INTVAL)
+		    { if (logger.isInfoEnabled()) outL = infoL; }
+		else if (n < SEVERE_INTVAL)
+		    { if (logger.isWarnEnabled()) outL = warnL; }
+		else  if (n < OFF_INTVAL)
+		    { if (logger.isErrorEnabled()) outL = errorL; }
+            }
 
-	    if (n >= SEVERE_INTVAL) return errorL;
-	    else if (n >= WARNING_INTVAL) return warnL;
-	    else if (n >= INFO_INTVAL) return infoL;
-	    else if (n >= FINER_INTVAL) return debugL;
-	    else if (n >= FINEST_INTVAL) return traceL;
-	    else return offL;
+	    return outL;
 	}
 
 	private interface LevelLogger
