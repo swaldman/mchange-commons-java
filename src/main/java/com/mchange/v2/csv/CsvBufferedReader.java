@@ -2,7 +2,7 @@ package com.mchange.v2.csv;
 
 import java.io.*;
 
-class CsvBufferedReader extends BufferedReader 
+public class CsvBufferedReader extends BufferedReader 
 {
     private BufferedReader inner;
 
