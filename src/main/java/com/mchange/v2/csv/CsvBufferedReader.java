@@ -18,7 +18,7 @@ public class CsvBufferedReader extends BufferedReader
     public String[] readSplitLine() throws IOException, MalformedCsvException
     {
 	String line = this.readLine();
-	return FastCsvUtils.splitRecord( line );
+	return line == null ? null : FastCsvUtils.splitRecord( line );
     }
 
     // simple delegations
