@@ -46,11 +46,22 @@ public final class FastCsvUtils
     private final static int SHIFT_BIT  = 1 << 25;
     private final static int SHIFT_OFFSET = 8;
 
+    private final static int CR = '\r';
+    private final static int LF = '\n';
+
+    private final static int EOF = -1;
+
+    private final static int CRLF_TOKEN = 999;
+
+    private final static String CRLF = "\r\n";
+
+    private final static int GUESSED_LINE_LEN = 512;
+
     //we can ignore escaped quotes. since they must be paired (""), they don't affect the even/odd count
-    //TODO: it might be a good idea to detect illegal quoting and report errors...
-    public static String csvReadLine(BufferedReader br) throws IOException
+    public static String csvReadLine(BufferedReader br) throws IOException, MalformedCsvException
     {
-	String s = br.readLine();
+	int[] holder = new int[1];
+	String s = readLine( br, holder );
 
 	String out;
 	if ( s != null )
@@ -61,9 +72,15 @@ public final class FastCsvUtils
 			StringBuilder sb = new StringBuilder( s );
 			do
 			    {
-				s = br.readLine();
-				sb.append( s );
-				quoteCount += countQuotes(s);
+				appendForToken( holder[0], sb );
+				s = readLine( br, holder );
+				if (s != null)
+				{
+				    sb.append( s );
+				    quoteCount += countQuotes(s);
+				}
+				else
+				    throw new MalformedCsvException("Unterminated quote at EOF: '" + sb.toString() + "'");
 			    }
 			while( quoteCount % 2 != 0 );
 			out = sb.toString();
@@ -76,6 +93,60 @@ public final class FastCsvUtils
 
 	return out;
     }
+
+    private static void appendForToken( int token, StringBuilder sb )
+    {
+	switch (token ) {
+	case CR:
+	case LF:
+	    sb.append( (char) token );
+	    break;
+	case CRLF_TOKEN:
+	    sb.append( CRLF );
+	    break;
+	case EOF:
+	    //do nothing
+	    break;
+	default:
+	    throw new InternalError("Unexpected token (should never happen): " + token);
+	}
+    }
+
+    // outSep is a size one array which will contain the separator char or -1 for EOF
+    private static String readLine(BufferedReader br, int[] outSep) throws IOException
+    {
+	StringBuilder sb = new StringBuilder( GUESSED_LINE_LEN );
+	int i = br.read();
+	if ( i < 0 ) 
+	{
+	    outSep[0] = EOF;
+	    return null;
+	}
+	else 
+	{
+	    while( notSepOrEOF(i) ) 
+	    {
+		sb.append( (char) i ); 
+		i = br.read();
+	    }
+	    if (i == CR)
+	    {
+		br.mark(1);
+		int check = br.read();
+		if ( check == LF ) outSep[0] = CRLF_TOKEN;
+		else 
+		{
+		    br.reset();
+		    outSep[0] = CR;
+		}
+	    }
+	    else outSep[0] = i;
+	    return sb.toString();
+	}
+    }
+
+    private static boolean notSepOrEOF( int i ) 
+    { return i >= 0 && (i != '\n' && i != '\r'); }
 
     private static int countQuotes(String s)
     {

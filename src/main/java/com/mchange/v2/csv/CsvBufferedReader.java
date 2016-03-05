@@ -13,7 +13,11 @@ public class CsvBufferedReader extends BufferedReader
 
     @Override
     public String readLine() throws IOException
-    { return FastCsvUtils.csvReadLine( inner ); }
+    { 
+	try { return FastCsvUtils.csvReadLine( inner ); }
+	catch ( MalformedCsvException e )
+	    { throw new IOException("Badly formatted CSV file.", e); }
+    } 
     
     public String[] readSplitLine() throws IOException, MalformedCsvException
     {
