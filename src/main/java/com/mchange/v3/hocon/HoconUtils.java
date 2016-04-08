@@ -168,8 +168,8 @@ public final class HoconUtils
 
     public static class WarnedConfig
     {
-	Config       config;
-	List<String> warnings;
+	public Config       config;
+	public List<String> warnings;
 
 	WarnedConfig( Config config, List<String> warnings )
 	{
