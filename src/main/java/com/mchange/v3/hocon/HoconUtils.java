@@ -43,6 +43,8 @@ import java.io.File;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import static com.typesafe.config.ConfigFactory.*;
+
 public final class HoconUtils
 {
     private final static String APPLICATION = "application";
@@ -163,6 +165,74 @@ public final class HoconUtils
 	    this._message = message;
 	}
     }
+
+    public static class WarnedConfig
+    {
+	Config       config;
+	List<String> warnings;
+
+	WarnedConfig( Config config, List<String> warnings )
+	{
+	    this.config   = config;
+	    this.warnings = warnings;
+	}
+    }
+
+    /*
+     * This preserves the standard application / resource / etc behavior,
+     * but puts a custom config before application (but still after System properties), 
+     * unless at least one of the standard config.resource / config.file / config.url 
+     * System.properties are set.
+     */
+    public static WarnedConfig customFileOrSpecifiedSourceWins( File customFile ) {
+	List<String> warnings = new ArrayList<String>();
+
+	boolean    fileExists         = customFile.exists();
+	Properties sysprops           = System.getProperties();
+	boolean    configuredLocation = sysprops.containsKey( "config.resource" ) || sysprops.containsKey( "config.file" ) || sysprops.containsKey( "config.url" );
+
+	if ( configuredLocation && fileExists )
+	{
+	    warnings.add( createSpecifiedSourceWarning( customFile, sysprops ) );
+	    return new WarnedConfig( ConfigFactory.load(), warnings );
+	}
+	else if ( !fileExists ) 
+	    return new WarnedConfig( ConfigFactory.load(), warnings );
+	else 
+	{
+	    Config out = defaultOverrides().withFallback( parseFile( customFile ).withFallback( defaultApplication().withFallback( defaultReference() ) ) );
+	    return new WarnedConfig( out, warnings );
+	}
+    }
+
+    private static String createSpecifiedSourceWarning( File customFile, Properties sysprops )
+    {
+	boolean first = true;;
+	StringBuilder sb = new StringBuilder();
+	sb.append( "Config file " );
+	sb.append( customFile.getAbsolutePath() );
+	sb.append( " will be ignored because a location has been explicitly set via System.properties. [");
+	if ( sysprops.containsKey( "config.resource" ) )
+	{
+	    sb.append( "config.resource=" + sysprops.getProperty( "config.resource" ) );
+	    first = false;
+	}
+	if ( sysprops.containsKey( "config.file" ) )
+	{
+	    if(! first) sb.append( ", " );
+	    sb.append( "config.file=" + sysprops.getProperty( "config.file" ) );
+	    first = false;
+	}
+	if ( sysprops.containsKey( "config.url" ) )
+	{
+	    if(! first) sb.append( ", " );
+	    sb.append( "config.url=" + sysprops.getProperty( "config.url" ) );
+	    first = false;
+	}
+	sb.append("]");
+	return sb.toString();
+    }
+
     private HoconUtils()
     {}
 }
