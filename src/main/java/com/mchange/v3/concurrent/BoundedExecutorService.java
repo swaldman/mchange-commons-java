@@ -9,6 +9,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.mchange.v2.log.MLevel;
+import com.mchange.v2.log.MLog;
+import com.mchange.v2.log.MLogger;
+
 import static com.mchange.v3.concurrent.BoundedExecutorService.State.*;
 
 // inspired by Java Concurrency In Practice, Goetz et al, Listing 8.4
@@ -18,6 +22,8 @@ import static com.mchange.v3.concurrent.BoundedExecutorService.State.*;
 // TODO: Seriously test this.
 
 public final class BoundedExecutorService extends AbstractExecutorService {
+
+    final static MLogger logger = MLog.getLogger( BoundedExecutorService.class );
 
     enum State { ACCEPTING, SATURATED, UNWINDING, SHUTDOWN, SHUTDOWN_NOW }
 
@@ -218,9 +224,13 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     // MT: call only from methods holding this' lock
     private void doUpdateState( State newState )
     {
+	if (logger.isLoggable( MLevel.FINE ))
+	    logger.log(MLevel.WARNING, "State transition " + this.state + " => " + newState + "; blockBound=" + blockBound + "; restartBeneath=" + restartBeneath + "; permits=" + permits );
+	
 	this.state = newState;
 	if ( this.state == SHUTDOWN_NOW ) this.permits = 0;
 	this.notifyAll();
+
     }
     
     class ReleasingFutureTask<V> extends FutureTask<V>
