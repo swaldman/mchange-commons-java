@@ -135,7 +135,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	{
 	case SHUTDOWN:
 	case SHUTDOWN_NOW:
-	    return permits == blockBound;
+	    return permits == blockBound; // permits will be zero in SHUTDOWN_NOW, and blockBound > 0, so we'll never wait()
 	case ACCEPTING:
 	    return false;
 	case SATURATED:
@@ -179,7 +179,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	}
 	catch ( InterruptedException e )
 	{
-	    throw new RejectedExecutionException( this + " has been forcible shut down. [state=" + state + "]", e );
+	    throw new RejectedExecutionException( this + " has been forcibly shut down. [state=" + state + "]", e );
 	}
     }
 
@@ -190,7 +190,6 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	if ( permits < restartBeneath )
 	{
 	    updateState( ACCEPTING );
-	    this.notifyAll();
 	}
 	else if ( permits < blockBound )
 	{
@@ -206,17 +205,24 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	case ACCEPTING:
 	case SATURATED:
 	case UNWINDING:
-	    this.state = newState;
+	    if ( this.state != newState ) doUpdateState( newState );
 	    break;
 	case SHUTDOWN:
-	    if ( newState == SHUTDOWN_NOW ) this.state = newState;
+	    if ( newState == SHUTDOWN_NOW ) doUpdateState( newState );
 	    break;
 	case SHUTDOWN_NOW:
-	    this.permits = 0;
-	    this.notifyAll();
+	    // can't change states from SHUTDOWN_NOW
 	}
     }
 
+    // MT: call only from methods holding this' lock
+    private void doUpdateState( State newState )
+    {
+	this.state = newState;
+	if ( this.state == SHUTDOWN_NOW ) this.permits = 0;
+	this.notifyAll();
+    }
+    
     class ReleasingFutureTask<V> extends FutureTask<V>
     {
 	ReleasingFutureTask(Callable<V> callable)
