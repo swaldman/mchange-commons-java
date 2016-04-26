@@ -225,7 +225,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     private void doUpdateState( State newState )
     {
 	if (logger.isLoggable( MLevel.FINE ))
-	    logger.log(MLevel.WARNING, "State transition " + this.state + " => " + newState + "; blockBound=" + blockBound + "; restartBeneath=" + restartBeneath + "; permits=" + permits );
+	    logger.log(MLevel.FINE, "State transition " + this.state + " => " + newState + "; blockBound=" + blockBound + "; restartBeneath=" + restartBeneath + "; permits=" + permits );
 	
 	this.state = newState;
 	if ( this.state == SHUTDOWN_NOW ) this.permits = 0;
