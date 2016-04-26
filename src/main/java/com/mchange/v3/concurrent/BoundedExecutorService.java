@@ -197,7 +197,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	{
 	    updateState( ACCEPTING );
 	}
-	else if ( permits < blockBound )
+	else if ( state == SATURATED && permits < blockBound )
 	{
 	    updateState( UNWINDING );
 	}
