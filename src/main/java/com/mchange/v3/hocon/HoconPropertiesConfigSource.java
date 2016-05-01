@@ -66,6 +66,9 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *
  *    hocon:reference,application,file:${user.home}/.myconfig,/
  *
+ *  NOTE: Hash symbols (#) within URLs will be interpreted as denoting a config scope (see below).
+ *        They and any subsequent text will NOT be treated as part of the URL
+ *
  *  All Configs found are merged, with later elements in the list taking preference over
  *  earlier elements. Substitutions within the full, merged Config are resolved.
  * 
