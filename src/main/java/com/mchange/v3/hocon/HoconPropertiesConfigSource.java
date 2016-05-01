@@ -41,6 +41,9 @@ import com.typesafe.config.*;
 
 import com.mchange.v2.cfg.*;
 
+import com.mchange.v2.lang.SystemUtils;
+
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import static com.mchange.v3.hocon.HoconUtils.*;
@@ -53,6 +56,15 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *  HOCON config files are read as resources by an identifier, which might look like
  *
  *    hocon:reference,application,special.json,scoped.conf#my-scope,/
+ *
+ *  Elements within this path are interpreted as URLs if they contain a colon, e.g.
+ *
+ *    hocon:reference,application,http://my.host.name/networkconfig,/
+ *
+ *  URL elements can contain substitutions based on System properties or environment variables
+ *  (with System properties taking preference if both are found)
+ *
+ *    hocon:reference,application,file:${user.home}/.myconfig,/
  *
  *  All Configs found are merged, with later elements in the list taking preference over
  *  earlier elements. Substitutions within the full, merged Config are resolved.
@@ -164,16 +176,39 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 			    }
 
 			if ( rawConfig == null )
-			    {		
-				if (resourcePath.charAt(0) == '/') // when loading resources from a classloader, leave out the leading slash...
-				    resourcePath = resourcePath.substring(1);
-				
-				boolean includes_suffix = (resourcePath.indexOf('.') >= 0);
-				
-				if ( includes_suffix )
-				    rawConfig = ConfigFactory.parseResources( cl, resourcePath );
+			    {
+				URL url = null;
+
+				if ( resourcePath.indexOf(":") >= 0 )
+				{
+				    try
+				    {
+					String substitutedPath = SystemUtils.sysPropsEnvReplace( resourcePath );
+					url = new URL( substitutedPath );
+				    }
+				    catch ( MalformedURLException e )
+				    {
+					dlis.add( new DelayedLogItem( Level.WARNING, String.format("Apparent URL resource path for HOCON '%s' could not be parsed as a URL.", resourcePath), e ) );
+					// leave URL as null
+				    }
+				}
+
+				if ( url != null )
+				{
+				    rawConfig = ConfigFactory.parseURL( url );
+				}
 				else
-				    rawConfig = ConfigFactory.parseResourcesAnySyntax( cl, resourcePath );
+				{
+				    if (resourcePath.charAt(0) == '/') // when loading resources from a classloader, leave out the leading slash...
+					resourcePath = resourcePath.substring(1);
+				    
+				    boolean includes_suffix = (resourcePath.indexOf('.') >= 0);
+				    
+				    if ( includes_suffix )
+					rawConfig = ConfigFactory.parseResources( cl, resourcePath );
+				    else
+					rawConfig = ConfigFactory.parseResourcesAnySyntax( cl, resourcePath );
+				}
 			    }
 				
 			if ( rawConfig.isEmpty() )
