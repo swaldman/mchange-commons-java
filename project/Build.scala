@@ -19,7 +19,7 @@ object MchangeCommonsJavaBuild extends Build {
     Keys.autoScalaLibrary := false, // this is a pure Java library, don't depend on Scala
     Keys.crossPaths := false,       //don't include _<scala-version> in artifact names
 
-    Keys.javacOptions in (Compile, Keys.compile) ++= Seq("-source","1.6","-target","1.6"),
+    Keys.javacOptions in (Compile, Keys.compile) ++= Seq("-source","1.6","-target","1.6"/*,"-Xlint:deprecation","-Xlint:unchecked"*/),
     //Keys.javacOptions in (Compile, Keys.compile) ++= Seq("-Xlint:all"),
     Keys.javacOptions in (Compile, Keys.doc) ++= Seq("-source","1.6"),
     Keys.javacOptions in (Keys.doc) += "-Xdoclint:none",

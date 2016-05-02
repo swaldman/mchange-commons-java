@@ -87,10 +87,13 @@ final class ConfigUtils
 	}
 	return out;
     }
-    */
+    */ 
 
     static List vmCondensedPaths(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    { return condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } ); }
+    {
+	List raw = condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } );
+	return ensureHoconInterresolvability( raw );
+    }
 
     static String stringFromPathsList( List pathsList )
     {
@@ -243,6 +246,98 @@ final class ConfigUtils
 	    Map.Entry entry = (Map.Entry) ii.next();
 	    System.err.println( entry.getKey() + " --> " + entry.getValue() );
 	}
+    }
+
+    private static void putToSet(Map<String,Set<String>> map, String key, String value ) {
+	Set<String> set = map.get( key );
+	if ( set == null ) {
+	    set = new HashSet<String>();
+	    map.put( key, set );
+	}
+	set.add( value );
+    }
+
+    private static String makeHoconPathFromElements( List<String> newElementsList ) {
+	StringBuilder sb = new StringBuilder();
+	sb.append("hocon:");
+	boolean first = true;
+	for( String element : newElementsList ) {
+	    if ( first ) first = false;
+	    else sb.append(",");
+	    sb.append( element );
+	}
+	return sb.toString();
+    }
+
+    private static String normalizeHoconPathElement( String element ) {
+	return ( element.indexOf(":") < 0 && element.charAt(0) != '/' ) ? ('/' + element) : element;
+    }
+
+
+    /*
+     * Well, this is a pain.
+     *
+     * The issue is that multiple applications can set up mutiple HOCON overlapping paths,
+     * and users, expecting the resolution associated with one application's ful HOCON path,
+     * can define substitutions that can't be fulfilled in a different application's config path.
+     *
+     * Our solution is to detect HOCON paths that overlap, and let overlapping paths fall back
+     * to one another in an ordering preserving way, so that most-recent HOCON paths always win,
+     * and within individual HOCON paths, the explicit specification overrides, but other overlapping
+     * specifications are available behind the explicit specification, in the same ordering as their
+     * paths are specified for the VM
+     */
+    private static List<String> ensureHoconInterresolvability( List<String> paths ) {
+	Map<String,List<String>> hoconPathToElementsList = new HashMap<String,List<String>>();
+	Map<String,Set<String>>  elementToHoconPaths     = new HashMap<String,Set<String>>();
+
+	List<String> out = new ArrayList<String>();
+
+	// pass 1
+	for ( String path : paths ) {
+	    if (path.toLowerCase().startsWith("hocon:")) {
+		String[] elements = path.substring("hocon:".length()).split("\\s*,\\s*");
+		for ( int i = 0, len = elements.length; i < len; ++i )
+		    elements[i] = normalizeHoconPathElement( elements[i] );
+		hoconPathToElementsList.put( path, Arrays.asList( elements ) );
+		for (String element : elements ) {
+		    putToSet(elementToHoconPaths, element, path );
+		    if ( element.indexOf('.') < 0 && !"/".equals( element ) ) {
+			putToSet( elementToHoconPaths, element + ".conf", path );
+			putToSet( elementToHoconPaths, element + ".properties", path );
+			putToSet( elementToHoconPaths, element + ".json", path );
+		    }
+		}
+	    }
+	}
+
+	// pass 2
+	for ( String path : paths ) {
+	    if (path.toLowerCase().startsWith("hocon:")) {
+		List<String> elements = hoconPathToElementsList.get( path );
+		Set<String> pathSet = new HashSet<String>();
+		for( String element : elements ) {
+		    // don't let mutual use of system properties constitute overlap,
+		    // since system properties can't contain resolvable substitutions
+		    if ( !"/".equals( element ) ) pathSet.addAll( elementToHoconPaths.get( element ) );
+		}
+		List<String> newElementsList = new ArrayList<String>();
+		for( String orderSettingPath : paths ) {
+		    if (path.toLowerCase().startsWith("hocon:")) {
+			if ( orderSettingPath != path ) { // we add the current path's elements last, since last override
+			    if ( pathSet.contains( orderSettingPath ) ) {
+				newElementsList.addAll( hoconPathToElementsList.get( orderSettingPath ) );
+			    }
+			}
+		    }
+		}
+		newElementsList.addAll( hoconPathToElementsList.get( path ) );
+		out.add( makeHoconPathFromElements( newElementsList ) );
+	    } else {
+		out.add( path );
+	    }
+	}
+	return out;
     }
 
     private ConfigUtils()
