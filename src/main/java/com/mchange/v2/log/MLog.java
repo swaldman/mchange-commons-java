@@ -115,6 +115,8 @@ public abstract class MLog
 		{
 		    if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))
 			loggerDesc = "java 1.4+ standard";
+			else if ("com.mchange.v2.log.log4j2.Log4j2MLog".equals( loggerDesc ))
+			loggerDesc = "log4j2";
 		    else if ("com.mchange.v2.log.log4j.Log4jMLog".equals( loggerDesc ))
 			loggerDesc = "log4j";
 		    else if ("com.mchange.v2.log.slf4j.Slf4jMLog".equals( loggerDesc ))
