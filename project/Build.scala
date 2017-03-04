@@ -11,7 +11,7 @@ object MchangeCommonsJavaBuild extends Build {
   val mySettings = Seq( 
     Keys.organization := "com.mchange",
     Keys.name := projectName, 
-    Keys.version := "0.2.12", 
+    Keys.version := "0.2.13-SNAPSHOT", 
 
     //Keys.scalaVersion := "2.10.1",
     //Keys.scalaVersion := "2.9.2",
