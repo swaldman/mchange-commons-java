@@ -43,18 +43,24 @@ public final class OutputStreamUtils
 {
     private final static MLogger logger = MLog.getLogger( OutputStreamUtils.class );
 
-    public static void attemptClose(OutputStream os)
+    public static void attemptClose(OutputStream os, MLogger mlogger)
     {
       try
 	  {if (os != null) os.close();}
       catch (IOException e)
 	  {
-		if ( logger.isLoggable( MLevel.WARNING ) )
-		    logger.log( MLevel.WARNING, "OutputStream close FAILED.", e );
+		if ( mlogger.isLoggable( MLevel.WARNING ) )
+		    mlogger.log( MLevel.WARNING, "OutputStream close FAILED.", e );
 	      //e.printStackTrace();
 	  }
     }
 
-  private OutputStreamUtils()
+    public static void attemptClose(OutputStream os)
+    { attemptClose( os, logger ); }
+    
+    public static void attemptCloseIgnore(OutputStream os)
+    { attemptClose( os, NullMLogger.instance() ); }
+    
+    private OutputStreamUtils()
     {}
 }

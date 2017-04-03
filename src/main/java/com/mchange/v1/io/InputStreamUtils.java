@@ -114,19 +114,25 @@ public final class InputStreamUtils
   public static InputStream getEmptyInputStream()
     {return EMPTY_ISTREAM;}
 
-  public static void attemptClose(InputStream is)
+    public static void attemptClose(InputStream is, MLogger mlogger)
     {
 	try
 	    {if (is != null) is.close();}
 	catch (IOException e)
 	    {
 		//e.printStackTrace();
-		if ( logger.isLoggable( MLevel.WARNING ) )
-		    logger.log( MLevel.WARNING, "InputStream close FAILED.", e );
+		if ( mlogger.isLoggable( MLevel.WARNING ) )
+		    mlogger.log( MLevel.WARNING, "InputStream close FAILED.", e );
 	    }
     }
 
-  public static void skipFully(InputStream is, long num_bytes) throws EOFException, IOException
+    public static void attemptClose(InputStream is)
+    { attemptClose( is, logger ); }
+
+    public static void attemptCloseIgnore(InputStream is)
+    { attemptClose( is, NullMLogger.instance() ); }
+
+    public static void skipFully(InputStream is, long num_bytes) throws EOFException, IOException
     {
       long num_skipped = 0;
       while (num_skipped < num_bytes)
