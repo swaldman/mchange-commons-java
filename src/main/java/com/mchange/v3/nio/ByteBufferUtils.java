@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 public final class ByteBufferUtils
 {
-    public byte[] newArray( ByteBuffer bb )
+    public static byte[] newArray( ByteBuffer bb )
     {
 	if ( bb.hasArray() ) {
 	    return (byte[]) bb.array().clone();
