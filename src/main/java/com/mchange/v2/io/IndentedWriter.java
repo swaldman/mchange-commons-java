@@ -49,9 +49,17 @@ public class IndentedWriter extends FilterWriter
 
     int indent_level = 0;
     boolean at_line_start = true;
+    String indentSpacing;
+
+    public IndentedWriter( Writer out, String indentSpacing )
+    {
+	super( out );
+	this.indentSpacing = indentSpacing;
+    }
 
     public IndentedWriter( Writer out )
-    { super( out ); }
+    { this( out, "\t" ); }
+    
 
     private boolean isEol( char c )
     { return ( c == '\r' || c == '\n' ); }
@@ -86,7 +94,7 @@ public class IndentedWriter extends FilterWriter
     private void printIndent() throws IOException
     {
 	for (int i = 0; i < indent_level; ++i)
-	    out.write( '\t' );
+	    out.write( indentSpacing );
     }
 
     public void print( String s ) throws IOException
