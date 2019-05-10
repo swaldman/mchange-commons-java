@@ -125,7 +125,7 @@ public final class MLevel
 	SEVERE = severe;
 	WARNING = warning;
 
-	DEBUG = fine;
+	DEBUG = finer;
 	TRACE = finest;
 
 	Map tmp = new HashMap();

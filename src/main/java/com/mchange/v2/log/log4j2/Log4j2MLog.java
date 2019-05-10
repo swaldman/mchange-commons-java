@@ -63,7 +63,6 @@ public final class Log4j2MLog extends MLog
 
     public Log4j2MLog() throws ClassNotFoundException
     {
-
         Class.forName(Log4j2MLog.CHECK_CLASS);
     }
 
@@ -103,7 +102,7 @@ public final class Log4j2MLog extends MLog
     private void fallbackWarn(String subst)
     {
         MLog.getLogger()
-                .warning("Could not create or find log4j Logger" + subst + ". " + "Using NullMLogger. All messages sent to this" + "logger will be silently ignored. You might want to fix this.");
+	    .warning("Could not create or find log4j Logger" + subst + ". " + "Using NullMLogger. All messages sent to this" + "logger will be silently ignored. You might want to fix this.");
     }
 
     private final static class Log4jMLogger implements MLogger
@@ -117,7 +116,6 @@ public final class Log4j2MLog extends MLog
 
         Log4jMLogger(Logger logger)
         {
-
             this.logger = logger;
         }
 
@@ -125,7 +123,8 @@ public final class Log4j2MLog extends MLog
         {
             if(lvl == null) return null;
             else if(lvl == Level.ALL) return MLevel.ALL;
-            else if(lvl == Level.DEBUG) return MLevel.FINEST;
+            else if(lvl == Level.TRACE) return MLevel.FINEST;
+            else if(lvl == Level.DEBUG) return MLevel.FINER;
             else if(lvl == Level.ERROR) return MLevel.SEVERE;
             else if(lvl == Level.FATAL) return MLevel.SEVERE;
             else if(lvl == Level.INFO) return MLevel.INFO;
@@ -138,10 +137,10 @@ public final class Log4j2MLog extends MLog
         {
             if(lvl == null) return null;
             else if(lvl == MLevel.ALL) return Level.ALL;
-            else if(lvl == MLevel.CONFIG) return Level.DEBUG;
+            else if(lvl == MLevel.CONFIG) return Level.FINE;
             else if(lvl == MLevel.FINE) return Level.DEBUG;
             else if(lvl == MLevel.FINER) return Level.DEBUG;
-            else if(lvl == MLevel.FINEST) return Level.DEBUG;
+            else if(lvl == MLevel.FINEST) return Level.TRACE;
             else if(lvl == MLevel.INFO) return Level.INFO;
             else if(lvl == MLevel.OFF) return Level.OFF;
             else if(lvl == MLevel.SEVERE) return Level.ERROR;
