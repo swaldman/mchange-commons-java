@@ -113,8 +113,10 @@ public final class Log4jMLog extends MLog
                 return null;
             else if (lvl == Level.ALL)
                 return MLevel.ALL;
-            else if (lvl == Level.DEBUG)
+            else if (lvl == Level.TRACE)
                 return MLevel.FINEST;
+            else if (lvl == Level.DEBUG)
+                return MLevel.FINER;
             else if (lvl == Level.ERROR)
                 return MLevel.SEVERE;
             else if (lvl == Level.FATAL)
@@ -142,7 +144,7 @@ public final class Log4jMLog extends MLog
             else if (lvl == MLevel.FINER)
                 return Level.DEBUG;
             else if (lvl == MLevel.FINEST)
-                return Level.DEBUG;
+                return Level.TRACE;
             else if (lvl == MLevel.INFO)
                 return Level.INFO;
             else if (lvl == MLevel.OFF)
@@ -207,22 +209,22 @@ public final class Log4jMLog extends MLog
         { log( level(l),  createMessage( srcClass, srcMeth, formatMessage(rb, msg, null) ),  t); }
 
         public void entering(String srcClass, String srcMeth)
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "entering method." ),  null); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "entering method." ),  null); }
 
         public void entering(String srcClass, String srcMeth, Object param)
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "entering method... param: " + param.toString() ),  null); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "entering method... param: " + param.toString() ),  null); }
 
         public void entering(String srcClass, String srcMeth, Object params[])
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "entering method... " + LogUtils.createParamsList( params ) ),  null); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "entering method... " + LogUtils.createParamsList( params ) ),  null); }
 
         public void exiting(String srcClass, String srcMeth)
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "exiting method." ),  null); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "exiting method." ),  null); }
 
         public void exiting(String srcClass, String srcMeth, Object result)
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "exiting method... result: " + result.toString() ),  null); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "exiting method... result: " + result.toString() ),  null); }
 
         public void throwing(String srcClass, String srcMeth, Throwable t)
-        { log( Level.DEBUG,  createMessage( srcClass, srcMeth, "throwing exception... " ),  t); }
+        { log( Level.TRACE,  createMessage( srcClass, srcMeth, "throwing exception... " ),  t); }
 
         public void severe(String msg)
         { log( Level.ERROR, msg,  null); }
@@ -243,7 +245,7 @@ public final class Log4jMLog extends MLog
         { log( Level.DEBUG, msg,  null); }
 
         public void finest(String msg)
-        { log( Level.DEBUG, msg,  null); }
+        { log( Level.TRACE, msg,  null); }
 
         public synchronized void setLevel(MLevel l) throws SecurityException
         {
