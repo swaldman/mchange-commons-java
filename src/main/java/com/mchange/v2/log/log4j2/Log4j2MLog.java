@@ -137,7 +137,7 @@ public final class Log4j2MLog extends MLog
         {
             if(lvl == null) return null;
             else if(lvl == MLevel.ALL) return Level.ALL;
-            else if(lvl == MLevel.CONFIG) return Level.FINE;
+            else if(lvl == MLevel.CONFIG) return Level.INFO;
             else if(lvl == MLevel.FINE) return Level.DEBUG;
             else if(lvl == MLevel.FINER) return Level.DEBUG;
             else if(lvl == MLevel.FINEST) return Level.TRACE;
