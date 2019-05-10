@@ -807,7 +807,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                         logger.warning( sw.toString() );
                         pw.close(); //superfluous, but I feel better
                     }
-		    if ( logger.isLoggable( MLevel.FINE ) )
+		    if ( logger.isLoggable( MLevel.FINER ) )
 		    {
                         StringWriter sw = new StringWriter( 4096 );
                         PrintWriter pw = new PrintWriter( sw );
@@ -819,7 +819,7 @@ public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
                         else
                             pw.print( stackTraces ); //already has an end-of-line
                         pw.flush(); //superfluous, but I feel better
-                        logger.fine( sw.toString() );
+                        logger.finer( sw.toString() );
                         pw.close(); //superfluous, but I feel better
 		    }
                     recreateThreadsAndTasks();
