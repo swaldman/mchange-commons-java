@@ -78,7 +78,7 @@ public abstract class MLog
 	    }
 	_mlog = tmpml;
 	if (warn)
-	    info("Using " + _mlog.getClass().getName() + " -- Named logger's not supported, everything goes to System.err.");
+	    info("Using " + _mlog.getClass().getName() + " -- Named loggers not supported, everything goes to System.err.");
 
 	NameTransformer tmpt = null;
 	String tClassName = MLogConfig.getProperty("com.mchange.v2.log.NameTransformer");
