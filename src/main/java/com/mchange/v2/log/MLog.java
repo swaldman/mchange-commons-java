@@ -54,6 +54,19 @@ public abstract class MLog
     private static synchronized MLog            mlog()        { return _mlog; }
     private static synchronized MLogger         logger()      { return _logger; }
 
+    public static void refreshConfig() { refreshConfig( null, null ); } // no sync' 'cuz the internal method does it
+    public static void forceFallback() { forceFallback( null ); }             // no sync' 'cuz the internal method does it
+
+    public static synchronized void forceFallback( MLevel level )
+    {
+	FallbackMLog fmlog = new FallbackMLog();
+	if (level != null) fmlog.overrideCutoffLevel( level );
+	_mlog = fmlog;
+	_logger = _mlog.getLogger( MLog.class );
+
+	info("Forced fallack to " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Named loggers not supported, everything goes to System.err.");
+    }
+
     public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
 	MLogConfig.refresh( overrides, overridesDescription );

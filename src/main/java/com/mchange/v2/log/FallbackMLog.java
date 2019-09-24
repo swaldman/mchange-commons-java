@@ -45,6 +45,9 @@ public final class FallbackMLog extends MLog
     final static MLevel DEFAULT_CUTOFF_LEVEL;
     final static String SEP;
 
+    // MT: protected by class lock
+    static MLevel overrideCutoffLevel = null;
+
     static
     {
 	MLevel dflt = null;
@@ -58,6 +61,17 @@ public final class FallbackMLog extends MLog
 	SEP = System.getProperty( "line.separator" );
     }
 
+    public static synchronized MLevel cutoffLevel()
+    {
+	if ( overrideCutoffLevel != null )
+	    return overrideCutoffLevel;
+	else
+	    return DEFAULT_CUTOFF_LEVEL;
+    }
+
+    public static synchronized void overrideCutoffLevel( MLevel level )
+    { overrideCutoffLevel = level; }
+
     MLogger logger = new FallbackMLogger();
 
     public MLogger getMLogger(String name)
@@ -68,8 +82,6 @@ public final class FallbackMLog extends MLog
 
     private final static class FallbackMLogger implements MLogger
     {
-	MLevel cutoffLevel = DEFAULT_CUTOFF_LEVEL;
-
 	private void formatrb(MLevel l, String srcClass, String srcMeth, String rbname, String msg, Object[] params, Throwable t)
 	{
 	    ResourceBundle rb = ResourceBundle.getBundle( rbname );
@@ -333,13 +345,13 @@ public final class FallbackMLog extends MLog
 	}
 
 	public void setLevel(MLevel l) throws SecurityException
-	{ this.cutoffLevel = l; }
+	{ overrideCutoffLevel( l ); }
 					      
 	public synchronized MLevel getLevel()
-	{ return cutoffLevel; }
+	{ return cutoffLevel(); }
 
 	public synchronized boolean isLoggable(MLevel l)
-	{ return (l.intValue() >= cutoffLevel.intValue()); }
+	{ return (l.intValue() >= cutoffLevel().intValue()); }
 
 	public String getName()
 	{ return "global"; }
