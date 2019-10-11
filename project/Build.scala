@@ -11,7 +11,7 @@ object MchangeCommonsJavaBuild extends Build {
   val mySettings = Seq( 
     Keys.organization := "com.mchange",
     Keys.name := projectName, 
-    Keys.version := "0.2.17-SNAPSHOT",
+    Keys.version := "0.2.17",
 
     //Keys.scalaVersion := "2.10.1",
     //Keys.scalaVersion := "2.9.2",
@@ -50,14 +50,14 @@ object MchangeCommonsJavaBuild extends Build {
   );
 
   val dependencies = Seq(
-    "com.typesafe" % "config" % "1.3.0" % "compile,optional",
-    "log4j" % "log4j" % "1.2.14+" % "compile,optional",
-    "org.apache.logging.log4j" % "log4j-api" % "2.7" % "compile,optional",
-    "org.apache.logging.log4j" % "log4j-core" % "2.7" % "compile,optional",
-    "org.slf4j" % "slf4j-api" % "1.7.5+" % "compile,optional",
-    "junit" % "junit" % "4.1+" % "test",
-    "ch.qos.logback" % "logback-classic" % "1.1.2" % "test",
-    "com.novocode" % "junit-interface" % "0.10-M3" % "test" 
+    "com.typesafe"             % "config"          % "1.3.0"   % "compile,optional",
+    "log4j"                    % "log4j"           % "1.2.14+" % "compile,optional",
+    "org.apache.logging.log4j" % "log4j-api"       % "2.7"     % "compile,optional",
+    "org.apache.logging.log4j" % "log4j-core"      % "2.7"     % "compile,optional",
+    "org.slf4j"                % "slf4j-api"       % "1.7.5+"  % "compile,optional",
+    "junit"                    % "junit"           % "4.1+"    % "test",
+    "ch.qos.logback"           % "logback-classic" % "1.1.2"   % "test",
+    "com.novocode"             % "junit-interface" % "0.10-M3" % "test" 
   );
 
   override lazy val settings = super.settings ++ mySettings;
