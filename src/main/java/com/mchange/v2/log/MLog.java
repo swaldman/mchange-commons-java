@@ -57,14 +57,34 @@ public abstract class MLog
     public static void refreshConfig() { refreshConfig( null, null ); } // no sync' 'cuz the internal method does it
     public static void forceFallback() { forceFallback( null ); }             // no sync' 'cuz the internal method does it
 
-    public static synchronized void forceFallback( MLevel level )
+    /**
+     *  Returns the MLog instance that was replaced by this operation
+     */
+    public static synchronized MLog forceFallback( MLevel level )
     {
+	MLog replaced = _mlog;
 	FallbackMLog fmlog = new FallbackMLog();
 	if (level != null) fmlog.overrideCutoffLevel( level );
 	_mlog = fmlog;
 	_logger = _mlog.getLogger( MLog.class );
 
-	info("Forced fallack to " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Named loggers not supported, everything goes to System.err.");
+	info("Forced replacement of " + replaced.getClass().getName() + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Named loggers not supported, everything goes to System.err.");
+
+	return replaced;
+    }
+
+    /**
+     *  Returns the MLog instance that was replaced by this operation
+     */
+    public static synchronized MLog forceMLog( MLog mlog )
+    {
+	MLog replaced = _mlog;
+	_mlog = mlog;
+	_logger = _mlog.getLogger( MLog.class );
+
+	info("Forced replacement of " + replaced.getClass().getName() + " with " + _mlog.getClass().getName());
+
+	return replaced;
     }
 
     public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
