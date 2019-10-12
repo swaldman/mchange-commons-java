@@ -7,6 +7,7 @@ import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.message.Message;
 //import org.apache.logging.log4j.core.filter.ThresholdFilter;
 
 import com.mchange.v2.log.MLog;
@@ -19,20 +20,18 @@ import com.mchange.v2.log.MLevel;
 public class MLogAppender extends AbstractAppender
 {
 
-    public MLogAppender(final String name, final Filter filter, final Layout<? extends Serializable> layout, final boolean ignoreExceptions)
+    protected MLogAppender(final String name, final Filter filter, final Layout<? extends Serializable> layout, final boolean ignoreExceptions)
     {
 	super(name, filter, layout, ignoreExceptions);
 	this.start();
     }
 
-    public MLogAppender(final String name )
+    public MLogAppender(String name, Filter filter)
+    { this( name, filter, null, false ); }
+
+    public MLogAppender(String name )
     {
-	this(
-	     name,
-	     null, //ThresholdFilter.createFilter( Level.ALL, Filter.Result.ACCEPT, Filter.Result.NEUTRAL ),
-	     null,
-	     false
-	     );
+	this( name, null ); //ThresholdFilter.createFilter( Level.ALL, Filter.Result.ACCEPT, Filter.Result.NEUTRAL ),
     }
 
     private MLevel levelToMLevel( Level level )
@@ -50,5 +49,8 @@ public class MLogAppender extends AbstractAppender
 
     @Override
     public final void append(final LogEvent event)
-    { MLog.getLogger( this.getName() ).log( levelToMLevel( event.getLevel()), event.getMessage().getFormattedMessage(), event.getThrown() ); }  
+    { MLog.getLogger( this.getName() ).log( levelToMLevel( event.getLevel() ), messageToString( event.getMessage() ), event.getThrown() ); }
+
+    public String messageToString( Message message )
+    { return message.getFormattedMessage(); }
 }
