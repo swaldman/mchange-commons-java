@@ -113,7 +113,7 @@ public final class SqlUtils
 
 	    if (msg == null)
 		msg = "An SQLException was provoked by the following failure: " + t.toString();
-	    if ( VersionUtils.isAtLeastJavaVersion14() )
+	    if ( VersionUtils.isAtLeastJavaVersion1_4() )
 		{
 		    SQLException out = new SQLException(msg);
 		    out.initCause( t );

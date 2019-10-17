@@ -69,14 +69,14 @@ public class PotentiallySecondaryException extends Exception implements Potentia
     private void setNested(Throwable t)
     {
 	this.nested = t;
-	if ( VersionUtils.isAtLeastJavaVersion14() )
+	if ( VersionUtils.isAtLeastJavaVersion1_4() )
 	    this.initCause( t );
     }
 
     public void printStackTrace(PrintWriter pw)
     {
 	super.printStackTrace(pw);
-	if ( !VersionUtils.isAtLeastJavaVersion14() && nested != null)
+	if ( !VersionUtils.isAtLeastJavaVersion1_4() && nested != null)
 	    {
 		pw.println(NESTED_MSG);
 		nested.printStackTrace(pw);
@@ -86,7 +86,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
     public void printStackTrace(PrintStream ps)
     {
 	super.printStackTrace(ps);
-	if ( !VersionUtils.isAtLeastJavaVersion14() && nested != null)
+	if ( !VersionUtils.isAtLeastJavaVersion1_4() && nested != null)
 	    {
 		ps.println("NESTED_MSG");
 		nested.printStackTrace(ps);
@@ -95,7 +95,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
 
     public void printStackTrace()
     {
-	if ( VersionUtils.isAtLeastJavaVersion14() )
+	if ( VersionUtils.isAtLeastJavaVersion1_4() )
 	    super.printStackTrace();
 	else
 	    this.printStackTrace(System.err);
