@@ -161,14 +161,16 @@ public final class FallbackMLog extends MLog
 	    format( l, srcClass, srcMeth, msg, params, t);
 	}
 
-	private boolean loggableMessage(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
+	private boolean isLoggableMessage(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
 	{
+	    // System.err.println( "isLoggableMessage( " + l + ", " + srcClass + ", " + srcMeth + ", " + msg + ", " + params + ", " + t + " ) -- loggerName: " + this.name);
+	    
 	    Filter globalFilter = _getGlobalFilter();
-	    boolean globalOkay = globalFilter == null || globalFilter.isLoggable( l, name, srcClass, srcMeth, msg, params, t );
+	    boolean globalOkay = globalFilter == null || globalFilter.isLoggable( l, this.name, srcClass, srcMeth, msg, params, t );
 	    if ( globalOkay )
 	    {
 		Filter localFilter = this._getFilter();
-		boolean localOkay  = localFilter == null || localFilter.isLoggable( l, name, srcClass, srcMeth, msg, params, t );
+		boolean localOkay  = localFilter == null || localFilter.isLoggable( l, this.name, srcClass, srcMeth, msg, params, t );
 		return localOkay;
 	    }
 	    else return false;
@@ -176,9 +178,8 @@ public final class FallbackMLog extends MLog
 
 	private void format(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
 	{
-	    if ( loggableMessage( l, srcClass, srcMeth, msg, params, t ) ) {
+	    if ( isLoggableMessage( l, srcClass, srcMeth, msg, params, t ) )
 		System.err.println( formatString( l, srcClass, srcMeth, msg, params, t ) );
-	    }
 	}
 
 	private String formatString(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)

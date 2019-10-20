@@ -43,13 +43,16 @@ import com.mchange.v2.cfg.MultiPropertiesConfig;
 public abstract class MLog
 {
     // MT: Protected by MLog.class' lock
+    private static boolean         _redirectableLoggers;
     private static NameTransformer _transformer;
-    private static MLog _mlog;
-    private static MLogger _logger;
+    private static MLog            _mlog;
+    private static MLogger         _logger;
 
     static
     { refreshConfig( null, null ); }
 
+    public static synchronized boolean usingRedirectableLoggers() { return _redirectableLoggers; }
+    
     private static synchronized NameTransformer transformer() { return _transformer; }
     private static synchronized MLog            mlog()        { return _mlog; }
     private static synchronized MLogger         logger()      { return _logger; }
@@ -68,12 +71,16 @@ public abstract class MLog
     public static synchronized MLog forceFallback( MLevel level )
     {
 	MLog replaced = _mlog;
+	info("Forcing replacement of " + replaced.getClass().getName() + " with fallback (with cutoff " + level + ") -- Everything goes to System.err.");
+
 	FallbackMLog fmlog = new FallbackMLog();
 	if (level != null) fmlog.overrideCutoffLevel( level );
 	_mlog = fmlog;
 	_logger = _mlog.getLogger( MLog.class );
 
 	info("Forced replacement of " + replaced.getClass().getName() + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Everything goes to System.err.");
+
+	RedirectableMLogger.resetAll();
 
 	return replaced;
     }
@@ -84,10 +91,14 @@ public abstract class MLog
     public static synchronized MLog forceMLog( MLog mlog )
     {
 	MLog replaced = _mlog;
+	info("Forcing replacement of " + replaced.getClass().getName() + " with " + mlog);
+
 	_mlog = mlog;
 	_logger = _mlog.getLogger( MLog.class );
 
 	info("Forced replacement of " + replaced.getClass().getName() + " with " + _mlog.getClass().getName());
+
+	RedirectableMLogger.resetAll();
 
 	return replaced;
     }
@@ -95,6 +106,15 @@ public abstract class MLog
     public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
 	MLogConfig.refresh( overrides, overridesDescription );
+
+	RedirectableMLogger.resetAll();
+
+	String redirectableLoggersStr = MLogConfig.getProperty("com.mchange.v2.log.MLog.useRedirectableLoggers");
+
+	if ( redirectableLoggersStr != null && redirectableLoggersStr.equalsIgnoreCase("true") )
+	    _redirectableLoggers = true;
+	else
+	    _redirectableLoggers = false;
 
 	String classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.MLog");
 	String[] classnames = null;
@@ -161,7 +181,16 @@ public abstract class MLog
 			loggerDesc = "slf4j";
 	
 		    if (logo.isLoggable( MLevel.INFO ))
-			logo.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging.");
+		    {
+			String mbwith;
+			if ( usingRedirectableLoggers() )
+			    mbwith = " with redirectable loggers";
+			else
+			    mbwith = "";
+			    
+			logo.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging" + mbwith + '.');
+		    }
+
 
 		    //System.err.println(mlog);
 
@@ -210,15 +239,18 @@ public abstract class MLog
 	NameTransformer xformer = null;
 	MLog            insty   = null;
 
+	boolean rdl;
+
 	synchronized ( MLog.class )
 	{
 	    xformer = transformer();
 	    insty = instance();
+	    rdl = _redirectableLoggers;
 	}
 
 	MLogger out;
 	if ( xformer == null )
-	    out = instance().getMLogger( name );
+	    out = insty.getMLogger( name );
 	else
 	    {
 		String xname = xformer.transformName( name );
@@ -227,7 +259,7 @@ public abstract class MLog
 		else
 		    out = insty.getMLogger( name );
 	    }
-	return out;
+	return rdl ? RedirectableMLogger.wrap(out) : out;
     }
 
     public static MLogger getLogger(Class cl)
@@ -235,10 +267,13 @@ public abstract class MLog
 	NameTransformer xformer = null;
 	MLog            insty   = null;
 
+	boolean rdl;
+
 	synchronized ( MLog.class )
 	{
 	    xformer = transformer();
 	    insty = instance();
+	    rdl = _redirectableLoggers;
 	}
 
 	MLogger out;
@@ -252,7 +287,7 @@ public abstract class MLog
 		else
 		    out = insty.getMLogger( cl );
 	    }
-	return out;
+	return rdl ? RedirectableMLogger.wrap(out) : out;
     }
 
     public static MLogger getLogger()
@@ -260,10 +295,13 @@ public abstract class MLog
 	NameTransformer xformer = null;
 	MLog            insty   = null;
 
+	boolean rdl;
+
 	synchronized ( MLog.class )
 	{
 	    xformer = transformer();
 	    insty = instance();
+	    rdl = _redirectableLoggers;
 	}
 
 	MLogger out;
@@ -277,7 +315,7 @@ public abstract class MLog
 		else
 		    out = insty.getMLogger();
 	    }
-	return out;
+	return rdl ? RedirectableMLogger.wrap(out) : out;
     }
 
     public static void log(MLevel l, String msg)
