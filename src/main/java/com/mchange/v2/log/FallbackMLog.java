@@ -39,14 +39,19 @@ import java.text.*;
 import java.util.*;
 import java.util.logging.*;
 import com.mchange.lang.ThrowableUtils;
+import com.mchange.v2.log.jdk14logging.Jdk14LoggingUtils;
 
 public final class FallbackMLog extends MLog
 {
     final static MLevel DEFAULT_CUTOFF_LEVEL;
     final static String SEP;
 
-    // MT: protected by class lock
-    static MLevel overrideCutoffLevel = null;
+    // MT: protected by this' lock
+    private static MLevel overrideCutoffLevel = null;
+    private static Filter globalFilter        = null;
+
+    // MT: unchanging, internally thread-safe
+    private final MLogger nameless = new FallbackMLogger();
 
     static
     {
@@ -61,7 +66,7 @@ public final class FallbackMLog extends MLog
 	SEP = System.getProperty( "line.separator" );
     }
 
-    public static synchronized MLevel cutoffLevel()
+    public synchronized MLevel cutoffLevel()
     {
 	if ( overrideCutoffLevel != null )
 	    return overrideCutoffLevel;
@@ -69,19 +74,81 @@ public final class FallbackMLog extends MLog
 	    return DEFAULT_CUTOFF_LEVEL;
     }
 
-    public static synchronized void overrideCutoffLevel( MLevel level )
+    public interface Filter {
+	boolean isLoggable( MLevel level, String loggerName, String srcClass, String srcMeth, String msg, Object[] params, Throwable t );
+    }
+
+    private static class Jdk14FilterAdapter implements Filter
+    {
+	private java.util.logging.Filter julFilter;
+	
+	Jdk14FilterAdapter( java.util.logging.Filter julFilter )
+	{ this.julFilter = julFilter; }
+
+	java.util.logging.Filter getInner()
+	{ return julFilter; }
+	
+	public boolean isLoggable( MLevel level, String loggerName, String srcClass, String srcMeth, String msg, Object[] params, Throwable t )
+	{
+	    LogRecord lr = new LogRecord( Jdk14LoggingUtils.levelFromMLevel( level ), msg );
+	    lr.setLoggerName( loggerName );
+	    lr.setSourceClassName( srcClass );
+	    lr.setSourceMethodName( srcMeth );
+	    lr.setParameters( params );
+	    lr.setThrown(t);
+	    return julFilter.isLoggable(lr);
+	}
+    }
+
+    /** @deprecated use setOverrideCutoffLevel(...) */
+    public void overrideCutoffLevel( MLevel level )
+    { this.setOverrideCutoffLevel( level ); }
+	
+    public synchronized void setOverrideCutoffLevel( MLevel level )
     { overrideCutoffLevel = level; }
 
-    MLogger logger = new FallbackMLogger();
+    public synchronized MLevel getOverrideCutoffLevel()
+    { return overrideCutoffLevel; }
+
+    private static Filter filterFromObject( Object o )
+    {
+	if ( o instanceof Filter ) return (Filter) o;
+	else if ( o instanceof java.util.logging.Filter) return new Jdk14FilterAdapter( (java.util.logging.Filter) o );
+	else throw new IllegalArgumentException( "Provided filter " + o + " must be either a FallbackMLog.Filter or an instance of java.util.logging.Filter." );
+    }
+
+    public synchronized void setGlobalFilter( Object filter )
+    { this.globalFilter = filterFromObject( filter ); }
+
+    public synchronized Object getGlobalFilter()
+    {
+	if (this.globalFilter instanceof Jdk14FilterAdapter) return ((Jdk14FilterAdapter) this.globalFilter).getInner();
+	else return this.globalFilter;
+    }
+
+    private synchronized Filter _getGlobalFilter()
+    { return this.globalFilter; }
 
     public MLogger getMLogger(String name)
-    { return logger; }
+    { return new FallbackMLogger(name); } 
 
     public MLogger getMLogger()
-    { return logger; } 
+    { return nameless; }
 
-    private final static class FallbackMLogger implements MLogger
+    private final class FallbackMLogger implements MLogger
     {
+	// MT: constant post construction
+	String name;
+
+	// MT: protected by this' lock
+	Filter filter = null;
+
+	public FallbackMLogger(String name)
+	{ this.name = name; }
+
+	public FallbackMLogger()
+	{ this.name = null; }
+	
 	private void formatrb(MLevel l, String srcClass, String srcMeth, String rbname, String msg, Object[] params, Throwable t)
 	{
 	    ResourceBundle rb = ResourceBundle.getBundle( rbname );
@@ -94,8 +161,25 @@ public final class FallbackMLog extends MLog
 	    format( l, srcClass, srcMeth, msg, params, t);
 	}
 
+	private boolean loggableMessage(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
+	{
+	    Filter globalFilter = _getGlobalFilter();
+	    boolean globalOkay = globalFilter == null || globalFilter.isLoggable( l, name, srcClass, srcMeth, msg, params, t );
+	    if ( globalOkay )
+	    {
+		Filter localFilter = this._getFilter();
+		boolean localOkay  = localFilter == null || localFilter.isLoggable( l, name, srcClass, srcMeth, msg, params, t );
+		return localOkay;
+	    }
+	    else return false;
+	}
+
 	private void format(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
-	{ System.err.println( formatString( l, srcClass, srcMeth, msg, params, t ) ); }
+	{
+	    if ( loggableMessage( l, srcClass, srcMeth, msg, params, t ) ) {
+		System.err.println( formatString( l, srcClass, srcMeth, msg, params, t ) );
+	    }
+	}
 
 	private String formatString(MLevel l, String srcClass, String srcMeth, String msg, Object[] params, Throwable t)
 	{
@@ -104,6 +188,11 @@ public final class FallbackMLog extends MLog
 	    StringBuffer sb = new StringBuffer(256);
 	    sb.append(l.getLineHeader());
 	    sb.append(' ');
+	    if ( name != null )
+	    {
+		sb.append( name );
+		sb.append(' ');
+	    }
 	    if (srcClass != null && srcMeth != null)
 		{
 		    sb.append('[');
@@ -169,15 +258,17 @@ public final class FallbackMLog extends MLog
 	public String getResourceBundleName()
 	{ return null; }
 
-	public void setFilter(Object java14Filter) throws SecurityException
+	public synchronized void setFilter( Object filter )
+	{ this.filter = filterFromObject( filter ); }
+	
+	public synchronized Object getFilter()
 	{
-	    warning("Using FallbackMLog -- Filters not supported!");
+	    if (this.filter instanceof Jdk14FilterAdapter) return ((Jdk14FilterAdapter) this.filter).getInner();
+	    else return this.filter;
 	}
 
-	public Object getFilter()
-	{ 
-	    return null; 
-	}
+	private synchronized Filter _getFilter()
+	{ return this.filter; }
 
 	public void log(MLevel l, String msg)
 	{ 

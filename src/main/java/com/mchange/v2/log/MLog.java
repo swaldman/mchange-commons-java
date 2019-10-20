@@ -55,7 +55,12 @@ public abstract class MLog
     private static synchronized MLogger         logger()      { return _logger; }
 
     public static void refreshConfig() { refreshConfig( null, null ); } // no sync' 'cuz the internal method does it
-    public static void forceFallback() { forceFallback( null ); }             // no sync' 'cuz the internal method does it
+
+
+    /**
+     *  Returns the MLog instance that was replaced by this operation
+     */
+    public static MLog forceFallback() { return forceFallback( null ); } // no sync' 'cuz the internal method does it
 
     /**
      *  Returns the MLog instance that was replaced by this operation
@@ -68,7 +73,7 @@ public abstract class MLog
 	_mlog = fmlog;
 	_logger = _mlog.getLogger( MLog.class );
 
-	info("Forced replacement of " + replaced.getClass().getName() + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Named loggers not supported, everything goes to System.err.");
+	info("Forced replacement of " + replaced.getClass().getName() + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Everything goes to System.err.");
 
 	return replaced;
     }
@@ -111,7 +116,7 @@ public abstract class MLog
 	    }
 	_mlog = tmpml;
 	if (warn)
-	    info("Using " + _mlog.getClass().getName() + " -- Named loggers not supported, everything goes to System.err.");
+	    info("Using " + _mlog.getClass().getName() + " -- everything goes to System.err.");
 
 	NameTransformer tmpt = null;
 	String tClassName = MLogConfig.getProperty("com.mchange.v2.log.NameTransformer");

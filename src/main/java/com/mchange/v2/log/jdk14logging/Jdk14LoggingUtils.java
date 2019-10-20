@@ -39,7 +39,7 @@ import java.util.*;
 import java.util.logging.*;
 import com.mchange.v2.log.*;
 
-final class Jdk14LoggingUtils
+public final class Jdk14LoggingUtils
 {
     public static MLevel mlevelFromLevel( Level lvl )
     {
@@ -63,6 +63,30 @@ final class Jdk14LoggingUtils
 	    return MLevel.WARNING;
 	else 
 	    throw new IllegalArgumentException("Unexpected Jdk14 logging level: " + lvl);
+    }
+
+    public static Level levelFromMLevel( MLevel mlvl )
+    {
+	if ( mlvl == MLevel.ALL )
+	    return Level.ALL;
+	else if ( mlvl == MLevel.CONFIG )
+	    return Level.CONFIG;
+	else if ( mlvl == MLevel.FINE )
+	    return Level.FINE;
+	else if ( mlvl == MLevel.FINER )
+	    return Level.FINER;
+	else if ( mlvl == MLevel.FINEST )
+	    return Level.FINEST;
+	else if ( mlvl == MLevel.INFO )
+	    return Level.INFO;
+	else if ( mlvl == MLevel.OFF )
+	    return Level.OFF;
+	else if ( mlvl == MLevel.SEVERE )
+	    return Level.SEVERE;
+	else if ( mlvl == MLevel.WARNING )
+	    return Level.WARNING;
+	else 
+	    throw new IllegalArgumentException("Unexpected MLevel: " + mlvl);
     }
 
     private Jdk14LoggingUtils()
