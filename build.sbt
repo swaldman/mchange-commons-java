@@ -6,7 +6,7 @@ organization := "com.mchange"
 
 name := "mchange-commons-java"
 
-version := "0.2.19"
+version := "0.2.20-SNAPSHOT"
 
 autoScalaLibrary := false // this is a pure Java library, don't depend on Scala
 

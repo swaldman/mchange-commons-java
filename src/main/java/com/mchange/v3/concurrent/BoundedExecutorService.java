@@ -36,7 +36,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     State state;
     int   permits;
 
-    Map<Thread,Runnable> waiters = new HashMap<Thread,Runnable>();
+    Map<Thread,Runnable> waiters   = new HashMap<Thread,Runnable>();
 
     public BoundedExecutorService( ExecutorService inner, int blockBound, int restartBeneath )
     {
@@ -122,16 +122,18 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 
     //MT: no need to synchronize
     protected <V> RunnableFuture<V> newTaskFor(Callable<V> callable) {
-	ReleasingFutureTask<V> out = new ReleasingFutureTask<V>(callable);
-	acquirePermit( out );
-	return out;
+	PermitAcquiringCallable<V> pac = new PermitAcquiringCallable<V>( callable );
+	ReleasingFutureTask<V>     rft = new ReleasingFutureTask<V>( pac );
+	pac.setTask( rft );
+	return rft;
     }
 
     //MT: no need to synchronize
     protected <V> RunnableFuture<V> newTaskFor(Runnable runnable, V result) {
-	ReleasingFutureTask<V> out = new ReleasingFutureTask<V>(runnable, result);
-	acquirePermit( out );
-	return out;
+	PermitAcquiringRunnable<V> par = new PermitAcquiringRunnable<V>( runnable );
+	ReleasingFutureTask<V>     rft = new ReleasingFutureTask<V>( par, result );
+	par.setTask( rft );
+	return rft;
     }
 
     // MT: Call only with this' lock
@@ -178,7 +180,6 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 		if ( state != SHUTDOWN_NOW )
 		{
 		    ++permits;
-		    
 		    if ( permits == blockBound ) updateState( SATURATED );
 		}
 	    }
@@ -232,13 +233,65 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	this.notifyAll();
 
     }
-    
-    class ReleasingFutureTask<V> extends FutureTask<V>
-    {
-	ReleasingFutureTask(Callable<V> callable)
-	{ super( callable ); }
 
-	ReleasingFutureTask(Runnable runnable, V result)
+    private final class PermitAcquiringCallable<V> implements Callable<V>, DelayedTaskSettable<V>
+    {
+	Callable<V>            callable;
+	ReleasingFutureTask<V> task;
+	    
+	PermitAcquiringCallable( Callable<V> callable )
+	{
+	    this.callable = callable;
+	}
+
+	public void setTask( ReleasingFutureTask<V> task )
+	{
+	    this.task = task;
+	}
+	    
+	public V call() throws Exception
+	{
+	    acquirePermit( this.task );
+	    return callable.call();
+	}
+    }
+    
+    private final class PermitAcquiringRunnable<V> implements Runnable, DelayedTaskSettable<V>
+    {
+	Runnable               runnable;
+	ReleasingFutureTask<V> task;
+	
+	PermitAcquiringRunnable( Runnable runnable )
+	{
+	    this.runnable = runnable;
+	}
+	
+	public void setTask( ReleasingFutureTask<V> task )
+	{
+	    this.task = task;
+	}
+
+	public void run()
+	{
+	    acquirePermit( this.task );
+	    runnable.run();
+	}
+    }
+
+    private interface DelayedTaskSettable<V>
+    {
+	public void setTask( ReleasingFutureTask<V> task );
+    }
+
+    private final class ReleasingFutureTask<V> extends FutureTask<V>
+    {
+	
+	ReleasingFutureTask(PermitAcquiringCallable<V> callable)
+	{
+	    super( callable );
+	}
+
+	ReleasingFutureTask(PermitAcquiringRunnable<V> runnable, V result)
 	{ super( runnable, result ); }
 
 	protected void done() 
