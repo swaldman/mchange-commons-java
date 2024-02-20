@@ -8,7 +8,7 @@
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of EITHER:
  *
- *     1) The GNU Lesser General Public License (LGPL), version 2.1, as 
+ *     1) The GNU Lesser General Public License (LGPL), version 2.1, as
  *        published by the Free Software Foundation
  *
  * OR
@@ -29,8 +29,8 @@
  * If not, the text of these licenses are currently available at
  *
  * LGPL v2.1: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
- *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php 
- * 
+ *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php
+ *
  */
 
 package com.mchange.v2.log;
@@ -74,7 +74,7 @@ public final class LogUtils
 	sb.append( msg );
 	return sb.toString();
     }
-    
+
     public static String createMessage(String srcMeth, String msg)
     {
 	StringBuffer sb = new StringBuffer(511);
@@ -110,7 +110,7 @@ public final class LogUtils
 	    }
             return (params == null ? msg : MessageFormat.format( msg, params ));
         }
-    } 
+    }
 
     private LogUtils()
     {}
