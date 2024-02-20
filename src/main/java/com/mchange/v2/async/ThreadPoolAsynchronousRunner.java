@@ -46,7 +46,7 @@ import java.util.Random;
 import com.mchange.v2.io.IndentedWriter;
 import com.mchange.v2.util.ResourceClosedException;
 
-public final class ThreadPoolAsynchronousRunner implements AsynchronousRunner
+public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAsynchronousRunner
 {
     final static MLogger logger = MLog.getLogger( ThreadPoolAsynchronousRunner.class );
 
