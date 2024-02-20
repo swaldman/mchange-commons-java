@@ -42,4 +42,5 @@ public interface ThreadPoolReportingAsynchronousRunner extends AsynchronousRunne
     public int getIdleCount();
     public int getPendingTaskCount();
     public String getStatus();
+    public String getStackTraces();
 }
