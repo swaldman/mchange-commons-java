@@ -6,17 +6,17 @@ organization := "com.mchange"
 
 name := "mchange-commons-java"
 
-version := "0.2.20"
+version := "0.3.0-SNAPSHOT"
 
 autoScalaLibrary := false // this is a pure Java library, don't depend on Scala
 
 crossPaths := false //don't include _<scala-version> in artifact names
 
-javacOptions in (Compile, compile) ++= Seq("-source","1.6","-target","1.6"/*,"-Xlint:deprecation","-Xlint:unchecked"*/)
+javacOptions in (Compile, compile) ++= Seq("-source","1.7","-target","1.7"/*,"-Xlint:deprecation","-Xlint:unchecked"*/)
 
 //javacOptions in (Compile, compile) ++= Seq("-Xlint:all")
 
-javacOptions in (Compile, doc) ++= Seq("-source","1.6")
+javacOptions in (Compile, doc) ++= Seq("-source","1.7")
 
 javacOptions in (doc) += "-Xdoclint:none"
 
@@ -28,9 +28,8 @@ libraryDependencies ++= Seq(
     "org.slf4j"                % "slf4j-api"       % "1.7.5+"  % "compile,optional",
     "junit"                    % "junit"           % "4.1+"    % "test",
     "ch.qos.logback"           % "logback-classic" % "1.1.2"   % "test",
-    "com.novocode"             % "junit-interface" % "0.10-M3" % "test" 
+    "com.novocode"             % "junit-interface" % "0.10-M3" % "test"
 );
-
 
 publishTo := {
   if (isSnapshot.value) Some("snapshots" at nexusSnapshots ) else Some("releases"  at nexusStaging )
