@@ -12,13 +12,13 @@ autoScalaLibrary := false // this is a pure Java library, don't depend on Scala
 
 crossPaths := false //don't include _<scala-version> in artifact names
 
-javacOptions in (Compile, compile) ++= Seq("-source","1.7","-target","1.7"/*,"-Xlint:deprecation","-Xlint:unchecked"*/)
+Compile / compile / javacOptions ++= Seq("-source","1.7","-target","1.7"/*,"-Xlint:deprecation","-Xlint:unchecked"*/)
 
-//javacOptions in (Compile, compile) ++= Seq("-Xlint:all")
+//Compile / compile / javacOptions ++= Seq("-Xlint:all")
 
-javacOptions in (Compile, doc) ++= Seq("-source","1.7")
+Compile / doc / javacOptions ++= Seq("-source","1.7")
 
-javacOptions in (doc) += "-Xdoclint:none"
+doc / javacOptions += "-Xdoclint:none"
 
 libraryDependencies ++= Seq(
     "com.typesafe"             % "config"          % "1.3.0"   % "compile,optional",
