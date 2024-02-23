@@ -23,8 +23,8 @@ doc / javacOptions += "-Xdoclint:none"
 libraryDependencies ++= Seq(
     "com.typesafe"             % "config"          % "1.3.0"   % "compile,optional",
     "log4j"                    % "log4j"           % "1.2.14+" % "compile,optional",
-    "org.apache.logging.log4j" % "log4j-api"       % "2.7"     % "compile,optional",
-    "org.apache.logging.log4j" % "log4j-core"      % "2.7"     % "compile,optional",
+    "org.apache.logging.log4j" % "log4j-api"       % "2.17.1"  % "compile,optional",
+    "org.apache.logging.log4j" % "log4j-core"      % "2.17.1"  % "compile,optional",
     "org.slf4j"                % "slf4j-api"       % "1.7.5+"  % "compile,optional",
     "junit"                    % "junit"           % "4.1+"    % "test",
     "ch.qos.logback"           % "logback-classic" % "1.1.2"   % "test",
