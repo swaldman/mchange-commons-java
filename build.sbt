@@ -16,9 +16,17 @@ Compile / compile / javacOptions ++= Seq("-source","1.7","-target","1.7"/*,"-Xli
 
 //Compile / compile / javacOptions ++= Seq("-Xlint:all")
 
+// some users want license files in source jar, go figure
+// see https://github.com/swaldman/mchange-commons-java/issues/11
+Compile / packageSrc / mappings ++= Seq(
+  (baseDirectory.value / "LICENSE") -> "LICENSE",
+  (baseDirectory.value / "LICENSE-LGPL") -> "LICENSE-LGPL",
+  (baseDirectory.value / "LICENSE-EPL") -> "LICENSE-EPL"
+)
+
 Compile / doc / javacOptions ++= Seq("-source","1.7")
 
-doc / javacOptions += "-Xdoclint:none"
+Compile / doc / javacOptions += "-Xdoclint:none"
 
 libraryDependencies ++= Seq(
     "com.typesafe"             % "config"          % "1.3.0"   % "compile,optional",
