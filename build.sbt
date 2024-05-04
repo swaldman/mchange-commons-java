@@ -55,7 +55,7 @@ resolvers += ("snapshots" at nexusSnapshots )
 //fork in Test := true
 //javaOptions in test += "-ea"
 
-logLevel in Test := Level.Debug
+Test / logLevel := Level.Debug
 testOptions += Tests.Argument(TestFrameworks.JUnit, "-a -v")
 
 pomExtra := pomExtraForProjectName( name.value )
