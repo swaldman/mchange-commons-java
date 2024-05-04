@@ -45,6 +45,8 @@ publishTo := {
 
 resolvers += ("snapshots" at nexusSnapshots )
 
+Compile / packageBin / packageOptions += Package.ManifestAttributes("Automatic-Module-Name" -> "com.mchange.mchangecommonsjava")
+
 /*
  * For some mysterious reasons, forking to test and setting java options on
  * the forked JVM is misbehaving. Workaround is to not fork at all, but
