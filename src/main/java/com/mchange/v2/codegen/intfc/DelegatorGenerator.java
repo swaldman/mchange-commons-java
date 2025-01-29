@@ -52,8 +52,11 @@ public class DelegatorGenerator
     boolean inner_getter         = true;
     boolean inner_setter         = true;
 
-    Class   superclass           = null;
-    Class[] extraInterfaces      = null;
+    // at most one of superclass and superclass by name should be set
+    Class  superclass = null;
+    String superclassByName = null;
+
+    Class[] extraInterfaces = null;
 
     // A rarely used feature, see below
     Method[]                   reflectiveDelegateMethods  = null;  //by default, none of this
@@ -119,6 +122,13 @@ public class DelegatorGenerator
     public Class getSuperclass()
     { return superclass; }
 
+    /** can be a simple name of FQCN, but if a simple name, you may need to override generateExtraImports */
+    public void setSuperclassByName( String superclassByName )
+    { this.superclassByName = superclassByName; }
+
+    public String getSuperclassByName()
+    { return superclassByName; }
+
     public void setExtraInterfaces( Class[] extraInterfaces )
     { this.extraInterfaces = extraInterfaces; }
 
@@ -172,11 +182,14 @@ public class DelegatorGenerator
 
     public void writeDelegator(Class intfcl, String genclass, Writer w) throws IOException
     {
+        if (superclass != null && superclassByName != null)
+            throw new IllegalStateException("A delegator generator may specify a superclass by class or by name, but not both! superclass: " + superclass + "; superclassByName: " + superclassByName);
+
 	IndentedWriter iw = CodegenUtils.toIndentedWriter(w);
-	
+
 	String   pkg      = genclass.substring(0, genclass.lastIndexOf('.'));
 	String   sgc      = CodegenUtils.fqcnLastElement( genclass );
-	String   scn      = (superclass != null ? ClassUtils.simpleClassName( superclass ) : null);
+	String   scn      = (superclass != null ? ClassUtils.simpleClassName( superclass ) : superclassByName); // may be, often is null!
 	String   sin      = ClassUtils.simpleClassName( intfcl );
 	String[] eins     = null;
 	if (extraInterfaces != null)
@@ -223,7 +236,7 @@ public class DelegatorGenerator
 	iw.println();
 	generateClassJavaDocComment( iw );
 	iw.print(CodegenUtils.getModifierString( class_modifiers ) + " class " + sgc);
-	if (superclass != null)
+	if (scn != null)
 	    iw.print(" extends " + scn);
 	iw.print(" implements " + sin);
 	if (eins != null)
