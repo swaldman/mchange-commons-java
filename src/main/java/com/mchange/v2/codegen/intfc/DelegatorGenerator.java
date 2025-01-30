@@ -306,18 +306,9 @@ public class DelegatorGenerator
 		Method method  = methods[i];
 
 		if (i != 0) iw.println();
-		iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
-		iw.println("{");
-		iw.upIndent();
-
-		generatePreDelegateCode( intfcl, genclass, method, iw );
-		generateDelegateCode( intfcl, genclass, method, iw );
-		generatePostDelegateCode( intfcl, genclass, method, iw );
-	    
-		iw.downIndent();
-		iw.println("}");
+                generateFullDelegateMethod( intfcl, genclass, method, iw );
 	    }
-	
+
 	if ( reflectiveDelegateMethods != null )
 	{
 	    iw.println("// Methods not in core interface to be delegated via reflection");
@@ -333,7 +324,7 @@ public class DelegatorGenerator
 		generatePreDelegateCode( intfcl, genclass, method, iw );
 		generateReflectiveDelegateCode( intfcl, genclass, method, iw );
 		generatePostDelegateCode( intfcl, genclass, method, iw );
-	    
+
 		iw.downIndent();
 		iw.println("}");
 	    }
@@ -344,6 +335,20 @@ public class DelegatorGenerator
 
 	iw.downIndent();
     	iw.println("}");
+    }
+
+    protected void generateFullDelegateMethod(Class intfcl, String genclass, Method method, IndentedWriter iw) throws IOException
+    {
+        iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
+        iw.println("{");
+        iw.upIndent();
+
+        generatePreDelegateCode( intfcl, genclass, method, iw );
+        generateDelegateCode( intfcl, genclass, method, iw );
+        generatePostDelegateCode( intfcl, genclass, method, iw );
+
+        iw.downIndent();
+        iw.println("}");
     }
 
     private void ensureImports(String genclass, Set imports, Method[] methods )
