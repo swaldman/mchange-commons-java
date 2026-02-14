@@ -37,7 +37,7 @@ package com.mchange.v2.naming;
 
 import java.net.*;
 import javax.naming.*;
-import com.mchange.v2.cfg.MultiPropertiesConfig;
+import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -75,7 +75,7 @@ public final class ReferenceableUtils
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, null ); }
     
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, MultiPropertiesConfig mcfg )
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, PropertiesConfig pcfg )
 	throws NamingException
     {
 	try
@@ -91,7 +91,7 @@ public final class ReferenceableUtils
 		    cl = defaultClassLoader;
 		else
 		    {
-                        if ( supportReferenceRemoteFactoryClassLocation( mcfg ) )
+                        if ( supportReferenceRemoteFactoryClassLocation( pcfg ) )
                         {
                             URL u = new URL( fClassLocation );
                             cl = new URLClassLoader( new URL[] { u }, defaultClassLoader );
@@ -104,7 +104,8 @@ public final class ReferenceableUtils
                                    "A javax.naming.Reference we have been tasked to disable specifies a potentially remote factory class location. " +
                                    "This is dangerous. A malicious reference could load and execute arbitrary code. " +
                                    "The factoryClassLocation property of the reference will be ignored, and the reference will atempt to dereference " +
-                                   "using the calling Thread's context ClassLoader or else the ClassLoader that loaded com.mchange.v2.naming.ReferenceableUtils."
+                                   "using the calling Thread's context ClassLoader or else the ClassLoader that loaded com.mchange.v2.naming.ReferenceableUtils. " +
+                                   "Reference: " + ref
                                 );
                             cl = defaultClassLoader;
                         }
@@ -128,24 +129,24 @@ public final class ReferenceableUtils
 	    }
     }
 
-    private static boolean supportReferenceRemoteFactoryClassLocation( MultiPropertiesConfig mcfg )
+    private static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
     {
         String systemPropertiesBasedShouldSupportStr = System.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
         Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
 
-        Boolean mcfgBasedShouldSupport;
-        if ( mcfg != null )
+        Boolean pcfgBasedShouldSupport;
+        if ( pcfg != null )
         {
-            String mcfgBasedShouldSupportStr = mcfg.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
-            mcfgBasedShouldSupport = mcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( mcfgBasedShouldSupportStr );
+            String pcfgBasedShouldSupportStr = pcfg.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
+            pcfgBasedShouldSupport = pcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( pcfgBasedShouldSupportStr );
         }
         else
-            mcfgBasedShouldSupport = null;
+            pcfgBasedShouldSupport = null;
 
         boolean out;
         if ( Boolean.FALSE.equals( systemPropertiesBasedShouldSupport ) )
         {
-            if (Boolean.TRUE.equals(mcfgBasedShouldSupport))
+            if (Boolean.TRUE.equals(pcfgBasedShouldSupport))
             {
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
@@ -161,7 +162,7 @@ public final class ReferenceableUtils
         }
         else if ( Boolean.TRUE.equals( systemPropertiesBasedShouldSupport ) )
         {
-            if ( Boolean.FALSE.equals( mcfgBasedShouldSupport ) )
+            if ( Boolean.FALSE.equals( pcfgBasedShouldSupport ) )
             {
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
@@ -179,9 +180,9 @@ public final class ReferenceableUtils
                 out = true;
             }
         }
-        else // property unset in System properties, defer to mcfg, only support if explicitly set to true there
+        else // property unset in System properties, defer to pcfg, only support if explicitly set to true there
         {
-            out = Boolean.TRUE.equals( mcfgBasedShouldSupport );
+            out = Boolean.TRUE.equals( pcfgBasedShouldSupport );
         }
         return out;
     }
