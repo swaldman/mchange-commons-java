@@ -38,27 +38,32 @@ package com.mchange.v2.codegen.bean;
 import java.util.*;
 import java.io.Serializable;
 import java.io.IOException;
-import com.mchange.v2.codegen.IndentedWriter;
+import com.mchange.v2.io.IndentedWriter;
 import com.mchange.v2.ser.IndirectPolicy;
 
 public class IndirectingSerializableExtension extends SerializableExtension
 {
-    protected String findIndirectorExpr;
     protected String indirectorClassName;
+    protected String findIndirectorExpr;
+    protected String findPropertiesConfigExpression;
 
     /**
-     * We expect this indirector to be a public class with a public no_arg ctor;
+     * We expect this indirector (indirectorClassName) to be a public class with a public no_arg ctor;
      * If you need the indirector initialized somehow, you'll have to extend
      * the class.
      *
      * @see #writeInitializeIndirector
      * @see #writeExtraDeclarations
      */
-    public IndirectingSerializableExtension( String indirectorClassName )
+    public IndirectingSerializableExtension( String indirectorClassName, String findPropertiesConfigExpression )
     { 
 	this.indirectorClassName = indirectorClassName;
 	this.findIndirectorExpr = "new " + indirectorClassName + "()";
+        this.findPropertiesConfigExpression = findPropertiesConfigExpression;
     }
+
+    public IndirectingSerializableExtension( String indirectorClassName )
+    { this( indirectorClassName, "null" ); }
 
     protected IndirectingSerializableExtension()
     {}
@@ -155,8 +160,9 @@ public class IndirectingSerializableExtension extends SerializableExtension
 		iw.println("// we create an artificial scope so that we can use the name o for all indirectly serialized objects.");
 		iw.println("{");
 		iw.upIndent();
+                iw.println("PropertiesConfig pcfg = " + findPropertiesConfigExpression + ";");
 		iw.println("Object o = ois.readObject();");
-		iw.println("if (o instanceof IndirectlySerialized) o = ((IndirectlySerialized) o).getObject();");
+		iw.println("if (o instanceof IndirectlySerialized) o = ((IndirectlySerialized) o).getObject( pcfg );");
 		iw.println("this." + prop.getName() + " = (" + prop.getSimpleTypeName() + ") o;");
 		iw.downIndent();
 		iw.println("}");
