@@ -8,7 +8,7 @@
  * This library is free software; you can redistribute it and/or modify
  * it under the terms of EITHER:
  *
- *     1) The GNU Lesser General Public License (LGPL), version 2.1, as 
+ *     1) The GNU Lesser General Public License (LGPL), version 2.1, as
  *        published by the Free Software Foundation
  *
  * OR
@@ -29,8 +29,8 @@
  * If not, the text of these licenses are currently available at
  *
  * LGPL v2.1: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
- *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php 
- * 
+ *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php
+ *
  */
 
 package com.mchange.v2.naming;
@@ -47,7 +47,7 @@ import java.util.Hashtable;
 public final class ReferenceableUtils
 {
     final static String SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY = "com.mchange.v2.naming.supportReferenceRemoteFactoryClassLocation";
-    
+
     final static MLogger logger = MLog.getLogger( ReferenceableUtils.class );
 
     /* don't worry -- References can have duplicate RefAddrs (I think!) */
@@ -74,7 +74,7 @@ public final class ReferenceableUtils
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env )
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, null ); }
-    
+
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, PropertiesConfig pcfg )
 	throws NamingException
     {
@@ -85,7 +85,7 @@ public final class ReferenceableUtils
 
 		ClassLoader defaultClassLoader = Thread.currentThread().getContextClassLoader();
 		if ( defaultClassLoader == null ) defaultClassLoader = ReferenceableUtils.class.getClassLoader();
-		
+
 		ClassLoader cl;
 		if ( fClassLocation == null )
 		    cl = defaultClassLoader;
@@ -110,14 +110,14 @@ public final class ReferenceableUtils
                             cl = defaultClassLoader;
                         }
 		    }
-		
+
 		Class fClass = Class.forName( fClassName, true, cl );
 		ObjectFactory of = (ObjectFactory) fClass.newInstance();
 		return of.getObjectInstance( ref, name, nameCtx, env );
 	    }
 	catch ( Exception e )
 	    {
-		if (Debug.DEBUG) 
+		if (Debug.DEBUG)
 		    {
 			//e.printStackTrace();
 			if ( logger.isLoggable( MLevel.FINE ) )
@@ -199,7 +199,7 @@ public final class ReferenceableUtils
 	appendTo.add( new StringRefAddr( REFADDR_VERSION, String.valueOf( CURRENT_REF_VERSION ) ) );
 	appendTo.add( new StringRefAddr( REFADDR_CLASSNAME, orig.getClassName() ) );
 	appendTo.add( new StringRefAddr( REFADDR_FACTORY, orig.getFactoryClassName() ) );
-	appendTo.add( new StringRefAddr( REFADDR_FACTORY_CLASS_LOCATION, 
+	appendTo.add( new StringRefAddr( REFADDR_FACTORY_CLASS_LOCATION,
 					 orig.getFactoryClassLocation() ) );
 	appendTo.add( new StringRefAddr( REFADDR_SIZE, String.valueOf(len) ) );
 	for (int i = 0; i < len; ++i)
@@ -223,7 +223,7 @@ public final class ReferenceableUtils
 			String factoryClassName = (String) extractFrom.get(index++).getContent();
 			String factoryClassLocation = (String) extractFrom.get(index++).getContent();
 
-			Reference outRef = new Reference( className, 
+			Reference outRef = new Reference( className,
 							  factoryClassName,
 							  factoryClassLocation );
 			int size = Integer.parseInt((String) extractFrom.get(index++).getContent());
@@ -236,13 +236,13 @@ public final class ReferenceableUtils
 	    }
 	catch (NumberFormatException e)
 	    {
-		if (Debug.DEBUG) 
+		if (Debug.DEBUG)
 		    {
 			//e.printStackTrace();
 			if ( logger.isLoggable( MLevel.FINE ) )
 			    logger.log( MLevel.FINE, "Version or size nested reference was not a number!!!", e);
 		    }
-		throw new NamingException("Version or size nested reference was not a number!!!"); 
+		throw new NamingException("Version or size nested reference was not a number!!!");
 	    }
     }
 
