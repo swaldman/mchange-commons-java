@@ -66,7 +66,7 @@ public final class MLevel
     private final static int WARNING_INTVAL = 900;
 
     public static MLevel fromIntValue(int intval)
-    { return (MLevel) integersToMLevels.get( new Integer( intval ) ); }
+    { return (MLevel) integersToMLevels.get( Integer.valueOf( intval ) ); }
 
     public static MLevel fromSeverity(String name)
     { return (MLevel) namesToMLevels.get( name ); }
@@ -129,15 +129,15 @@ public final class MLevel
 	TRACE = finest;
 
 	Map tmp = new HashMap();
-	tmp.put( new Integer(all.intValue()), all);
-	tmp.put( new Integer(config.intValue()), config);
-	tmp.put( new Integer(fine.intValue()), fine);
-	tmp.put( new Integer(finer.intValue()), finer);
-	tmp.put( new Integer(finest.intValue()), finest);
-	tmp.put( new Integer(info.intValue()), info);
-	tmp.put( new Integer(off.intValue()), off);
-	tmp.put( new Integer(severe.intValue()), severe);
-	tmp.put( new Integer(warning.intValue()), warning);
+	tmp.put( Integer.valueOf(all.intValue()), all);
+	tmp.put( Integer.valueOf(config.intValue()), config);
+	tmp.put( Integer.valueOf(fine.intValue()), fine);
+	tmp.put( Integer.valueOf(finer.intValue()), finer);
+	tmp.put( Integer.valueOf(finest.intValue()), finest);
+	tmp.put( Integer.valueOf(info.intValue()), info);
+	tmp.put( Integer.valueOf(off.intValue()), off);
+	tmp.put( Integer.valueOf(severe.intValue()), severe);
+	tmp.put( Integer.valueOf(warning.intValue()), warning);
 
 	integersToMLevels = Collections.unmodifiableMap( tmp );
 
