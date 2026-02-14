@@ -37,6 +37,7 @@ package com.mchange.v2.naming;
 
 import java.net.*;
 import javax.naming.*;
+import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -45,6 +46,8 @@ import java.util.Hashtable;
 
 public final class ReferenceableUtils
 {
+    final static String SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY = "com.mchange.v2.naming.supportReferenceRemoteFactoryClassLocation";
+    
     final static MLogger logger = MLog.getLogger( ReferenceableUtils.class );
 
     /* don't worry -- References can have duplicate RefAddrs (I think!) */
@@ -68,7 +71,11 @@ public final class ReferenceableUtils
 	    return s;
     }
 
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env)
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env )
+	throws NamingException
+    { return referenceToObject( ref, name, nameCtx, env, null ); }
+    
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, MultiPropertiesConfig mcfg )
 	throws NamingException
     {
 	try
@@ -84,8 +91,23 @@ public final class ReferenceableUtils
 		    cl = defaultClassLoader;
 		else
 		    {
-			URL u = new URL( fClassLocation );
-			cl = new URLClassLoader( new URL[] { u }, defaultClassLoader );
+                        if ( supportReferenceRemoteFactoryClassLocation( mcfg ) )
+                        {
+                            URL u = new URL( fClassLocation );
+                            cl = new URLClassLoader( new URL[] { u }, defaultClassLoader );
+                        }
+                        else
+                        {
+                            if ( logger.isLoggable( MLevel.WARNING ) )
+                                logger.log(
+                                   MLevel.WARNING,
+                                   "A javax.naming.Reference we have been tasked to disable specifies a potentially remote factory class location. " +
+                                   "This is dangerous. A malicious reference could load and execute arbitrary code. " +
+                                   "The factoryClassLocation property of the reference will be ignored, and the reference will atempt to dereference " +
+                                   "using the calling Thread's context ClassLoader or else the ClassLoader that loaded com.mchange.v2.naming.ReferenceableUtils."
+                                );
+                            cl = defaultClassLoader;
+                        }
 		    }
 		
 		Class fClass = Class.forName( fClassName, true, cl );
@@ -104,6 +126,64 @@ public final class ReferenceableUtils
 		ne.setRootCause( e );
 		throw ne;
 	    }
+    }
+
+    private static boolean supportReferenceRemoteFactoryClassLocation( MultiPropertiesConfig mcfg )
+    {
+        String systemPropertiesBasedShouldSupportStr = System.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
+        Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
+
+        Boolean mcfgBasedShouldSupport;
+        if ( mcfg != null )
+        {
+            String mcfgBasedShouldSupportStr = mcfg.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
+            mcfgBasedShouldSupport = mcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( mcfgBasedShouldSupportStr );
+        }
+        else
+            mcfgBasedShouldSupport = null;
+
+        boolean out;
+        if ( Boolean.FALSE.equals( systemPropertiesBasedShouldSupport ) )
+        {
+            if (Boolean.TRUE.equals(mcfgBasedShouldSupport))
+            {
+                if ( logger.isLoggable( MLevel.WARNING ) )
+                    logger.log(
+                       MLevel.WARNING,
+                       "Security-sensitive property '" + SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY +
+                       "' has been set to 'false' in System properties. Disabling loading of remote factory classes in System properties " +
+                       "OVERRIDES any configuration of this property set elsewhere, regardless of any alternative prioritization of system properties you may have configured. " +
+                       "Please resolve the inconsistency of configuration." +
+                       "Loading of remote factory classes when resolving javax.naming.Reference instances will be disabled!"
+                    );
+            }
+            out = false;
+        }
+        else if ( Boolean.TRUE.equals( systemPropertiesBasedShouldSupport ) )
+        {
+            if ( Boolean.FALSE.equals( mcfgBasedShouldSupport ) )
+            {
+                if ( logger.isLoggable( MLevel.WARNING ) )
+                    logger.log(
+                       MLevel.WARNING,
+                       "Security-sensitive property '" + SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY +
+                       "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling loading of remote factory classes in  " +
+                       "supplied configuration overrides permission granted in System properties. " +
+                       "Please resolve the inconsistency of configuration." +
+                       "Loading of remote factory classes when resolving javax.naming.Reference instances will be disabled!"
+                    );
+                out = false;
+            }
+            else // System prop is explicitly set to true, MConfig value is either unset or set to true
+            {
+                out = true;
+            }
+        }
+        else // property unset in System properties, defer to mcfg, only support if explicitly set to true there
+        {
+            out = Boolean.TRUE.equals( mcfgBasedShouldSupport );
+        }
+        return out;
     }
 
     /**
