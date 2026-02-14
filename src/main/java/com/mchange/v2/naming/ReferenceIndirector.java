@@ -44,6 +44,7 @@ import javax.naming.Name;
 import javax.naming.NamingException;
 import javax.naming.Reference;
 import javax.naming.Referenceable;
+import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -100,8 +101,10 @@ public class ReferenceIndirector implements Indirector
 	    this.env = env;
 	}
 
-
 	public Object getObject() throws ClassNotFoundException, IOException
+        { return getObject(null); }
+
+	public Object getObject(PropertiesConfig pcfg) throws ClassNotFoundException, IOException
 	{
 	    try
 		{
@@ -115,7 +118,7 @@ public class ReferenceIndirector implements Indirector
 		    if ( contextName != null )
 			nameContext = (Context) initialContext.lookup( contextName );
 
-		    return ReferenceableUtils.referenceToObject( reference, name, nameContext, env ); 
+		    return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); 
 		}
 	    catch (NamingException e)
 		{
