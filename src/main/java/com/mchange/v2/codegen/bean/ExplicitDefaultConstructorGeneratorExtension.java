@@ -39,7 +39,7 @@ import java.util.*;
 import java.lang.reflect.Modifier;
 import java.io.IOException;
 import com.mchange.v2.codegen.CodegenUtils;
-import com.mchange.v2.codegen.IndentedWriter;
+import com.mchange.v2.io.IndentedWriter;
 
 public class ExplicitDefaultConstructorGeneratorExtension implements GeneratorExtension 
 {

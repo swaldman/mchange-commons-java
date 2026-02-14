@@ -41,6 +41,8 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import com.mchange.io.*;
 
+import com.mchange.v2.ser.UnsupportedVersionException;
+
 public class RMIRegistryCallingCard implements CallingCard, Serializable
 {
   transient Remote cached = null; //really transient

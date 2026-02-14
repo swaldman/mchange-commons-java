@@ -36,7 +36,7 @@
 package com.mchange.v2.codegen.bean;
 
 import java.util.*;
-import com.mchange.v2.codegen.IndentedWriter;
+import com.mchange.v2.io.IndentedWriter;
 import com.mchange.v2.naming.JavaBeanObjectFactory;
 import com.mchange.v2.naming.JavaBeanReferenceMaker;
 

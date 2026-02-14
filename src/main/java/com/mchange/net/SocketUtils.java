@@ -39,9 +39,6 @@ import java.io.IOException;
 import java.net.Socket;
 import com.mchange.util.RobustMessageLogger;
 
-/**
- * @deprecated use com.mchange.net.v1.net.SocketUtils
- */
 public final class SocketUtils
 {
   public static void attemptClose(Socket s)

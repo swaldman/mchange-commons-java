@@ -37,8 +37,8 @@ package com.mchange.util.impl;
 
 import java.io.*;
 import java.util.*;
-import com.mchange.io.InputStreamUtils;
-import com.mchange.io.OutputStreamUtils;
+import com.mchange.v1.io.InputStreamUtils;
+import com.mchange.v1.io.OutputStreamUtils;
 
 public class SyncedProperties 
 {

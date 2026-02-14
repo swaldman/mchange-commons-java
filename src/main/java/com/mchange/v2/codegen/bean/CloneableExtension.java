@@ -37,7 +37,7 @@ package com.mchange.v2.codegen.bean;
 
 import java.util.*;
 import java.io.IOException;
-import com.mchange.v2.codegen.IndentedWriter;
+import com.mchange.v2.io.IndentedWriter;
 
 public class CloneableExtension implements GeneratorExtension
 {

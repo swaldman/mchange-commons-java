@@ -41,7 +41,7 @@ import com.mchange.v2.log.*;
 import java.lang.reflect.Modifier;
 import com.mchange.v1.lang.ClassUtils;
 import com.mchange.v2.codegen.CodegenUtils;
-import com.mchange.v2.codegen.IndentedWriter;
+import com.mchange.v2.io.IndentedWriter;
 
 public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 {

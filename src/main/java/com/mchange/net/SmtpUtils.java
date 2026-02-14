@@ -48,9 +48,10 @@ import java.net.Socket;
 import java.net.InetAddress;
 import java.util.Enumeration;
 import java.util.Properties;
-import com.mchange.io.OutputStreamUtils;
 import com.mchange.io.ReaderUtils;
 import com.mchange.net.SocketUtils;
+import com.mchange.v1.io.OutputStreamUtils;
+
 
 public final class SmtpUtils 
 {

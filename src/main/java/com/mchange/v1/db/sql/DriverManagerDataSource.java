@@ -41,7 +41,7 @@ import java.sql.*;
 import javax.naming.*;
 import javax.naming.spi.ObjectFactory;
 import javax.sql.DataSource;
-import com.mchange.io.UnsupportedVersionException;
+import com.mchange.v2.ser.UnsupportedVersionException;
 
 /**
  * @deprecated use com.mchange.v2.c3p0.DriverManagerDataSource

@@ -37,6 +37,8 @@ package com.mchange.io;
 
 import java.io.*;
 
+import com.mchange.v1.io.InputStreamUtils;
+
 public final class FileUtils
 {
   public static byte[] getBytes(File file, int max_len) throws IOException
