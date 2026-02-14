@@ -46,7 +46,6 @@ import java.util.Hashtable;
 
 public final class ReferenceableUtils
 {
-    final static String SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY = "com.mchange.v2.naming.supportReferenceRemoteFactoryClassLocation";
 
     final static MLogger logger = MLog.getLogger( ReferenceableUtils.class );
 
@@ -131,13 +130,13 @@ public final class ReferenceableUtils
 
     private static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
     {
-        String systemPropertiesBasedShouldSupportStr = System.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
+        String systemPropertiesBasedShouldSupportStr = System.getProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION );
         Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
 
         Boolean pcfgBasedShouldSupport;
         if ( pcfg != null )
         {
-            String pcfgBasedShouldSupportStr = pcfg.getProperty( SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY );
+            String pcfgBasedShouldSupportStr = pcfg.getProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION );
             pcfgBasedShouldSupport = pcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( pcfgBasedShouldSupportStr );
         }
         else
@@ -151,7 +150,7 @@ public final class ReferenceableUtils
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
                        MLevel.WARNING,
-                       "Security-sensitive property '" + SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY +
+                       "Security-sensitive property '" + SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION +
                        "' has been set to 'false' in System properties. Disabling loading of remote factory classes in System properties " +
                        "OVERRIDES any configuration of this property set elsewhere, regardless of any alternative prioritization of system properties you may have configured. " +
                        "Please resolve the inconsistency of configuration." +
@@ -167,7 +166,7 @@ public final class ReferenceableUtils
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
                        MLevel.WARNING,
-                       "Security-sensitive property '" + SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOAD_KEY +
+                       "Security-sensitive property '" + SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION +
                        "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling loading of remote factory classes in  " +
                        "supplied configuration overrides permission granted in System properties. " +
                        "Please resolve the inconsistency of configuration." +
