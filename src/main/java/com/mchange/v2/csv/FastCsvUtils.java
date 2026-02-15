@@ -57,7 +57,8 @@ public final class FastCsvUtils
 
     private final static int GUESSED_LINE_LEN = 512;
 
-    //we can ignore escaped quotes. since they must be paired (""), they don't affect the even/odd count
+    // read a logical line, which may span multiple physical lines
+    // (because CR/LF/CRLF might be included in quoted spans)
     public static String csvReadLine(BufferedReader br) throws IOException, MalformedCsvException
     {
 	int[] holder = new int[1];
@@ -66,6 +67,7 @@ public final class FastCsvUtils
 	String out;
 	if ( s != null )
 	    {
+                //we can ignore escaped quotes. since they must be paired (""), they don't affect the even/odd count
 		int quoteCount = countQuotes(s);
 		if (quoteCount % 2 != 0) 
 		    {
@@ -94,6 +96,9 @@ public final class FastCsvUtils
 	return out;
     }
 
+    // for joining CSV lines that span multiple physical lines
+    //
+    // we have to restore the token that split the physical lines
     private static void appendForToken( int token, StringBuilder sb )
     {
 	switch (token ) {
@@ -112,6 +117,8 @@ public final class FastCsvUtils
 	}
     }
 
+    // reads a line, storing the token that ended the line, which can be CR, LF, CRLF, or EOF
+    //
     // outSep is a size one array which will contain the separator char or -1 for EOF
     private static String readLine(BufferedReader br, int[] outSep) throws IOException
     {
@@ -159,6 +166,7 @@ public final class FastCsvUtils
 	return count;
     }
 
+    // split a logical line, which may span multiple physical lines, into correct CSV elements
     public static String[] splitRecord( String csvRecord ) throws MalformedCsvException
     {
 	int[] upshifted = upshiftQuoteString( csvRecord );
@@ -180,6 +188,9 @@ public final class FastCsvUtils
 	System.err.println( new String(cbuf) );
     }
 
+    // here we just split on commas and trim around them.
+    // we don't have to worry about quoted commas or whitespace, because
+    // that has already been shifted
     private static List splitShifted(int[] shiftedQuoteString)
     {
 	List out = new ArrayList();
@@ -251,6 +262,11 @@ public final class FastCsvUtils
     private static boolean isShifted( int c )
     { return ( c & SHIFT_BIT ) != 0; }
 
+    // to avoid splitting on quoted regions, we shift everything inside quoted strings up,
+    // and mark them with SHIFT_BIT to indicate that we have done so.
+    //
+    // when we are done with this, all characters within double quotes are shifted,
+    // while the double-quote characters that begin and end the shift region are eliminated
     private static int[] upshiftQuoteString(String s) throws MalformedCsvException
     {
 	//System.err.printf("ENTERED upshiftQuoteString, s->%s\n", s);
@@ -276,6 +292,12 @@ public final class FastCsvUtils
 	return out;
     }
 
+    // note that this also shifts the escape bit for escaped double-quote chars,
+    // so once we've shifted, if we tested those chars for isEscaped(c), it'd show false!
+    //
+    // but we don't and we don't need to, the escape has already served its function, distinguishing
+    // quote terminating from non-quote-terminating double quotes.
+    // the escape bit is shifted beyond the high bit, so disappears.
     private static int findShiftyChar( int c, boolean shift )
     { return ( shift ? ((c << SHIFT_OFFSET) | SHIFT_BIT) : c ); }
 
@@ -285,6 +307,17 @@ public final class FastCsvUtils
     private static boolean isEscaped( int c )
     { return (c & ESCAPE_BIT) != 0; }
 
+    // read one character at a time.
+    //
+    // the client tracks whether we are inside a double-quoted region and ensures that
+    // if we are, shift is true, if we are not, shift is false.
+    //
+    // when we are in a double-quoted region,
+    // we have to unescape double double-quotes ("") to single double-quote chars, but we don't want
+    // these interior single quotes to be taken as delimiters.
+    //
+    // so we return the double-quote char with an escape bit set,
+    // so it is not actually equal to '"'
     private static class EscapedCharReader
     {
 	char[] chars;
