@@ -91,4 +91,103 @@ public class FastCsvUtilsJUnitTestCase extends TestCase
 	    }
     }
 
+    public void testGenerateQuotedCsvItem()
+    {
+	// simple string, no internal quotes
+	assertEquals("Simple quoting", "\"hello\"", FastCsvUtils.generateQuotedCsvItem("hello"));
+
+	// empty string
+	assertEquals("Empty string quoting", "\"\"", FastCsvUtils.generateQuotedCsvItem(""));
+
+	// string with one embedded quote
+	assertEquals("Single embedded quote", "\"a\"\"re\"", FastCsvUtils.generateQuotedCsvItem("a\"re"));
+
+	// string with quotes wrapping content
+	assertEquals("Quotes wrapping content", "\"\"\"harder\"\"\"", FastCsvUtils.generateQuotedCsvItem("\"harder\""));
+
+	// string with commas (just wraps, no special escaping for commas)
+	assertEquals("Commas in content", "\"s,t,r,i,n,g,s\"", FastCsvUtils.generateQuotedCsvItem("s,t,r,i,n,g,s"));
+
+	// string with newlines
+	assertEquals("Newlines in content", "\"line1\nline2\"", FastCsvUtils.generateQuotedCsvItem("line1\nline2"));
+
+	// string with CRLF
+	assertEquals("CRLF in content", "\"line1\r\nline2\"", FastCsvUtils.generateQuotedCsvItem("line1\r\nline2"));
+
+	// string with multiple consecutive quotes
+	assertEquals("Multiple consecutive quotes", "\"a\"\"\"\"b\"", FastCsvUtils.generateQuotedCsvItem("a\"\"b"));
+    }
+
+    public void testGenerateCsvItemsAlwaysQuoted()
+    {
+	String[] quotedSimple = FastCsvUtils.generateCsvItemsAlwaysQuoted(SIMPLE);
+	assertEquals("Length preserved for SIMPLE", SIMPLE.length, quotedSimple.length);
+	assertEquals("\"these\"", quotedSimple[0]);
+	assertEquals("\"are\"", quotedSimple[1]);
+	assertEquals("\"some\"", quotedSimple[2]);
+	assertEquals("\"simple\"", quotedSimple[3]);
+	assertEquals("\"strings\"", quotedSimple[4]);
+
+	String[] quotedHarder = FastCsvUtils.generateCsvItemsAlwaysQuoted(HARDER);
+	assertEquals("Length preserved for HARDER", HARDER.length, quotedHarder.length);
+	assertEquals("\"th,ese\"", quotedHarder[0]);
+	assertEquals("\"a\"\"re\"", quotedHarder[1]);
+	assertEquals("\"some\"", quotedHarder[2]);
+	assertEquals("\"\"\"harder\"\"\"", quotedHarder[3]);
+	assertEquals("\"s,t,r,i,n,g,s\"", quotedHarder[4]);
+
+	// empty array
+	String[] quotedEmpty = FastCsvUtils.generateCsvItemsAlwaysQuoted(new String[]{});
+	assertEquals("Empty array", 0, quotedEmpty.length);
+    }
+
+    public void testGenerateCsvLineQuotedUnterminated()
+    {
+	String simpleLine = FastCsvUtils.generateCsvLineQuotedUnterminated(SIMPLE);
+	assertEquals("SIMPLE line", "\"these\",\"are\",\"some\",\"simple\",\"strings\"", simpleLine);
+
+	// single element array
+	String singleLine = FastCsvUtils.generateCsvLineQuotedUnterminated(new String[]{"hello"});
+	assertEquals("Single element", "\"hello\"", singleLine);
+
+	// empty array
+	String emptyLine = FastCsvUtils.generateCsvLineQuotedUnterminated(new String[]{});
+	assertEquals("Empty array", "", emptyLine);
+
+	// line with items that need quote escaping
+	String harderLine = FastCsvUtils.generateCsvLineQuotedUnterminated(HARDER);
+	assertEquals("HARDER line", "\"th,ese\",\"a\"\"re\",\"some\",\"\"\"harder\"\"\",\"s,t,r,i,n,g,s\"", harderLine);
+    }
+
+    public void testGenerateThenSplitRoundTrip()
+    {
+	try
+	    {
+		// SIMPLE round trip
+		String simpleLine = FastCsvUtils.generateCsvLineQuotedUnterminated(SIMPLE);
+		String[] simpleParsed = FastCsvUtils.splitRecord(simpleLine);
+		assertAllEqual("SIMPLE round trip", SIMPLE, simpleParsed);
+
+		// HARDER round trip (embedded commas and quotes)
+		String harderLine = FastCsvUtils.generateCsvLineQuotedUnterminated(HARDER);
+		String[] harderParsed = FastCsvUtils.splitRecord(harderLine);
+		assertAllEqual("HARDER round trip", HARDER, harderParsed);
+
+		// MULTILINE round trip (embedded newlines, CR, CRLF)
+		String multilineLine = FastCsvUtils.generateCsvLineQuotedUnterminated(MULTILINE);
+		String[] multilineParsed = FastCsvUtils.splitRecord(multilineLine);
+		assertAllEqual("MULTILINE round trip", MULTILINE, multilineParsed);
+
+		// BLANKS round trip (empty fields)
+		String blanksLine = FastCsvUtils.generateCsvLineQuotedUnterminated(BLANKS);
+		String[] blanksParsed = FastCsvUtils.splitRecord(blanksLine);
+		assertAllEqual("BLANKS round trip", BLANKS, blanksParsed);
+	    }
+	catch (Exception e)
+	    {
+		e.printStackTrace();
+		fail( e.getMessage() );
+	    }
+    }
+
 }
