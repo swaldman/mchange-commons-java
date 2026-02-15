@@ -75,6 +75,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	col.add( "com.mchange.v2.ser.IndirectlySerialized" );
 	col.add( "com.mchange.v2.ser.Indirector" );
 	col.add( "com.mchange.v2.ser.SerializableUtils" );
+	col.add( "com.mchange.v2.cfg.PropertiesConfig" );
 	col.add( "java.io.NotSerializableException" );
 	return col;
     }
