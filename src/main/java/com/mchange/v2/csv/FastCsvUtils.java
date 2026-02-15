@@ -40,6 +40,8 @@ import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.IOException;
 
+// RFC 4180-style CSV,
+// though accepts (unquoted) CR only or LF only in addition to CRLF as line terminator
 public final class FastCsvUtils
 {
     private final static int ESCAPE_BIT = 1 << 24;
@@ -56,6 +58,50 @@ public final class FastCsvUtils
     private final static String CRLF = "\r\n";
 
     private final static int GUESSED_LINE_LEN = 512;
+
+    public static String generateQuotedCsvItem(String s)
+    {
+        int quoteCount = countQuotes(s);
+        if ( quoteCount == 0 )
+            return "\"" + s + "\"";
+        else
+        {
+            int len = s.length();
+            StringBuilder sb = new StringBuilder(len + quoteCount + 2);
+            sb.append('\"');
+            for (int i = 0; i < len; ++i)
+            {
+                char c = s.charAt(i);
+                if (c == '"')
+                    sb.append("\"\"");
+                else
+                    sb.append(c);
+            }
+            sb.append('\"');
+            return sb.toString();
+        }
+    }
+
+    public static String[] generateCsvItemsAlwaysQuoted(String[] ss)
+    {
+        int len = ss.length;
+        String[] out = new String[len];
+        for (int i = 0; i < len; ++i)
+            out[i] = generateQuotedCsvItem(ss[i]);
+        return out;
+    }
+
+    public static String generateCsvLineQuotedUnterminated(String[] ss)
+    {
+        int len = ss.length;
+        StringBuffer sb = new StringBuffer( GUESSED_LINE_LEN );
+        for (int i = 0; i < len; ++i)
+        {
+            sb.append(generateQuotedCsvItem(ss[i]));
+            if (i != len-1) sb.append(',');
+        }
+        return sb.toString();
+    }
 
     // read a logical line, which may span multiple physical lines
     // (because CR/LF/CRLF might be included in quoted spans)
