@@ -36,7 +36,7 @@ libraryDependencies ++= Seq(
     "org.slf4j"                % "slf4j-api"       % "1.7.5"   % "compile,optional",
     "junit"                    % "junit"           % "4.1+"    % "test",
     "ch.qos.logback"           % "logback-classic" % "1.1.2"   % "test",
-    "com.novocode"             % "junit-interface" % "0.10-M3" % "test"
+    "com.novocode"             % "junit-interface" % "0.11"    % "test"
 );
 
 publishTo := {
