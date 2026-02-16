@@ -212,10 +212,16 @@ public final class FastCsvUtils
 	return count;
     }
 
-    // split a logical line, which may span multiple physical lines, into correct CSV elements
+    /**
+     * @deprecated("Prefer csvSplitLine.")
+     */
     public static String[] splitRecord( String csvRecord ) throws MalformedCsvException
+    { return csvSplitLine( csvRecord ); }
+
+    // split a logical line, which may span multiple physical lines, into correct CSV elements
+    public static String[] csvSplitLine( String csvLine ) throws MalformedCsvException
     {
-	int[] upshifted = upshiftQuoteString( csvRecord );
+	int[] upshifted = upshiftQuoteString( csvLine );
 	//debugPrint( upshifted );
 	List upshiftedSplit = splitShifted( upshifted );
 	int len = upshiftedSplit.size();

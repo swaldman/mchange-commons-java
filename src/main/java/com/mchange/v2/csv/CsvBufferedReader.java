@@ -22,7 +22,7 @@ public class CsvBufferedReader extends BufferedReader
     public String[] readSplitLine() throws IOException, MalformedCsvException
     {
 	String line = this.readLine();
-	return line == null ? null : FastCsvUtils.splitRecord( line );
+	return line == null ? null : FastCsvUtils.csvSplitLine( line );
     }
 
     // simple delegations
