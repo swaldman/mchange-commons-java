@@ -190,12 +190,12 @@ public final class ReferenceableUtils
     }
 
     public static boolean permitNonlocalJndiNames( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg ); }
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg, "Looking up nonlocal (or not provably local) JNDI names"); }
 
     public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg ); }
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances" ); }
 
-    private static boolean falseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg )
+    private static boolean falseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled )
     {
         String systemPropertiesBasedShouldSupportStr = System.getProperty( propStyleKey );
         Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
@@ -218,10 +218,10 @@ public final class ReferenceableUtils
                     logger.log(
                        MLevel.WARNING,
                        "Security-sensitive property '" + propStyleKey +
-                       "' has been set to 'false' in System properties. Disabling loading of remote factory classes in System properties " +
+                       "' has been set to 'false' in System properties. Disabling this functionality in System properties conservatively " +
                        "OVERRIDES any configuration of this property set elsewhere, regardless of any alternative prioritization of system properties you may have configured. " +
                        "Please resolve the inconsistency of configuration." +
-                       "Loading of remote factory classes when resolving javax.naming.Reference instances will be disabled!"
+                       whatWillBeDisabled + " will be disabled!"
                     );
             }
             out = false;
@@ -234,10 +234,10 @@ public final class ReferenceableUtils
                     logger.log(
                        MLevel.WARNING,
                        "Security-sensitive property '" + propStyleKey +
-                       "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling loading of remote factory classes in  " +
+                       "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling this functionality in  " +
                        "supplied configuration overrides permission granted in System properties. " +
                        "Please resolve the inconsistency of configuration." +
-                       "Loading of remote factory classes when resolving javax.naming.Reference instances will be disabled!"
+                       whatWillBeDisabled + " will be disabled!"
                     );
                 out = false;
             }
