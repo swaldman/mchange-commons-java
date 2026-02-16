@@ -159,15 +159,51 @@ public final class ReferenceableUtils
 	    }
     }
 
-    private static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
+    public static boolean nameLocalityIsAcceptable( Object jndiName, PropertiesConfig pcfg )
     {
-        String systemPropertiesBasedShouldSupportStr = System.getProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION );
+        boolean resolveNonlocal = permitNonlocalJndiNames( pcfg );
+        if ( jndiName instanceof String )
+            return resolveNonlocal || jndiNameIsLocal((String) jndiName);
+        else if ( jndiName instanceof Name )
+            return resolveNonlocal || jndiNameIsLocal((Name) jndiName);
+        else
+        {
+            if ( logger.isLoggable( MLevel.WARNING ) )
+                logger.log(
+                   MLevel.WARNING,
+                   "Putative JNDI name of unexpected type. We expect String or javax.naming.Name. " +
+                   "We conservatively, redundantly, disallow any attempt to lookup of jndi names of unknown types. There is no API to do so. " +
+                   "Putative JNDI name: " + jndiName
+                );
+            return false;
+        }
+    }
+
+    public static boolean jndiNameIsLocal( String name )
+    { return name.startsWith("java:"); }
+
+    public static boolean jndiNameIsLocal( Name name )
+    {
+        // for now we don't know how to prove to ourselves that a javax.naming.Name is local
+        // we are open to suggestions!
+        return false;
+    }
+
+    public static boolean permitNonlocalJndiNames( PropertiesConfig pcfg )
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg ); }
+
+    public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg ); }
+
+    private static boolean falseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg )
+    {
+        String systemPropertiesBasedShouldSupportStr = System.getProperty( propStyleKey );
         Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
 
         Boolean pcfgBasedShouldSupport;
         if ( pcfg != null )
         {
-            String pcfgBasedShouldSupportStr = pcfg.getProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION );
+            String pcfgBasedShouldSupportStr = pcfg.getProperty( propStyleKey );
             pcfgBasedShouldSupport = pcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( pcfgBasedShouldSupportStr );
         }
         else
@@ -181,7 +217,7 @@ public final class ReferenceableUtils
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
                        MLevel.WARNING,
-                       "Security-sensitive property '" + SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION +
+                       "Security-sensitive property '" + propStyleKey +
                        "' has been set to 'false' in System properties. Disabling loading of remote factory classes in System properties " +
                        "OVERRIDES any configuration of this property set elsewhere, regardless of any alternative prioritization of system properties you may have configured. " +
                        "Please resolve the inconsistency of configuration." +
@@ -197,7 +233,7 @@ public final class ReferenceableUtils
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
                        MLevel.WARNING,
-                       "Security-sensitive property '" + SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION +
+                       "Security-sensitive property '" + propStyleKey +
                        "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling loading of remote factory classes in  " +
                        "supplied configuration overrides permission granted in System properties. " +
                        "Please resolve the inconsistency of configuration." +
@@ -276,11 +312,14 @@ public final class ReferenceableUtils
 	    }
     }
 
-    private static Set commaSeparatedStringListToSet( String csList )
+    private static Set commaSeparatedStringListToModifiableSet( String csList )
     {
         String[] items = csList.split("\\s*,\\s*");
-        return Collections.unmodifiableSet(new HashSet(Arrays.asList(items)));
+        return new HashSet(Arrays.asList(items));
     }
+
+    private static Set commaSeparatedStringListToSet( String csList )
+    { return Collections.unmodifiableSet(commaSeparatedStringListToModifiableSet(csList)); }
 
     // pcfg can be null
     private static Set findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
@@ -311,11 +350,11 @@ public final class ReferenceableUtils
             return commaSeparatedStringListToSet( rawPropsConfigProp );
         else
         {
-            Set sysPropSet = commaSeparatedStringListToSet( rawSysProp );
-            Set propsConfigSet = commaSeparatedStringListToSet( rawPropsConfigProp );
+            Set sysPropSet = commaSeparatedStringListToModifiableSet( rawSysProp );
+            Set propsConfigSet = commaSeparatedStringListToModifiableSet( rawPropsConfigProp );
 
             if (sysPropSet.equals(propsConfigSet))
-                return sysPropSet;
+                return Collections.unmodifiableSet(sysPropSet);
             else
             {
                 sysPropSet.retainAll(propsConfigSet);
@@ -334,6 +373,8 @@ public final class ReferenceableUtils
             }
         }
     }
+
+    
 
     /**
      * @deprecated nesting references seemed useful until I realized that

@@ -48,6 +48,7 @@ import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
+import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.ser.Indirector;
 import com.mchange.v2.ser.IndirectlySerialized;
 
@@ -116,7 +117,17 @@ public class ReferenceIndirector implements Indirector
 
 		    Context nameContext = null;
 		    if ( contextName != null )
-			nameContext = (Context) initialContext.lookup( contextName );
+                    {
+                        if (ReferenceableUtils.nameLocalityIsAcceptable( contextName, pcfg ))
+                            nameContext = (Context) initialContext.lookup( contextName );
+                        else
+                            throw new IOException(
+                                "Cannot dereference indirectly serialized ReferenceSerialized, " +
+                                "because it references a context with nonlocal name '" + contextName +
+                                "', and lookup of nonlocal JNDI names is disabled via '" +
+                                SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES + "'."
+                            );
+                    }
 
 		    return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); 
 		}
