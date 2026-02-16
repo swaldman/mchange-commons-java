@@ -36,13 +36,14 @@
 package com.mchange.v2.naming;
 
 import java.net.*;
+import java.util.*;
 import javax.naming.*;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
+import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
-import java.util.Hashtable;
 
 public final class ReferenceableUtils
 {
@@ -72,15 +73,45 @@ public final class ReferenceableUtils
 
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env )
 	throws NamingException
-    { return referenceToObject( ref, name, nameCtx, env, null ); }
+    {
+        Set allowedFactoryClassNames = findMandatoryObjectFactoryWhitelist( null );
+        return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null );
+    }
 
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, PropertiesConfig pcfg )
+	throws NamingException
+    {
+        Set allowedFactoryClassNames = findMandatoryObjectFactoryWhitelist( pcfg );
+        return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, pcfg );
+    }
+
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames )
+	throws NamingException
+    { return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null ); }
+
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames, PropertiesConfig pcfg )
 	throws NamingException
     {
 	try
 	    {
 		String fClassName = ref.getFactoryClassName();
 		String fClassLocation = ref.getFactoryClassLocation();
+
+                // for now, we simply do not support null factoryClassName
+                //
+                // if ever there is a need to, we could adopt the behavior of, or delegate to, javax.naming.spi.NamingManager
+                // see https://docs.oracle.com/en/java/javase/11/docs/api/java.naming/javax/naming/spi/NamingManager.html
+                // but as this is likely legacy functionality, for now we'll just reject such References
+                if (fClassName == null)
+                    throw new NamingException(
+                        "A null factoryClassName was encountered. ReferenceableUtils.referenceToObject(...) does not support null factory class names. " +
+                        "If the null is intentional, consider using javax.naming.spi.NamingManager.getObjectInstance(...) " +
+                        "which employs certain conventions to dereference with an unspecified factoryClassName. Reference: " + ref
+                    );
+                if (allowedFactoryClassNames != null && !allowedFactoryClassNames.contains(fClassName))
+                    throw new NamingException(
+                        "factoryClassName '" + fClassName + "' is not in allowedFactoryClassNames [" + IterableUtils.joinAsString(",",allowedFactoryClassNames) + "]"
+                    );
 
 		ClassLoader defaultClassLoader = Thread.currentThread().getContextClassLoader();
 		if ( defaultClassLoader == null ) defaultClassLoader = ReferenceableUtils.class.getClassLoader();
@@ -243,6 +274,65 @@ public final class ReferenceableUtils
 		    }
 		throw new NamingException("Version or size nested reference was not a number!!!");
 	    }
+    }
+
+    private static Set commaSeparatedStringListToSet( String csList )
+    {
+        String[] items = csList.split("\\s*,\\s*");
+        return Collections.unmodifiableSet(new HashSet(Arrays.asList(items)));
+    }
+
+    // pcfg can be null
+    private static Set findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
+    {
+        Set narrowest = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg );
+        if (narrowest == null)
+            throw new NamingException(
+                "No ObjectFactory whitelist found. " +
+                "When calling referenceToObject(...) using overloads that lack an explicit allowedFactoryClassNames Set, a '" +
+                SecurityConfigKey.OBJECT_FACTORY_WHITELIST + "' must be provided either as a System property or a provided com.mchange.v2.PropertiesConfig instance. " +
+                "If you really want to live dangerously and accept any ObjectFactory (why?!?), you must call an overload of referenceToObject(...) that accepts " +
+                "an explicit allowedFactoryClassNames Set, and then provide it as null."
+            );
+        return narrowest;
+    }
+
+    // pcfg can be null
+    private static Set narrowestStringListPropertiesConfigSystemProperties( String propStyleKey, PropertiesConfig pcfg )
+    {
+        String rawSysProp = System.getProperty( propStyleKey );
+        String rawPropsConfigProp = pcfg == null ? null : pcfg.getProperty( propStyleKey );
+
+        if (rawSysProp == null && rawPropsConfigProp == null)
+            return null;
+        else if (rawSysProp != null && rawPropsConfigProp == null)
+            return commaSeparatedStringListToSet( rawSysProp );
+        else if (rawSysProp == null && rawPropsConfigProp != null)
+            return commaSeparatedStringListToSet( rawPropsConfigProp );
+        else
+        {
+            Set sysPropSet = commaSeparatedStringListToSet( rawSysProp );
+            Set propsConfigSet = commaSeparatedStringListToSet( rawPropsConfigProp );
+
+            if (sysPropSet.equals(propsConfigSet))
+                return sysPropSet;
+            else
+            {
+                sysPropSet.retainAll(propsConfigSet);
+                Set out = Collections.unmodifiableSet(sysPropSet);
+
+                if ( logger.isLoggable( MLevel.WARNING ) )
+                    logger.log(
+                        MLevel.WARNING,
+                        "Inconsistent values of '" + propStyleKey + "' were found in System properties and the provided configuration. " +
+                        "We are conservatively using the *intersection* of those values. " +
+                        "Value in System properties: '" + rawSysProp + "'; Value in PropertiesConfig: '" + rawPropsConfigProp + "'; " +
+                        "Value of intersection: '" + IterableUtils.joinAsString(",",out)
+                    );
+
+                return out;
+            }
+        }
     }
 
     /**
