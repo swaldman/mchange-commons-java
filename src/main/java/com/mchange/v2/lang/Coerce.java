@@ -126,21 +126,21 @@ public final class Coerce
 	if ( type == String.class )
 	    return s;
 	else if ( type == Byte.class )
-	    return new Byte( toByte( s ) );
+	    return Byte.valueOf( toByte( s ) );
 	else if ( type == Boolean.class )
 	    return Boolean.valueOf( s );
 	else if ( type == Character.class )
-	    return new Character( toChar( s ) );
+	    return Character.valueOf( toChar( s ) );
 	else if ( type == Short.class )
-	    return new Short( toShort( s ) );
+	    return Short.valueOf( toShort( s ) );
 	else if ( type == Integer.class )
-	    return new Integer( s );
+	    return Integer.valueOf( s );
 	else if ( type == Long.class )
-	    return new Long( s );
+	    return Long.valueOf( s );
 	else if ( type == Float.class )
-	    return new Float( s );
+	    return Float.valueOf( s );
 	else if ( type == Double.class )
-	    return new Double( s );
+	    return Double.valueOf( s );
 	else
 	    throw new IllegalArgumentException("Cannot coerce to type: " + type.getName());
     }

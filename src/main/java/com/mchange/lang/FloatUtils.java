@@ -145,7 +145,7 @@ public final class FloatUtils
     static class J11FParser implements FParser
     {
 	public float parseFloat(String fStr) throws NumberFormatException
-	{return new Float(fStr).floatValue();}
+	{return Float.valueOf(fStr).floatValue();}
     }	
 
 }

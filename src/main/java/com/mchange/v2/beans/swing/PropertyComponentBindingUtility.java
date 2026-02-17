@@ -116,19 +116,19 @@ class PropertyComponentBindingUtility
 		if (propType == boolean.class)
 		    this.nullReplacement = Boolean.FALSE;
 		if (propType == byte.class)
-		    this.nullReplacement = new Byte( (byte) 0 );
+		    this.nullReplacement = Byte.valueOf( (byte) 0 );
 		else if (propType == char.class)
-		    this.nullReplacement = new Character( (char) 0 );
+		    this.nullReplacement = Character.valueOf( (char) 0 );
 		else if (propType == short.class)
-		    this.nullReplacement = new Short( (short) 0 );
+		    this.nullReplacement = Short.valueOf( (short) 0 );
 		else if (propType == int.class)
-		    this.nullReplacement = new Integer( 0 );
+		    this.nullReplacement = Integer.valueOf( 0 );
 		else if (propType == long.class)
-		    this.nullReplacement = new Long( 0 );
+		    this.nullReplacement = Long.valueOf( 0 );
 		else if (propType == float.class)
-		    this.nullReplacement = new Float( 0 );
+		    this.nullReplacement = Float.valueOf( 0 );
 		else if (propType == double.class)
-		    this.nullReplacement = new Double( 0 );
+		    this.nullReplacement = Double.valueOf( 0 );
 		else
 		    throw new InternalError("What kind of primitive is " + propType.getName() + "???");
 	    }

@@ -110,7 +110,7 @@ public final class VersionUtils
 		if (numBitsStr == null)
 		    tmpNumBits = null;
 		else
-		    tmpNumBits = new Integer( numBitsStr );
+		    tmpNumBits = Integer.valueOf( numBitsStr );
 	    }
 	catch (Exception e)
 	    {

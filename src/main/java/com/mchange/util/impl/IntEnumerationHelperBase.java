@@ -46,5 +46,5 @@ public abstract class IntEnumerationHelperBase implements IntEnumeration
     {return hasMoreInts();}
 
   public final Object nextElement()
-    {return new Integer(nextInt());}
+    {return Integer.valueOf(nextInt());}
 }

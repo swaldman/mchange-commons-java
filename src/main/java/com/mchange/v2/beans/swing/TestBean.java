@@ -80,7 +80,7 @@ public class TestBean
 	    {
 		float old_f = f;
 		f = new_f;
-		pcs.firePropertyChange( "theFloat", new Float(old_f), new Float(f) );
+		pcs.firePropertyChange( "theFloat", Float.valueOf(old_f), Float.valueOf(f) );
 	    }
     }
 

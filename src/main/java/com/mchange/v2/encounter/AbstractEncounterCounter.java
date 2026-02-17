@@ -39,7 +39,7 @@ import java.util.Map;
 
 class AbstractEncounterCounter implements EncounterCounter
 {
-    final static Long ONE = new Long(1);
+    final static Long ONE = Long.valueOf(1);
     Map m;
 
     AbstractEncounterCounter(Map m)
@@ -61,7 +61,7 @@ class AbstractEncounterCounter implements EncounterCounter
 	else
 	    {
 		out = oldLong.longValue(); 
-		newLong = new Long(out + 1);
+		newLong = Long.valueOf(out + 1);
 	    }
 	m.put( o, newLong );
 	return out;

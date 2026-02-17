@@ -183,28 +183,28 @@ public final class BeangenUtils
 			// for boolean and int 
 			if (propType == byte.class)
 			    {
-				oldValExpr  = "new Byte( "+ oldValExpr +" )";
-				newValExpr  = "new Byte( "+ newValExpr +" )";
+				oldValExpr  = "Byte.valueOf( "+ oldValExpr +" )";
+				newValExpr  = "Byte.valueOf( "+ newValExpr +" )";
 			    }
 			else if (propType == char.class)
 			    {
-				oldValExpr  = "new Character( "+ oldValExpr +" )";
-				newValExpr  = "new Character( "+ newValExpr +" )";
+				oldValExpr  = "Character.valueOf( "+ oldValExpr +" )";
+				newValExpr  = "Character.valueOf( "+ newValExpr +" )";
 			    }
 			else if (propType == short.class)
 			    {
-				oldValExpr  = "new Short( "+ oldValExpr +" )";
-				newValExpr  = "new Short( "+ newValExpr +" )";
+				oldValExpr  = "Short.valueOf( "+ oldValExpr +" )";
+				newValExpr  = "Short.valueOf( "+ newValExpr +" )";
 			    }
 			else if (propType == float.class)
 			    {
-				oldValExpr  = "new Float( "+ oldValExpr +" )";
-				newValExpr  = "new Float( "+ newValExpr +" )";
+				oldValExpr  = "Float.valueOf( "+ oldValExpr +" )";
+				newValExpr  = "Float.valueOf( "+ newValExpr +" )";
 			    }
 			else if (propType == double.class)
 			    {
-				oldValExpr  = "new Double( "+ oldValExpr +" )";
-				newValExpr  = "new Double( "+ newValExpr +" )";
+				oldValExpr  = "Double.valueOf( "+ oldValExpr +" )";
+				newValExpr  = "Double.valueOf( "+ newValExpr +" )";
 			    }
 
 			changeCheck = "oldVal != " + prop.getName();

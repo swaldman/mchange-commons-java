@@ -55,14 +55,14 @@ public class DoubleWeakHashMapJUnitTestCase extends TestCase
     
     public void testHardAdds()
     {
-        Integer a = new Integer(1);
-        Integer b = new Integer(2);
-        Integer c = new Integer(3);
-        
+        Integer a = Integer.valueOf(1);
+        Integer b = Integer.valueOf(2);
+        Integer c = Integer.valueOf(3);
+
         String poop = new String("poop");
         String scoop = new String("scoop");
         String doop = new String("dcoop");
-        
+
         Map m = new DoubleWeakHashMap();
         m.put(a, poop);
         m.put(b, scoop);
@@ -70,15 +70,15 @@ public class DoubleWeakHashMapJUnitTestCase extends TestCase
         assertEquals("Size should be three, viewed via Map directly.", m.size(), 3);
         assertEquals("Size should be three, viewed via keySet .", m.keySet().size(), 3);
         assertEquals("Size should be three, viewed via values Collection.", m.values().size(), 3);
-        
+
         int count = 0;
         for (Iterator ii = m.keySet().iterator(); ii.hasNext();)
         {
             count += ((Integer) ii.next()).intValue();
         }
         assertEquals("Count should be six, viewed via values Collection.", count, 6);
-        
-        Integer d = new Integer(4);
+
+        Integer d = Integer.valueOf(4);
         m.put(d, poop);
         m.values().remove(poop);
         assertEquals("After removing a doubled value, size should be 2", m.size(), 2);
