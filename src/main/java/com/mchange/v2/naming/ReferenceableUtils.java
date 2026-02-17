@@ -131,7 +131,7 @@ public final class ReferenceableUtils
                             if ( logger.isLoggable( MLevel.WARNING ) )
                                 logger.log(
                                    MLevel.WARNING,
-                                   "A javax.naming.Reference we have been tasked to disable specifies a potentially remote factory class location. " +
+                                   "A javax.naming.Reference we have been tasked to dereference specifies a potentially remote factory class location. " +
                                    "This is dangerous. A malicious reference could load and execute arbitrary code. " +
                                    "The factoryClassLocation property of the reference will be ignored, and the reference will atempt to dereference " +
                                    "using the calling Thread's context ClassLoader or else the ClassLoader that loaded com.mchange.v2.naming.ReferenceableUtils. " +
@@ -194,6 +194,9 @@ public final class ReferenceableUtils
 
     public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances" ); }
+
+    public static boolean acceptDeserializedInitialContextEnvironment( PropertiesConfig pcfg )
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, pcfg, "Acceptance of deserialized InitialContext environment"); }
 
     private static boolean falseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled )
     {

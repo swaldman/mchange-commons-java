@@ -51,6 +51,7 @@ import com.mchange.v2.log.MLogger;
 import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.ser.Indirector;
 import com.mchange.v2.ser.IndirectlySerialized;
+import com.mchange.v2.util.MapUtils;
 
 public class ReferenceIndirector implements Indirector
 {
@@ -102,6 +103,22 @@ public class ReferenceIndirector implements Indirector
 	    this.env = env;
 	}
 
+        public String toString()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.append(this.getClass().getName());
+            sb.append("[reference=");
+            sb.append(reference);
+            sb.append("; name=");
+            sb.append(name);
+            sb.append("; contextName=");
+            sb.append(contextName);
+            sb.append("; env=[");
+            sb.append(MapUtils.joinEntriesIntoString(true,true,"->",",",env));
+            sb.append("]]");
+            return sb.toString();
+        }
+
 	public Object getObject() throws ClassNotFoundException, IOException
         { return getObject(null); }
 
@@ -113,7 +130,20 @@ public class ReferenceIndirector implements Indirector
 		    if ( env == null )
 			initialContext = new InitialContext();
 		    else
-			initialContext = new InitialContext( env );
+                    {
+                        if (ReferenceableUtils.acceptDeserializedInitialContextEnvironment(pcfg))
+                            initialContext = new InitialContext( env );
+                        else
+                            throw new IOException(
+                                "A value indirectly serialized as a reference includes a non-default (non-null) InitialContext environment " +
+                                "by which the reference wishes to be looked up. " +
+                                "InitialContext environment parameters can redirect lookups to untrusted remote servers " +
+                                "and potentially lead to download and execution of malicious code. SecurityConfigKey '" +
+                                SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT +
+                                "' is set conservatively to false, so this operation is not supported. " +
+                                "Indirectly serialized reference: " + this.toString()
+                            );
+                    }
 
 		    Context nameContext = null;
 		    if ( contextName != null )

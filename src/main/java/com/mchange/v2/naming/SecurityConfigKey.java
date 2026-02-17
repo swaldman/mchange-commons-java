@@ -10,5 +10,7 @@ public class SecurityConfigKey {
     // used in ReferenceableUtils.referenceToObject when no whitelist is provided explicitly
     public final static String OBJECT_FACTORY_WHITELIST = "com.mchange.v2.naming.objectFactoryWhitelist";
 
+    public final static String ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT = "com.mchange.v2.naming.acceptDeserializedInitialContextEnvironment";
+
     private SecurityConfigKey() {}
 }
