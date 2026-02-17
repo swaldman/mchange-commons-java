@@ -85,10 +85,16 @@ public final class ReferenceableUtils
         return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, pcfg );
     }
 
+    /**
+     * Note that if, and only if, null is explicitly passed as allowedFactoryClassNames, no whitelist test is performed.
+     */
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames )
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null ); }
 
+    /**
+     * Note that if, and only if, null is explicitly passed as allowedFactoryClassNames, no whitelist test is performed.
+     */
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames, PropertiesConfig pcfg )
 	throws NamingException
     {
