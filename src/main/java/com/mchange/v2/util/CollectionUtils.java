@@ -223,8 +223,8 @@ public final class CollectionUtils
 				out = (Collection) ctor.newInstance( new Object[] { c } );
 			    }
 			catch ( Exception e )
-			    { 
-				/* IGNORE... just means there's no accessible ctor here */ 
+			    {
+				/* IGNORE... just means there's no accessible ctor here */
 				if ( Debug.DEBUG && Debug.TRACE == Debug.TRACE_MAX )
 				    e.printStackTrace();
 			    }
