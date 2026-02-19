@@ -128,16 +128,24 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
     { assertFalse( ReferenceableUtils.jndiNameIsLocal( "" ) ); }
 
     // ==========================================
-    // jndiNameIsLocal (Name overload) - always false (conservative)
+    // jndiNameIsLocal (Name overload)
+    // A Name whose first component starts with "java:" is considered local.
     // ==========================================
 
-    public void testJndiNameIsLocalNameAlwaysFalse() throws InvalidNameException
-    {
-        // Even a name that looks local by string convention is considered non-local,
-        // because there is no general API to prove a javax.naming.Name is local.
-        Name name = new CompositeName( "java:comp/env" );
-        assertFalse( ReferenceableUtils.jndiNameIsLocal( name ) );
-    }
+    public void testJndiNameIsLocalNameJavaPrefix() throws InvalidNameException
+    { assertTrue( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "java:comp/env/myDS" ) ) ); }
+
+    public void testJndiNameIsLocalNameBareJavaColon() throws InvalidNameException
+    { assertTrue( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "java:" ) ) ); }
+
+    public void testJndiNameIsLocalNameNonLocalUrl() throws InvalidNameException
+    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "ldap://example.com/myDS" ) ) ); }
+
+    public void testJndiNameIsLocalNameNoJavaPrefix() throws InvalidNameException
+    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "comp/env" ) ) ); }
+
+    public void testJndiNameIsLocalNameEmpty() throws InvalidNameException
+    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "" ) ) ); }
 
     // ==========================================
     // nameLocalityIsAcceptable
@@ -165,17 +173,33 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
         assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( "ldap://example.com", cfg ) );
     }
 
-    public void testNameLocalityAcceptableNameNoPermit() throws InvalidNameException
+    public void testNameLocalityAcceptableLocalNameNoPermit() throws InvalidNameException
     {
-        // javax.naming.Name is always treated as non-local; requires explicit permit
+        // A Name whose first component starts with "java:" is local regardless of config
         Name name = new CompositeName( "java:comp/env" );
+        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, null ) );
+    }
+
+    public void testNameLocalityAcceptableLocalNamePcfgFalse() throws InvalidNameException
+    {
+        // Local name is still acceptable even when permitNonlocalJndiNames=false
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
+        Name name = new CompositeName( "java:comp/env" );
+        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, cfg ) );
+    }
+
+    public void testNameLocalityAcceptableNonLocalNameNoPermit() throws InvalidNameException
+    {
+        // A non-java: Name is non-local; rejected without explicit permit
+        Name name = new CompositeName( "ldap://example.com/myDS" );
         assertFalse( ReferenceableUtils.nameLocalityIsAcceptable( name, null ) );
     }
 
-    public void testNameLocalityAcceptableNameWithPermit() throws InvalidNameException
+    public void testNameLocalityAcceptableNonLocalNameWithPermit() throws InvalidNameException
     {
+        // A non-java: Name is accepted when permitNonlocalJndiNames=true
         PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-        Name name = new CompositeName( "java:comp/env" );
+        Name name = new CompositeName( "ldap://example.com/myDS" );
         assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, cfg ) );
     }
 
