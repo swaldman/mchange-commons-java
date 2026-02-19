@@ -61,6 +61,14 @@ public class ReferenceIndirector implements Indirector
     Name      contextName;
     Hashtable environmentProperties;
 
+    private static String envToString( Hashtable env )
+    {
+        if (env == null)
+            return "null";
+        else
+            return "[" + MapUtils.joinEntriesIntoString(true,true,"->",",",env) + "]";
+    }
+
     public Name getName()
     { return name; }
 
@@ -113,9 +121,9 @@ public class ReferenceIndirector implements Indirector
             sb.append(name);
             sb.append("; contextName=");
             sb.append(contextName);
-            sb.append("; env=[");
-            sb.append(MapUtils.joinEntriesIntoString(true,true,"->",",",env));
-            sb.append("]]");
+            sb.append("; env=");
+            sb.append(envToString(env));
+            sb.append("]");
             return sb.toString();
         }
 
@@ -159,7 +167,17 @@ public class ReferenceIndirector implements Indirector
                             );
                     }
 
-		    return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); 
+                    try
+                    { return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); }
+                    catch (NamingException ne)
+                    {
+                        throw new IOException(
+                            "Failed to dereference reference " + reference +
+                            "' under name '" + name + "' and nameContext '" + nameContext +
+                            "' using environment: " + envToString(env),
+                            ne
+                        );
+                    }
 		}
 	    catch (NamingException e)
 		{
