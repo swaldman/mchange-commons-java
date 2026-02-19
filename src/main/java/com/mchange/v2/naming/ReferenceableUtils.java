@@ -100,6 +100,22 @@ public final class ReferenceableUtils
     {
 	try
 	    {
+                // name and nameCtx are optional parameters. name can just be null
+                //
+                // this function isn't really a JNDI lookup, but we are erring on the side of
+                // conservatism with this stuff now.
+                //
+                // if the reference is associated with an apparently non-local name,
+                // we gate it
+                
+                if (name != null && !nameLocalityIsAcceptable(name,pcfg))
+                    throw new NamingException(
+                        "Cannot dereference " + name +
+                        "because it does not appear to be local, " +
+                        "and lookup of nonlocal JNDI names is disabled via '" +
+                        SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES + "'."
+                    );
+
 		String fClassName = ref.getFactoryClassName();
 		String fClassLocation = ref.getFactoryClassLocation();
 
@@ -189,11 +205,7 @@ public final class ReferenceableUtils
     { return name.startsWith("java:"); }
 
     public static boolean jndiNameIsLocal( Name name )
-    {
-        // for now we don't know how to prove to ourselves that a javax.naming.Name is local
-        // we are open to suggestions!
-        return false;
-    }
+    { return !name.isEmpty() && name.get(0).startsWith("java:"); }
 
     public static boolean permitNonlocalJndiNames( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg, "Looking up nonlocal (or not provably local) JNDI names"); }
