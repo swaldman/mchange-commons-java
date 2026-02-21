@@ -549,12 +549,25 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
         assertEquals( "ALPHA", result );
     }
 
-    /** Explicit null whitelist (Set overload) → any factory accepted */
-    public void testReferenceToObjectNullSetWhitelistAcceptsAny() throws NamingException
+    /** ALL_FACTORY_CLASS_NAMES token bypasses whitelist → any factory accepted */
+    public void testReferenceToObjectAllFactoryClassNamesAcceptsAny() throws NamingException
     {
         Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
-        Object result = ReferenceableUtils.referenceToObject( ref, null, null, null, (Set) null );
+        Object result = ReferenceableUtils.referenceToObject( ref, null, null, null, ReferenceableUtils.ALL_FACTORY_CLASS_NAMES );
         assertEquals( "ALPHA", result );
+    }
+
+    /** A regular empty Set (not the ALL_FACTORY_CLASS_NAMES token) rejects all factory class names */
+    public void testReferenceToObjectRegularEmptySetRejectsAll()
+    {
+        Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+        Set emptySet = Collections.unmodifiableSet( new HashSet() );
+        try
+        {
+            ReferenceableUtils.referenceToObject( ref, null, null, null, emptySet );
+            fail( "Expected NamingException: regular empty Set should reject all factory class names" );
+        }
+        catch (NamingException e) { /* expected */ }
     }
 
     /** Factory not in explicit whitelist → NamingException */
@@ -576,7 +589,7 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
         Reference ref = new Reference( "java.lang.String", null, null );
         try
         {
-            ReferenceableUtils.referenceToObject( ref, null, null, null, (Set) null );
+            ReferenceableUtils.referenceToObject( ref, null, null, null, ReferenceableUtils.ALL_FACTORY_CLASS_NAMES );
             fail( "Expected NamingException: null factory class name" );
         }
         catch (NamingException e) { /* expected */ }
