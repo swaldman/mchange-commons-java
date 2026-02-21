@@ -156,15 +156,13 @@ public class ReferenceIndirector implements Indirector
 		    Context nameContext = null;
 		    if ( contextName != null )
                     {
-                        if (ReferenceableUtils.nameLocalityIsAcceptable( contextName, pcfg ))
+                        try
+                        {
+                            ReferenceableUtils.assertAcceptableName( contextName, pcfg );
                             nameContext = (Context) initialContext.lookup( contextName );
-                        else
-                            throw new IOException(
-                                "Cannot dereference indirectly serialized ReferenceSerialized, " +
-                                "because it references a context with nonlocal name '" + contextName +
-                                "', and lookup of nonlocal JNDI names is disabled via '" +
-                                SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES + "'."
-                            );
+                        }
+                        catch (NamingException ne) // if the name is unacceptable, fail with an informative message.
+                        { throw new IOException(ne.getMessage(), ne); }
                     }
 
                     try

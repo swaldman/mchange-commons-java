@@ -1,43 +1,10 @@
-/*
- * Distributed as part of mchange-commons-java 0.2.11
- *
- * Copyright (C) 2015 Machinery For Change, Inc.
- *
- * Author: Steve Waldman <swaldman@mchange.com>
- *
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of EITHER:
- *
- *     1) The GNU Lesser General Public License (LGPL), version 2.1, as
- *        published by the Free Software Foundation
- *
- * OR
- *
- *     2) The Eclipse Public License (EPL), version 1.0
- *
- * You may choose which license to accept if you wish to redistribute
- * or modify this work. You may offer derivatives of this work
- * under the license you have chosen, or you may provide the same
- * choice of license which you have been offered here.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * You should have received copies of both LGPL v2.1 and EPL v1.0
- * along with this software; see the files LICENSE-EPL and LICENSE-LGPL.
- * If not, the text of these licenses are currently available at
- *
- * LGPL v2.1: http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
- *  EPL v1.0: http://www.eclipse.org/org/documents/epl-v10.php
- *
- */
-
 package com.mchange.v2.naming;
 
 import java.net.*;
 import java.util.*;
 import javax.naming.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
@@ -104,17 +71,8 @@ public final class ReferenceableUtils
                 //
                 // this function isn't really a JNDI lookup, but we are erring on the side of
                 // conservatism with this stuff now.
-                //
-                // if the reference is associated with an apparently non-local name,
-                // we gate it
-                
-                if (name != null && !nameLocalityIsAcceptable(name,pcfg))
-                    throw new NamingException(
-                        "Cannot dereference " + name +
-                        "because it does not appear to be local, " +
-                        "and lookup of nonlocal JNDI names is disabled via '" +
-                        SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES + "'."
-                    );
+
+                if (name != null) assertAcceptableName(name,pcfg);
 
 		String fClassName = ref.getFactoryClassName();
 		String fClassLocation = ref.getFactoryClassLocation();
@@ -181,6 +139,7 @@ public final class ReferenceableUtils
 	    }
     }
 
+    /*
     public static boolean nameLocalityIsAcceptable( Object jndiName, PropertiesConfig pcfg )
     {
         boolean resolveNonlocal = permitNonlocalJndiNames( pcfg );
@@ -209,6 +168,82 @@ public final class ReferenceableUtils
 
     public static boolean permitNonlocalJndiNames( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg, "Looking up nonlocal (or not provably local) JNDI names"); }
+    */
+
+    private final static String DEFAULT_NAME_GUARD_CLASS_NAME = "com.mchange.v2.naming.ApparentlyLocalNameGuard";
+
+    // for now we'll just use a simple HashMap, synchronizing access, to cache Constructors.
+    // there should be very few values looked up, so soft-reference-ing seems like overkill
+    //
+    // MT: Synchronized on own lock
+    private final static Map nameGuardClassNameToConstructor = new HashMap();
+
+    private final static NameGuard nameGuardForClassName(String fqcn)
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
+    {
+        synchronized (nameGuardClassNameToConstructor)
+        {
+            Constructor ctor = (Constructor) nameGuardClassNameToConstructor.get(fqcn);
+            if (ctor == null)
+            {
+                Class cl = Class.forName(fqcn);
+                ctor = cl.getDeclaredConstructor();
+                nameGuardClassNameToConstructor.put(fqcn,ctor);
+            }
+            return (NameGuard) ctor.newInstance();
+        }
+    }
+
+    public static void assertAcceptableName( Object jndiName, PropertiesConfig pcfg ) throws NamingException
+    {
+        String nameGuardClassName;
+        if (pcfg == null)
+            nameGuardClassName = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        else
+            nameGuardClassName = pcfg.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+
+        try
+        {
+            NameGuard nameGuard;
+            if (nameGuardClassName == null)
+                nameGuard = nameGuardForClassName( DEFAULT_NAME_GUARD_CLASS_NAME );
+            else
+                nameGuard = nameGuardForClassName( nameGuardClassName );
+
+            boolean acceptable;
+            if ( jndiName instanceof String )
+                acceptable = nameGuard.nameIsAcceptable((String) jndiName);
+            else if ( jndiName instanceof Name )
+                acceptable = nameGuard.nameIsAcceptable((Name) jndiName);
+            else
+            {
+                throw new NamingException(
+                   "Putative JNDI name of unexpected type. We expect String or javax.naming.Name. " +
+                   "We conservatively, redundantly, disallow any attempt to lookup of jndi names of unknown types. There is no API to do so. " +
+                   "Putative JNDI name: " + jndiName
+                );
+            }
+
+            if (!acceptable)
+            {
+                String nameGuardDescription;
+                if (nameGuardClassName == null)
+                    nameGuardDescription = "default NameGuard '" + DEFAULT_NAME_GUARD_CLASS_NAME +"'";
+                else
+                    nameGuardDescription = "NameGuard '" + nameGuardClassName + "', currently configured via '" + SecurityConfigKey.NAME_GUARD_CLASS_NAME + "'";
+                throw new NamingException(
+                    "Under " + nameGuardDescription + ", names are only acceptable when " + nameGuard.onlyAcceptableWhen() + ". '" + jndiName + "' does not qualify."
+                );
+            }
+        }
+        catch (ReflectiveOperationException roe)
+        {
+            if (nameGuardClassName == null)
+                throw new InternalError("Huh? We failed to reflectively lookup and construct default NameGuard '" + DEFAULT_NAME_GUARD_CLASS_NAME + "'?!?", roe);
+            else
+                throw new NamingException("We failed to reflectively lookup and construct configured NameGuard '" + nameGuardClassName + ". Cause: " + roe);
+        }
+    }
 
     public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances" ); }
