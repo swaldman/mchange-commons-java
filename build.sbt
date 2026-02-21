@@ -1,7 +1,3 @@
-val nexus = "https://oss.sonatype.org/"
-val nexusSnapshots = nexus + "content/repositories/snapshots";
-val nexusStaging = nexus + "service/local/staging/deploy/maven2";
-
 organization := "com.mchange"
 
 name := "mchange-commons-java"
@@ -40,10 +36,9 @@ libraryDependencies ++= Seq(
 );
 
 publishTo := {
-  if (isSnapshot.value) Some("snapshots" at nexusSnapshots ) else Some("releases"  at nexusStaging )
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if (version.value.endsWith("-SNAPSHOT")) Some("central-snapshots" at centralSnapshots) else localStaging.value
 }
-
-resolvers += ("snapshots" at nexusSnapshots )
 
 Compile / packageBin / packageOptions += Package.ManifestAttributes("Automatic-Module-Name" -> "com.mchange.mchangecommonsjava")
 
