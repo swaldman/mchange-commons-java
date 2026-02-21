@@ -42,6 +42,8 @@ import javax.naming.spi.ObjectFactory;
 import junit.framework.TestCase;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.naming.AnyNameNameGuard;
+import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.naming.ReferenceIndirector;
 import com.mchange.v2.naming.SecurityConfigKey;
 import com.mchange.v2.ser.IndirectlySerialized;
@@ -197,19 +199,18 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
     }
 
     /**
-     * When the indirector has a contextName set (a javax.naming.Name is always considered
-     * non-local) and permitNonlocalJndiNames is false (the default), getObject() must
-     * throw IOException.
+     * "jdbc/DataSource" lacks a "java:" first component so is not explicitly local.
+     * The default ApparentlyLocalNameGuard rejects it and getObject() must throw IOException.
      */
-    public void testGetObjectNonLocalContextNameRejectedByDefault() throws Exception
+    public void testGetObjectNotExplicitlyLocalContextNameRejectedByDefault() throws Exception
     {
         ReferenceIndirector ri = new ReferenceIndirector();
-        ri.setNameContextName( new CompositeName( "java:comp/env" ) );
+        ri.setNameContextName( new CompositeName( "jdbc/DataSource" ) );
         IndirectlySerialized is = makeReferenceSerialized( ri );
         try
         {
             is.getObject( null );
-            fail( "Expected IOException: non-local contextName rejected by default" );
+            fail( "Expected IOException: contextName rejected by default ApparentlyLocalNameGuard" );
         }
         catch (IOException e) { /* expected */ }
     }
@@ -253,8 +254,60 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
     }
 
     /**
-     * A non-local name (first component does not start with "java:") is rejected by default.
-     * The NamingException from referenceToObject is wrapped and rethrown as IOException.
+     * "jdbc/DataSource" lacks a "java:" prefix so is not explicitly local.
+     * The default ApparentlyLocalNameGuard rejects it; the NamingException is wrapped as IOException.
+     */
+    public void testGetObjectWithNotExplicitlyLocalNameRejectedByDefault() throws Exception
+    {
+        ReferenceIndirector ri = new ReferenceIndirector();
+        ri.setName( new CompositeName( "jdbc/DataSource" ) );
+        IndirectlySerialized is = makeReferenceSerialized( ri );
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, SIMPLE_FACTORY );
+        try
+        {
+            is.getObject( cfg );
+            fail( "Expected IOException: jdbc/DataSource rejected by default ApparentlyLocalNameGuard" );
+        }
+        catch (IOException e) { /* expected */ }
+    }
+
+    /**
+     * "jdbc/DataSource" lacks a "java:" prefix so is rejected by the default guard,
+     * but is accepted when FirstComponentIsJavaIdentifierNameGuard is configured
+     * (its first component "jdbc" is a valid Java identifier).
+     */
+    public void testGetObjectWithNotExplicitlyLocalNamePermittedByConfig() throws Exception
+    {
+        ReferenceIndirector ri = new ReferenceIndirector();
+        ri.setName( new CompositeName( "jdbc/DataSource" ) );
+        IndirectlySerialized is = makeReferenceSerialized( ri );
+        PropertiesConfig cfg = pcfg(
+            SecurityConfigKey.OBJECT_FACTORY_WHITELIST, SIMPLE_FACTORY,
+            SecurityConfigKey.NAME_GUARD_CLASS_NAME, FirstComponentIsJavaIdentifierNameGuard.class.getName()
+        );
+        assertEquals( "SIMPLE", is.getObject( cfg ) );
+    }
+
+    /**
+     * A contextName with scheme "ldap:" is genuinely non-local.
+     * The default ApparentlyLocalNameGuard rejects it and getObject() must throw IOException.
+     */
+    public void testGetObjectNonLocalContextNameRejectedByDefault() throws Exception
+    {
+        ReferenceIndirector ri = new ReferenceIndirector();
+        ri.setNameContextName( new CompositeName( "ldap://example.com/ctx" ) );
+        IndirectlySerialized is = makeReferenceSerialized( ri );
+        try
+        {
+            is.getObject( null );
+            fail( "Expected IOException: ldap:// contextName rejected by default ApparentlyLocalNameGuard" );
+        }
+        catch (IOException e) { /* expected */ }
+    }
+
+    /**
+     * A name with scheme "ldap:" is genuinely non-local.
+     * The default ApparentlyLocalNameGuard rejects it; the NamingException is wrapped as IOException.
      */
     public void testGetObjectWithNonLocalNameRejectedByDefault() throws Exception
     {
@@ -265,13 +318,14 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
         try
         {
             is.getObject( cfg );
-            fail( "Expected IOException: non-local name rejected by default" );
+            fail( "Expected IOException: ldap:// name rejected by default ApparentlyLocalNameGuard" );
         }
         catch (IOException e) { /* expected */ }
     }
 
     /**
-     * A non-local name is accepted when permitNonlocalJndiNames=true.
+     * A genuinely non-local "ldap://..." name is accepted when AnyNameNameGuard is configured,
+     * and dereferencing succeeds with a whitelisted factory.
      */
     public void testGetObjectWithNonLocalNamePermittedByConfig() throws Exception
     {
@@ -280,7 +334,7 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
         IndirectlySerialized is = makeReferenceSerialized( ri );
         PropertiesConfig cfg = pcfg(
             SecurityConfigKey.OBJECT_FACTORY_WHITELIST, SIMPLE_FACTORY,
-            SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true"
+            SecurityConfigKey.NAME_GUARD_CLASS_NAME, AnyNameNameGuard.class.getName()
         );
         assertEquals( "SIMPLE", is.getObject( cfg ) );
     }

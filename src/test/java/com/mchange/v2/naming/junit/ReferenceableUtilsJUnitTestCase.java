@@ -41,6 +41,10 @@ import javax.naming.spi.ObjectFactory;
 import junit.framework.TestCase;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.naming.AnyNameNameGuard;
+import com.mchange.v2.naming.ApparentlyLocalNameGuard;
+import com.mchange.v2.naming.ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard;
+import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.naming.SecurityConfigKey;
 
@@ -84,9 +88,6 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
         return MultiPropertiesConfig.fromProperties( "/test", p );
     }
 
-    private static PropertiesConfig emptyPcfg()
-    { return MultiPropertiesConfig.fromProperties( "/test", new Properties() ); }
-
     private static void restoreSystemProperty( String key, String savedValue )
     {
         if ( savedValue == null )
@@ -112,186 +113,361 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
     { assertEquals( "", ReferenceableUtils.literalNullToNull( "" ) ); }
 
     // ==========================================
-    // jndiNameIsLocal (String overload)
+    // AnyNameNameGuard
+    // Accepts every name unconditionally.
     // ==========================================
 
-    public void testJndiNameIsLocalStringJavaPrefix()
-    { assertTrue( ReferenceableUtils.jndiNameIsLocal( "java:comp/env/myDS" ) ); }
+    public void testAnyNameGuardAcceptsAnyString()
+    {
+        AnyNameNameGuard guard = new AnyNameNameGuard();
+        assertTrue( guard.nameIsAcceptable( "" ) );
+        assertTrue( guard.nameIsAcceptable( "java:comp/env" ) );
+        assertTrue( guard.nameIsAcceptable( "ldap://example.com/myDS" ) );
+        assertTrue( guard.nameIsAcceptable( "anything at all" ) );
+    }
 
-    public void testJndiNameIsLocalStringBarePrefix()
-    { assertTrue( ReferenceableUtils.jndiNameIsLocal( "java:" ) ); }
+    public void testAnyNameGuardAcceptsAnyName() throws InvalidNameException
+    {
+        AnyNameNameGuard guard = new AnyNameNameGuard();
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "" ) ) );
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "java:comp/env" ) ) );
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "ldap://example.com" ) ) );
+    }
 
-    public void testJndiNameIsLocalStringNonLocal()
-    { assertFalse( ReferenceableUtils.jndiNameIsLocal( "ldap://example.com/myDS" ) ); }
-
-    public void testJndiNameIsLocalStringEmpty()
-    { assertFalse( ReferenceableUtils.jndiNameIsLocal( "" ) ); }
+    public void testAnyNameGuardDescriptionNonNull()
+    { assertNotNull( new AnyNameNameGuard().onlyAcceptableWhen() ); }
 
     // ==========================================
-    // jndiNameIsLocal (Name overload)
-    // A Name whose first component starts with "java:" is considered local.
+    // ApparentlyLocalNameGuard
+    // String: must start with "java:"
+    // Name:   first component must start with "java:"
     // ==========================================
 
-    public void testJndiNameIsLocalNameJavaPrefix() throws InvalidNameException
-    { assertTrue( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "java:comp/env/myDS" ) ) ); }
+    public void testApparentlyLocalNameGuardStringLocal()
+    {
+        ApparentlyLocalNameGuard guard = new ApparentlyLocalNameGuard();
+        assertTrue( guard.nameIsAcceptable( "java:comp/env/myDS" ) );
+        assertTrue( guard.nameIsAcceptable( "java:" ) );
+    }
 
-    public void testJndiNameIsLocalNameBareJavaColon() throws InvalidNameException
-    { assertTrue( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "java:" ) ) ); }
+    public void testApparentlyLocalNameGuardStringNonLocal()
+    {
+        ApparentlyLocalNameGuard guard = new ApparentlyLocalNameGuard();
+        assertFalse( guard.nameIsAcceptable( "" ) );
+        assertFalse( guard.nameIsAcceptable( "ldap://example.com" ) );
+        assertFalse( guard.nameIsAcceptable( "jdbc/myDS" ) );
+        assertFalse( guard.nameIsAcceptable( "jms/topic" ) );
+    }
 
-    public void testJndiNameIsLocalNameNonLocalUrl() throws InvalidNameException
-    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "ldap://example.com/myDS" ) ) ); }
+    public void testApparentlyLocalNameGuardNameLocalFirstComponent() throws InvalidNameException
+    {
+        ApparentlyLocalNameGuard guard = new ApparentlyLocalNameGuard();
+        // CompositeName splits on "/", so first component of "java:comp/env" is "java:comp"
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "java:comp/env" ) ) );
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "java:" ) ) );
+    }
 
-    public void testJndiNameIsLocalNameNoJavaPrefix() throws InvalidNameException
-    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "comp/env" ) ) ); }
+    public void testApparentlyLocalNameGuardNameNonLocal() throws InvalidNameException
+    {
+        ApparentlyLocalNameGuard guard = new ApparentlyLocalNameGuard();
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "" ) ) );          // empty Name
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "ldap://example.com" ) ) ); // first comp "ldap:"
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "jdbc/myDS" ) ) ); // first comp "jdbc"
+    }
 
-    public void testJndiNameIsLocalNameEmpty() throws InvalidNameException
-    { assertFalse( ReferenceableUtils.jndiNameIsLocal( new CompositeName( "" ) ) ); }
+    public void testApparentlyLocalNameGuardDescriptionNonNull()
+    { assertNotNull( new ApparentlyLocalNameGuard().onlyAcceptableWhen() ); }
 
     // ==========================================
-    // nameLocalityIsAcceptable
+    // FirstComponentIsJavaIdentifierNameGuard
+    // String: text before the first "/" must be a valid Java (qualified) name.
+    // Name:   first component must be a valid Java name.
     // ==========================================
 
-    public void testNameLocalityAcceptableLocalString()
+    public void testFirstComponentJavaIdentifierGuardStringValid()
     {
-        // "java:*" strings are always acceptable regardless of config
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( "java:comp/env/myDS", null ) );
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( "java:comp/env/myDS", emptyPcfg() ) );
+        FirstComponentIsJavaIdentifierNameGuard guard = new FirstComponentIsJavaIdentifierNameGuard();
+        assertTrue( guard.nameIsAcceptable( "jdbc/myDS" ) );   // first comp = "jdbc"
+        assertTrue( guard.nameIsAcceptable( "jms/topic" ) );   // first comp = "jms"
+        assertTrue( guard.nameIsAcceptable( "jdbc" ) );        // no slash; whole string = "jdbc"
     }
 
-    public void testNameLocalityAcceptableNonLocalStringNoPermit()
-    { assertFalse( ReferenceableUtils.nameLocalityIsAcceptable( "ldap://example.com", null ) ); }
-
-    public void testNameLocalityAcceptableNonLocalStringPcfgFalse()
+    public void testFirstComponentJavaIdentifierGuardStringInvalid()
     {
-        PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
-        assertFalse( ReferenceableUtils.nameLocalityIsAcceptable( "ldap://example.com", cfg ) );
+        FirstComponentIsJavaIdentifierNameGuard guard = new FirstComponentIsJavaIdentifierNameGuard();
+        // "java:comp" before "/" contains a colon → not a valid Java name
+        assertFalse( guard.nameIsAcceptable( "java:comp/env" ) );
+        // bare "java:" has a colon → invalid
+        assertFalse( guard.nameIsAcceptable( "java:" ) );
+        // "ldap:" before first "/" has colon → invalid
+        assertFalse( guard.nameIsAcceptable( "ldap://example.com" ) );
+        assertFalse( guard.nameIsAcceptable( "" ) );
     }
 
-    public void testNameLocalityAcceptableNonLocalStringPcfgTrue()
+    public void testFirstComponentJavaIdentifierGuardNameValid() throws InvalidNameException
     {
-        PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( "ldap://example.com", cfg ) );
+        FirstComponentIsJavaIdentifierNameGuard guard = new FirstComponentIsJavaIdentifierNameGuard();
+        // CompositeName splits on "/"; first component is "jdbc"
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "jdbc/myDS" ) ) );
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "jms" ) ) );
     }
 
-    public void testNameLocalityAcceptableLocalNameNoPermit() throws InvalidNameException
+    public void testFirstComponentJavaIdentifierGuardNameInvalid() throws InvalidNameException
     {
-        // A Name whose first component starts with "java:" is local regardless of config
-        Name name = new CompositeName( "java:comp/env" );
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, null ) );
+        FirstComponentIsJavaIdentifierNameGuard guard = new FirstComponentIsJavaIdentifierNameGuard();
+        // First component of "java:comp/env" is "java:comp" → colon → invalid
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "java:comp/env" ) ) );
+        // Empty Name
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "" ) ) );
     }
 
-    public void testNameLocalityAcceptableLocalNamePcfgFalse() throws InvalidNameException
+    public void testFirstComponentJavaIdentifierGuardDescriptionNonNull()
+    { assertNotNull( new FirstComponentIsJavaIdentifierNameGuard().onlyAcceptableWhen() ); }
+
+    // ==========================================
+    // ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard
+    // Accepts if EITHER ApparentlyLocalNameGuard OR
+    // FirstComponentIsJavaIdentifierNameGuard accepts.
+    // ==========================================
+
+    public void testApparentlyLocalOrJavaIdentifierGuardStringAccepted()
     {
-        // Local name is still acceptable even when permitNonlocalJndiNames=false
-        PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
-        Name name = new CompositeName( "java:comp/env" );
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, cfg ) );
+        ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard guard =
+            new ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard();
+        // Accepted by ApparentlyLocal
+        assertTrue( guard.nameIsAcceptable( "java:comp/env" ) );
+        // Accepted by FirstComponentIsJavaIdentifier
+        assertTrue( guard.nameIsAcceptable( "jdbc/myDS" ) );
+        assertTrue( guard.nameIsAcceptable( "jms/topic" ) );
     }
 
-    public void testNameLocalityAcceptableNonLocalNameNoPermit() throws InvalidNameException
+    public void testApparentlyLocalOrJavaIdentifierGuardStringRejected()
     {
-        // A non-java: Name is non-local; rejected without explicit permit
-        Name name = new CompositeName( "ldap://example.com/myDS" );
-        assertFalse( ReferenceableUtils.nameLocalityIsAcceptable( name, null ) );
+        ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard guard =
+            new ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard();
+        // Neither guard accepts these
+        assertFalse( guard.nameIsAcceptable( "ldap://example.com" ) );
+        assertFalse( guard.nameIsAcceptable( "" ) );
     }
 
-    public void testNameLocalityAcceptableNonLocalNameWithPermit() throws InvalidNameException
+    public void testApparentlyLocalOrJavaIdentifierGuardNameAccepted() throws InvalidNameException
     {
-        // A non-java: Name is accepted when permitNonlocalJndiNames=true
-        PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-        Name name = new CompositeName( "ldap://example.com/myDS" );
-        assertTrue( ReferenceableUtils.nameLocalityIsAcceptable( name, cfg ) );
+        ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard guard =
+            new ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard();
+        // First component "java:comp" starts with "java:" → ApparentlyLocal accepts
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "java:comp/env" ) ) );
+        // First component "jdbc" is valid Java name → FirstComponentIsJavaIdentifier accepts
+        assertTrue( guard.nameIsAcceptable( new CompositeName( "jdbc/myDS" ) ) );
     }
 
-    public void testNameLocalityAcceptableUnknownTypeReturnsFalse()
+    public void testApparentlyLocalOrJavaIdentifierGuardNameRejected() throws InvalidNameException
     {
-        // Unknown type → conservatively false
-        assertFalse( ReferenceableUtils.nameLocalityIsAcceptable( Integer.valueOf(42), null ) );
+        ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard guard =
+            new ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard();
+        // First component "ldap:" has colon → neither accepts
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "ldap://example.com" ) ) );
+        assertFalse( guard.nameIsAcceptable( new CompositeName( "" ) ) );
+    }
+
+    public void testApparentlyLocalOrJavaIdentifierGuardDescriptionNonNull()
+    { assertNotNull( new ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard().onlyAcceptableWhen() ); }
+
+    // ==========================================
+    // assertAcceptableName
+    // Default NameGuard is ApparentlyLocalNameGuard.
+    // NAME_GUARD_CLASS_NAME config overrides the guard.
+    // When pcfg is non-null, pcfg is consulted; otherwise the system property is consulted.
+    // ==========================================
+
+    /** Default guard (ApparentlyLocalNameGuard): local String passes. */
+    public void testAssertAcceptableNameDefaultGuardStringLocalPasses() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( "java:comp/env/myDS", null );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** Default guard: non-local String throws NamingException. */
+    public void testAssertAcceptableNameDefaultGuardStringNonLocalThrows()
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( "ldap://example.com", null );
+            fail( "Expected NamingException: non-local name rejected by default guard" );
+        }
+        catch (NamingException e) { /* expected */ }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** Default guard: Name with "java:" first component passes. */
+    public void testAssertAcceptableNameDefaultGuardNameLocalPasses() throws NamingException, InvalidNameException
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( new CompositeName( "java:comp/env" ), null );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** Default guard: Name without "java:" first component throws NamingException. */
+    public void testAssertAcceptableNameDefaultGuardNameNonLocalThrows() throws InvalidNameException
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( new CompositeName( "ldap://example.com" ), null );
+            fail( "Expected NamingException: non-local Name rejected by default guard" );
+        }
+        catch (NamingException e) { /* expected */ }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** Unknown type (not String, not Name) always throws NamingException. */
+    public void testAssertAcceptableNameUnknownTypeThrows()
+    {
+        try
+        {
+            ReferenceableUtils.assertAcceptableName( Integer.valueOf(42), null );
+            fail( "Expected NamingException: unknown type" );
+        }
+        catch (NamingException e) { /* expected */ }
+    }
+
+    /** AnyNameNameGuard configured via pcfg: any String passes. */
+    public void testAssertAcceptableNameAnyGuardViaPcfgAcceptsAnyString() throws NamingException
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME, AnyNameNameGuard.class.getName() );
+        ReferenceableUtils.assertAcceptableName( "ldap://example.com", cfg );
+        ReferenceableUtils.assertAcceptableName( "", cfg );
+        ReferenceableUtils.assertAcceptableName( "java:comp/env", cfg );
+    }
+
+    /** AnyNameNameGuard configured via pcfg: any Name passes. */
+    public void testAssertAcceptableNameAnyGuardViaPcfgAcceptsAnyName() throws NamingException, InvalidNameException
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME, AnyNameNameGuard.class.getName() );
+        ReferenceableUtils.assertAcceptableName( new CompositeName( "ldap://example.com" ), cfg );
+        ReferenceableUtils.assertAcceptableName( new CompositeName( "" ), cfg );
+    }
+
+    /** AnyNameNameGuard configured via system property: any String passes. */
+    public void testAssertAcceptableNameAnyGuardViaSysprop() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.setProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, AnyNameNameGuard.class.getName() );
+            ReferenceableUtils.assertAcceptableName( "ldap://example.com", null );
+            ReferenceableUtils.assertAcceptableName( "", null );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** FirstComponentIsJavaIdentifierNameGuard via pcfg: "jdbc/..." passes, "java:..." throws. */
+    public void testAssertAcceptableNameFirstComponentGuardViaPcfg() throws NamingException
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     FirstComponentIsJavaIdentifierNameGuard.class.getName() );
+        // "jdbc/myDS" first component "jdbc" is a valid Java name → passes
+        ReferenceableUtils.assertAcceptableName( "jdbc/myDS", cfg );
+
+        // "java:comp/env" first component "java:comp" has a colon → throws
+        try
+        {
+            ReferenceableUtils.assertAcceptableName( "java:comp/env", cfg );
+            fail( "Expected NamingException: 'java:comp/env' rejected by FirstComponentIsJavaIdentifier guard" );
+        }
+        catch (NamingException e) { /* expected */ }
+    }
+
+    /** Configuring a non-existent class name throws NamingException (not InternalError). */
+    public void testAssertAcceptableNameBadGuardClassThrows()
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     "com.example.DoesNotExistNameGuard" );
+        try
+        {
+            ReferenceableUtils.assertAcceptableName( "java:comp/env", cfg );
+            fail( "Expected NamingException: non-existent NameGuard class" );
+        }
+        catch (NamingException e) { /* expected */ }
     }
 
     // ==========================================
-    // falseBiasedLookup logic (exercised via permitNonlocalJndiNames,
-    // supportReferenceRemoteFactoryClassLocation, and
+    // referenceToObject – name-guard integration
+    // referenceToObject calls assertAcceptableName when name != null.
+    // ==========================================
+
+    /** Non-null local name passes the default guard and dereferencing succeeds. */
+    public void testReferenceToObjectWithLocalNameSucceeds() throws NamingException, InvalidNameException
+    {
+        String savedWl    = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        String savedGuard = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, ALPHA_FACTORY );
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            Object result = ReferenceableUtils.referenceToObject(
+                ref, new CompositeName( "java:comp/env/myDS" ), null, null );
+            assertEquals( "ALPHA", result );
+        }
+        finally
+        {
+            restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, savedWl );
+            restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, savedGuard );
+        }
+    }
+
+    /** Non-null non-local name is rejected by the default guard → NamingException. */
+    public void testReferenceToObjectWithNonLocalNameThrows() throws InvalidNameException
+    {
+        String savedWl    = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        String savedGuard = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, ALPHA_FACTORY );
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            ReferenceableUtils.referenceToObject(
+                ref, new CompositeName( "ldap://example.com/myDS" ), null, null );
+            fail( "Expected NamingException: non-local name rejected by default guard" );
+        }
+        catch (NamingException e) { /* expected */ }
+        finally
+        {
+            restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, savedWl );
+            restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, savedGuard );
+        }
+    }
+
+    /** Non-local name succeeds when AnyNameNameGuard is configured via pcfg. */
+    public void testReferenceToObjectWithNonLocalNameAndAnyGuardSucceeds()
+        throws NamingException, InvalidNameException
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     AnyNameNameGuard.class.getName() );
+        Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+        Set whitelist = Collections.singleton( ALPHA_FACTORY );
+        Object result = ReferenceableUtils.referenceToObject(
+            ref, new CompositeName( "ldap://example.com/myDS" ), null, null, whitelist, cfg );
+        assertEquals( "ALPHA", result );
+    }
+
+    // ==========================================
+    // falseBiasedLookup logic (exercised via
+    // supportReferenceRemoteFactoryClassLocation and
     // acceptDeserializedInitialContextEnvironment)
     // ==========================================
-
-    // --- permitNonlocalJndiNames ---
-
-    public void testPermitNonlocalDefaultFalse()
-    { assertFalse( ReferenceableUtils.permitNonlocalJndiNames( null ) ); }
-
-    public void testPermitNonlocalPcfgTrue()
-    {
-        assertTrue( ReferenceableUtils.permitNonlocalJndiNames(
-            pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" ) ) );
-    }
-
-    public void testPermitNonlocalPcfgFalse()
-    {
-        assertFalse( ReferenceableUtils.permitNonlocalJndiNames(
-            pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" ) ) );
-    }
-
-    public void testPermitNonlocalSyspropTruePcfgNull()
-    {
-        String saved = System.getProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES );
-        try
-        {
-            System.setProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-            assertTrue( ReferenceableUtils.permitNonlocalJndiNames( null ) );
-        }
-        finally { restoreSystemProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, saved ); }
-    }
-
-    public void testPermitNonlocalSyspropFalsePcfgNull()
-    {
-        String saved = System.getProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES );
-        try
-        {
-            System.setProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
-            assertFalse( ReferenceableUtils.permitNonlocalJndiNames( null ) );
-        }
-        finally { restoreSystemProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, saved ); }
-    }
-
-    /** sysprop=false, pcfg=true → false  (sysprop false is unconditionally disabling) */
-    public void testPermitNonlocalSyspropFalseOverridesPcfgTrue()
-    {
-        String saved = System.getProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES );
-        try
-        {
-            System.setProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
-            PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-            assertFalse( ReferenceableUtils.permitNonlocalJndiNames( cfg ) );
-        }
-        finally { restoreSystemProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, saved ); }
-    }
-
-    /** sysprop=true, pcfg=false → false  (pcfg false overrides even sysprop true) */
-    public void testPermitNonlocalPcfgFalseOverridesSyspropTrue()
-    {
-        String saved = System.getProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES );
-        try
-        {
-            System.setProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-            PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "false" );
-            assertFalse( ReferenceableUtils.permitNonlocalJndiNames( cfg ) );
-        }
-        finally { restoreSystemProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, saved ); }
-    }
-
-    /** sysprop=true, pcfg=true → true */
-    public void testPermitNonlocalSyspropTruePcfgTrue()
-    {
-        String saved = System.getProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES );
-        try
-        {
-            System.setProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-            PropertiesConfig cfg = pcfg( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, "true" );
-            assertTrue( ReferenceableUtils.permitNonlocalJndiNames( cfg ) );
-        }
-        finally { restoreSystemProperty( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, saved ); }
-    }
 
     // --- supportReferenceRemoteFactoryClassLocation ---
 
@@ -361,7 +537,7 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
     }
 
     // ==========================================
-    // referenceToObject
+    // referenceToObject – whitelist
     // ==========================================
 
     /** Explicit non-null whitelist containing the factory → succeeds */
