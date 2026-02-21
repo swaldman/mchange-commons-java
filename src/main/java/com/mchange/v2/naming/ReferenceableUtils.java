@@ -26,6 +26,14 @@ public final class ReferenceableUtils
 
     final static int CURRENT_REF_VERSION = 1;
 
+    // This set is a special case, a token.
+    //
+    // Semantically, it does not mean empty set (which would imply nothing passes the white list),
+    // but it means NO WHITELIST, any factoryClassName is accepted.
+    //
+    // It is and must be tested by reference equality, not semantic equality
+    public final static Set ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet());
+
     /**
      * A null string value in a Reference sometimes goes to the literal
      * "null". Sigh. We convert this string to a Java null.
@@ -53,14 +61,16 @@ public final class ReferenceableUtils
     }
 
     /**
-     * Note that if, and only if, null is explicitly passed as allowedFactoryClassNames, no whitelist test is performed.
+     * The allowedFactoryClassNames whitelist test can be (but generally should not be) circumvented by explicitly providing ReferenceUtils.ALL_FACTORY_CLASS_NAMES
+     * as the argument allowedFactoryClassNames. allowedFactoryClassNames must not be null. (A NullPointerException will be provoked if it is.)
      */
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames )
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null ); }
 
     /**
-     * Note that if, and only if, null is explicitly passed as allowedFactoryClassNames, no whitelist test is performed.
+     * The allowedFactoryClassNames whitelist test can be (but generally should not be) circumvented by explicitly providing ReferenceUtils.ALL_FACTORY_CLASS_NAMES
+     * as the argument allowedFactoryClassNames. allowedFactoryClassNames must not be null. (A NullPointerException will be provoked if it is.)
      */
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames, PropertiesConfig pcfg )
 	throws NamingException
@@ -88,7 +98,9 @@ public final class ReferenceableUtils
                         "If the null is intentional, consider using javax.naming.spi.NamingManager.getObjectInstance(...) " +
                         "which employs certain conventions to dereference with an unspecified factoryClassName. Reference: " + ref
                     );
-                if (allowedFactoryClassNames != null && !allowedFactoryClassNames.contains(fClassName))
+
+                // note that the use of a reference rather than semantic equality test against token ALL_FACTORY_CLASS_NAMES is essential!
+                if (allowedFactoryClassNames != ALL_FACTORY_CLASS_NAMES && !allowedFactoryClassNames.contains(fClassName))
                     throw new NamingException(
                         "factoryClassName '" + fClassName + "' is not in allowedFactoryClassNames [" + IterableUtils.joinAsString(",",allowedFactoryClassNames) + "]"
                     );
