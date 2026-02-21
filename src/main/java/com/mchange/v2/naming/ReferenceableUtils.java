@@ -31,7 +31,7 @@ public final class ReferenceableUtils
     // Semantically, it does not mean empty set (which would imply nothing passes the white list),
     // but it means NO WHITELIST, any factoryClassName is accepted.
     //
-    // It is and must be tested by reference equality, not semantic equality
+    // It is and must be tested by reference identity, not semantic equality
     public final static Set ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet());
 
     /**
@@ -99,7 +99,7 @@ public final class ReferenceableUtils
                         "which employs certain conventions to dereference with an unspecified factoryClassName. Reference: " + ref
                     );
 
-                // note that the use of a reference rather than semantic equality test against token ALL_FACTORY_CLASS_NAMES is essential!
+                // note that the test of reference identity, rather than semantic equality, against token ALL_FACTORY_CLASS_NAMES is essential!
                 if (allowedFactoryClassNames != ALL_FACTORY_CLASS_NAMES && !allowedFactoryClassNames.contains(fClassName))
                     throw new NamingException(
                         "factoryClassName '" + fClassName + "' is not in allowedFactoryClassNames [" + IterableUtils.joinAsString(",",allowedFactoryClassNames) + "]"
