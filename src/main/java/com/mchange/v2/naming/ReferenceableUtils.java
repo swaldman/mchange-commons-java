@@ -133,9 +133,14 @@ public final class ReferenceableUtils
 			if ( logger.isLoggable( MLevel.FINE ) )
 			    logger.log( MLevel.FINE, "Could not resolve Reference to Object!", e);
 		    }
-		NamingException ne = new NamingException("Could not resolve Reference to Object!");
-		ne.setRootCause( e );
-		throw ne;
+                if (e instanceof NamingException)
+                    throw (NamingException) e;
+                else
+                {
+                    NamingException ne = new NamingException("Could not resolve Reference to Object!");
+                    ne.setRootCause( e );
+                    throw ne;
+                }
 	    }
     }
 
