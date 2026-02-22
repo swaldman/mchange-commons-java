@@ -404,7 +404,7 @@ public final class ReferenceableUtils
                 "When calling referenceToObject(...) using overloads that lack an explicit allowedFactoryClassNames Set, a '" +
                 SecurityConfigKey.OBJECT_FACTORY_WHITELIST + "' must be provided either as a System property or a provided com.mchange.v2.PropertiesConfig instance. " +
                 "If you really want to live dangerously and accept any ObjectFactory (why?!?), you must call an overload of referenceToObject(...) that accepts " +
-                "an explicit allowedFactoryClassNames Set, and then provide it as null."
+                "an explicit allowedFactoryClassNames Set, and then provide it as ReferenceableUtils..ALL_FACTORY_CLASS_NAMES"
             );
         return narrowest;
     }
