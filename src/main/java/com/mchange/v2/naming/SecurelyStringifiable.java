@@ -7,7 +7,7 @@ import java.lang.reflect.Modifier;
 
 // we might consider caching Method objects here, but we expect this to be a rare,
 // not-performace-critical application, so for now we'll just lookup on demand
-final class SecurelyStringifiable
+public final class SecurelyStringifiable
 {
     private final static MLogger logger = MLog.getLogger( SecurelyStringifiable.class );
     
@@ -23,11 +23,11 @@ final class SecurelyStringifiable
         {
             Method m = cl.getMethod( methodName, argTypes );
             int modifiers = m.getModifiers();
-            if ((modifiers & Modifier.PUBLIC) == 0)
+            if ((modifiers & Modifier.PUBLIC) != 0)
             {
-                if ((modifiers & Modifier.STATIC) == 0)
+                if ((modifiers & Modifier.STATIC) != 0)
                 {
-                    if (m.getReturnType() == cl)
+                    if (m.getReturnType() == expectedReturnType)
                         return m;
                     else
                     {
