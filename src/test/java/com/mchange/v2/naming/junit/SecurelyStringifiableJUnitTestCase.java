@@ -100,7 +100,8 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point p = new Point( 3, 7 );
         String result = SecurelyStringifiable.securelyStringify( p );
-        assertEquals( "3,7", result );
+        String expectedFqcn = Point.class.getName();
+        assertEquals( "Securely Stringified: " + expectedFqcn + "\n" + "3,7", result );
     }
 
     public void testSecurelyStringifyStringifyOnlyThrows()
@@ -139,7 +140,8 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
 
     public void testConstructSecurelyStringifiedConformingClass() throws SecurelyStringifiableException
     {
-        Object result = SecurelyStringifiable.constructSecurelyStringified( Point.class, "5,11" );
+        String stringified = "Securely Stringified: " + Point.class.getName() + "\n" + "5,11";
+        Object result = SecurelyStringifiable.constructSecurelyStringified( stringified );
         assertTrue( result instanceof Point );
         Point p = (Point) result;
         assertEquals( 5, p.x );
@@ -150,7 +152,8 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         try
         {
-            SecurelyStringifiable.constructSecurelyStringified( StringifyOnly.class, "hello" );
+            String stringified = "Securely Stringified: " + StringifyOnly.class.getName() + "\n" + "hello";
+            SecurelyStringifiable.constructSecurelyStringified( stringified );
             fail( "Expected SecurelyStringifiableException: missing constructSecurelyStringified" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
@@ -160,7 +163,8 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         try
         {
-            SecurelyStringifiable.constructSecurelyStringified( ConstructOnly.class, "hello" );
+            String stringified = "Securely Stringified: " + ConstructOnly.class.getName() + "\n" + "hello";
+            SecurelyStringifiable.constructSecurelyStringified( stringified );
             fail( "Expected SecurelyStringifiableException: missing securelyStringify" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
@@ -170,8 +174,29 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         try
         {
-            SecurelyStringifiable.constructSecurelyStringified( NoMethods.class, "hello" );
+            String stringified = "Securely Stringified: " + NoMethods.class.getName() + "\n" + "hello";
+            SecurelyStringifiable.constructSecurelyStringified( stringified );
             fail( "Expected SecurelyStringifiableException: no methods at all" );
+        }
+        catch ( SecurelyStringifiableException e ) { /* expected */ }
+    }
+
+    public void testConstructSecurelyStringifiedBadPrefixThrows()
+    {
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified( "not a valid stringified" );
+            fail( "Expected SecurelyStringifiableException: bad prefix" );
+        }
+        catch ( SecurelyStringifiableException e ) { /* expected */ }
+    }
+
+    public void testConstructSecurelyStringifiedUnknownClassThrows()
+    {
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified( "Securely Stringified: com.nonexistent.FakeClass\nhello" );
+            fail( "Expected SecurelyStringifiableException: unknown class" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
     }
@@ -184,7 +209,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( -42, 100 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( Point.class, stringified );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified );
         assertEquals( original, reconstructed );
     }
 
@@ -192,7 +217,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( 0, 0 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( Point.class, stringified );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified );
         assertEquals( original, reconstructed );
     }
 
@@ -200,7 +225,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( -1, -2 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( Point.class, stringified );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified );
         assertEquals( original, reconstructed );
     }
 }
