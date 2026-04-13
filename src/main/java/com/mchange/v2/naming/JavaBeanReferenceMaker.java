@@ -6,6 +6,7 @@ import java.util.*;
 import javax.naming.*;
 import com.mchange.v2.log.*;
 import java.lang.reflect.Method;
+import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.lang.Coerce;
 import com.mchange.v2.beans.BeansUtils;
 import com.mchange.v2.ser.SerializableUtils;
@@ -52,7 +53,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
     public void removeReferenceProperty( String propName )
     { referenceProperties.remove( propName ); }
 
-    public Reference createReference( Object bean )
+    public Reference createReference( Object bean, PropertiesConfig pcfg )
 	throws NamingException
     {
 	try
@@ -123,9 +124,23 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
                                                     addMe = new StringRefAddr( propertyName, SecurelyStringifiable.securelyStringify( val ) );
                                             }
 					if (addMe == null) // all String-based approaches have failed
-					    addMe = new BinaryRefAddr( propertyName, SerializableUtils.toByteArray( val, 
-														    indirector, 
-														    IndirectPolicy.INDIRECT_ON_EXCEPTION ) );
+                                        {
+                                            if (ReferenceableUtils.generateSerializedObjectBinaryRefAddr( pcfg ))
+                                            {
+                                                addMe = new BinaryRefAddr( propertyName, SerializableUtils.toByteArray( val, 
+                                                                                                                        indirector, 
+                                                                                                                        IndirectPolicy.INDIRECT_ON_EXCEPTION ) );
+                                            }
+                                            else
+                                            {
+                                                if (logger.isLoggable(MLevel.WARNING))
+                                                    logger.log(MLevel.WARNING,
+                                                               "No other approach has worked, and embedding properties as Java Serialized objects is disabled, so property of type " +
+                                                               pd.getName() +
+                                                               " and concete class " + val.getClass().getName() +
+                                                               " will not be included in the generated reference!");
+                                            }
+                                        }
 					refAddrs.add( addMe );
 				    }
 			    }
@@ -155,5 +170,8 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 	    }
     }
 
+    public Reference createReference( Object bean )
+	throws NamingException
+    { return createReference( bean, null ); }
 }
 

@@ -14,5 +14,7 @@ public class SecurityConfigKey {
 
     public final static String ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT = "com.mchange.v2.naming.acceptDeserializedInitialContextEnvironment";
 
+    public final static String GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR = "com.mchange.v2.naming.generateSerializedObjectBinaryRefAddr";
+
     private SecurityConfigKey() {}
 }

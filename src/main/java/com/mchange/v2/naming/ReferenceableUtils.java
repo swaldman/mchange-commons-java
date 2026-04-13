@@ -262,6 +262,9 @@ public final class ReferenceableUtils
         }
     }
 
+    public static boolean generateSerializedObjectBinaryRefAddr( PropertiesConfig pcfg )
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, pcfg, "Serializing, via dangerous Java Serialization, objects into references (as BinaryRefAddr)" ); }
+
     public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances" ); }
 

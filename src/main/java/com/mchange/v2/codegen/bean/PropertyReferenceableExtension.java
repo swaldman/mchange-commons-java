@@ -15,6 +15,8 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 
     String javaBeanReferenceMakerClassName = JavaBeanReferenceMaker.class.getName();
 
+    String pcfgExpression = "null";
+
     public void setUseExplicitReferenceProperties( boolean explicit_reference_properties )
     { this.explicit_reference_properties = explicit_reference_properties; }
 
@@ -26,6 +28,12 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 
     public String getFactoryClassName()
     { return factoryClassName; }
+
+    public void setPropertiesConfigExpression( String pcfgExpression )
+    { this.pcfgExpression = pcfgExpression; }
+
+    public String getPropertiesConfigExpression()
+    { return this.pcfgExpression; }
 
 //     public void setJavaBeanReferenceMakerClassName( String javaBeanReferenceMakerClassName )
 //     { this.javaBeanReferenceMakerClassName = javaBeanReferenceMakerClassName; }
@@ -66,7 +74,7 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 	iw.println("static"); 
 	iw.println("{"); 
 	iw.upIndent();
-	
+
 	iw.println("referenceMaker.setFactoryClassName( \"" + factoryClassName + "\" );");
 	if ( explicit_reference_properties )
 	    {
@@ -80,8 +88,8 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 	iw.println("public Reference getReference() throws NamingException");
 	iw.println("{"); 
 	iw.upIndent();
-	
-	iw.println("return referenceMaker.createReference( this );");
+
+	iw.println("return referenceMaker.createReference( this, " + this.getPropertiesConfigExpression() + " );");
 
 	iw.downIndent();
 	iw.println("}");

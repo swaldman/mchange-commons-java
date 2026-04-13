@@ -4,6 +4,7 @@ import java.beans.*;
 import java.util.*;
 import javax.naming.*;
 import com.mchange.v2.log.*;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import javax.naming.spi.ObjectFactory;
 import com.mchange.v2.beans.BeansUtils;
@@ -92,7 +93,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 				if ( content.length == 0 )
 				    out.put( propertyName, NULL_TOKEN ); //we use an empty array to mean null
 				else
-				    out.put( propertyName, SerializableUtils.fromByteArray( content ) ); //this will handle "indirectly serialized" objects.
+                                    handleDeserializeBinaryRefAddressContent( propertyName, out, content );
 			    }
 			else
 			    {
@@ -108,6 +109,26 @@ public class JavaBeanObjectFactory implements ObjectFactory
 		    logger.warning(this.getClass().getName() + " -- RefAddr for unknown property: " + type);
 	    }
 	return out;
+    }
+
+    protected void handleDeserializeBinaryRefAddressContent( String propertyName, Map out, byte[] content ) throws ClassNotFoundException, IOException
+    {
+        if ( logger.isLoggable( MLevel.WARNING ) )
+            logger.log(
+                MLevel.WARNING,
+                "Deserialization of BinaryRefAddr contents interpreted as Java-Serialized objects has been disabled. " +
+                "The functionality still exists, but to restore it you must define your own subclass of " +
+                this.getClass().getName() +
+                "and override 'protected void handleDeserializeBinaryRefAddressContent( String propertyName, Map out, byte[] content ) throws ClassNotFoundException, IOException' " +
+                "to call 'dangerousDeserializeBinaryRefAddressContent( propertyName, out, content )' rather than merely log this warning. " +
+                "For now, property '" + propertyName + "' will be skipped. " +
+                "It will take its default value upon construction and not be updated from the reference."
+            );
+    }
+
+    protected void dangerousDeserializeBinaryRefAddressContent( String propertyName, Map out, byte[] content ) throws ClassNotFoundException, IOException
+    {
+	out.put( propertyName, SerializableUtils.fromByteArray( content ) ); //this will handle "indirectly serialized" objects.
     }
 
     protected Object createBlankInstance(Class beanClass) throws Exception
