@@ -116,7 +116,13 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 						if (textValue != null)
 						    addMe = new StringRefAddr( propertyName, textValue );
 					    }
-					if (addMe == null) //property editor approach failed
+                                        if ( addMe == null ) //property editor approach failed
+                                            {
+                                                // note that it's the concrete class, not the declared bean type, that must be SecurelyStringified!
+                                                if ( SecurelyStringifiable.isSecurelyStringifiable( val.getClass() ) )
+                                                    addMe = new StringRefAddr( propertyName, SecurelyStringifiable.securelyStringify( val ) );
+                                            }
+					if (addMe == null) // all String-based approaches have failed
 					    addMe = new BinaryRefAddr( propertyName, SerializableUtils.toByteArray( val, 
 														    indirector, 
 														    IndirectPolicy.INDIRECT_ON_EXCEPTION ) );

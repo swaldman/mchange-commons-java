@@ -10,11 +10,14 @@ import java.lang.reflect.Modifier;
 public final class SecurelyStringifiable
 {
     private final static MLogger logger = MLog.getLogger( SecurelyStringifiable.class );
-    
+
     public final static String SECURELY_STRINGIFY_METHOD_NAME = "securelyStringify";
     public final static String CONSTRUCT_SECURELY_STRINGIFIED_METHOD_NAME = "constructSecurelyStringified";
 
     private final static Class[] CONSTRUCT_SECURELY_STRINGIFIED_METHOD_ARGS = new Class[]{String.class};
+
+    private final static String SECURELY_STRINGIFIED_PFX     = "Securely Stringified: ";
+    private final static int    SECURELY_STRINGIFIED_PFX_LEN = SECURELY_STRINGIFIED_PFX.length();
 
 
     private static Method getExpectedPublicStaticMethod(Class cl, String methodName, Class[] argTypes, Class expectedReturnType)
@@ -95,13 +98,41 @@ public final class SecurelyStringifiable
             throw new SecurelyStringifiableException("'" + cl.getName() + "' is not SecurelyStringifiable.");
         else
         {
-            try { return (String) mStringify.invoke(null, new Object[]{o}); }
+            try
+            {
+                String fqcn = cl.getName();
+                return SECURELY_STRINGIFIED_PFX + fqcn + '\n' + (String) mStringify.invoke(null, new Object[]{o});
+            }
             catch (Exception e)
             { throw new SecurelyStringifiableException( "Attempt to securely stringify " + o + " failed with an Exception.", e ); }
         }
     }
 
-    public static Object constructSecurelyStringified( Class cl, String stringified ) throws SecurelyStringifiableException
+    public static Object constructSecurelyStringified( String stringified ) throws SecurelyStringifiableException
+    {
+        try
+        {
+            if (!stringified.startsWith(SECURELY_STRINGIFIED_PFX))
+                throw new SecurelyStringifiableException( "Not a SecurelyStringified, does not begin with header " + SECURELY_STRINGIFIED_PFX + "<fqcn> -- " + stringified);
+            else
+            {
+                String noPfx = stringified.substring( SECURELY_STRINGIFIED_PFX_LEN );
+                int newLineIndex = noPfx.indexOf('\n');
+                if (newLineIndex <= 0)
+                    throw new SecurelyStringifiableException("Bad SecurelyStringified header, unterminated or no class name -- " + stringified);
+                else
+                {
+                    String fqcn = noPfx.substring(0, newLineIndex);
+                    String stringifiedPostHeader = noPfx.substring(newLineIndex+1);
+                    return constructSecurelyStringifiedPostHeader( Class.forName(fqcn), stringified, stringifiedPostHeader );
+                }
+            }
+        }
+        catch (Exception e)
+        { throw new SecurelyStringifiableException( "An Exception occurred while trying to reconstruct a SecurelyStringified object.", e ); }
+    }
+
+    private static Object constructSecurelyStringifiedPostHeader( Class cl, String stringified, String stringifiedPostHeader ) throws SecurelyStringifiableException
     {
         // always check both!
         Method mStringify = getGoodSecurelyStringifyMethod(cl);
@@ -110,7 +141,7 @@ public final class SecurelyStringifiable
             throw new SecurelyStringifiableException("'" + cl.getName() + "' is not SecurelyStringifiable.");
         else
         {
-            try { return mConstruct.invoke(null, new Object[]{stringified}); }
+            try { return mConstruct.invoke(null, new Object[]{stringifiedPostHeader}); }
             catch (Exception e)
             {
                 throw new SecurelyStringifiableException(

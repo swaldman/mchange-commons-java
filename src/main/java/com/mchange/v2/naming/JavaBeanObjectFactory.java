@@ -60,11 +60,31 @@ public class JavaBeanObjectFactory implements ObjectFactory
 				if ( Coerce.canCoerce( propertyType ) )
 				    out.put( propertyName, Coerce.toObject( content, propertyType ) );
 				else
-				    {
-					PropertyEditor pe = BeansUtils.findPropertyEditor( pd );
-					pe.setAsText( content );
-					out.put( propertyName, pe.getValue() );
-				    }
+                                {
+                                    PropertyEditor pe = BeansUtils.findPropertyEditor( pd );
+                                    if (pe != null)
+                                    {
+                                        pe.setAsText( content );
+                                        out.put( propertyName, pe.getValue() );
+                                    }
+                                    else // the only remaining valid possibility is that it is securely Stringified
+                                    {
+                                        try
+                                        {
+                                            out.put( propertyName, SecurelyStringifiable.constructSecurelyStringified( content ) );
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            if (logger.isLoggable( MLevel.WARNING ))
+                                                logger.log(
+                                                    MLevel.WARNING,
+                                                    "Failed to find an acceptable means to decode StringRefAddr for property '" + propertyName +
+                                                    "' of " + beanClass + ". Content: " + content,
+                                                    e
+                                                );
+                                        }
+                                    }
+                                }
 			    }
 			else if ( addr instanceof BinaryRefAddr )
 			    {
