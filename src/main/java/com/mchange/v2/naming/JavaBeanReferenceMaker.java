@@ -29,6 +29,8 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
     ReferenceIndirector indirector = new ReferenceIndirector();
 
+    protected boolean skipUnwritableProperties = false;
+
     public Hashtable getEnvironmentProperties()
     { return indirector.getEnvironmentProperties(); }
 
@@ -133,15 +135,25 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
                                             }
                                             else
                                             {
-                                                if (logger.isLoggable(MLevel.WARNING))
-                                                    logger.log(MLevel.WARNING,
-                                                               "No other approach has worked, and embedding properties as Java Serialized objects is disabled, so property of type " +
-                                                               pd.getName() +
-                                                               " and concete class " + val.getClass().getName() +
-                                                               " will not be included in the generated reference!");
+                                                String baseMessage =
+                                                    "While creating a javax.naming.Reference to '" +
+                                                    bean +
+                                                    "', found a property of type '" +
+                                                    pd.getName() +
+                                                    "' and concete class '" + val.getClass().getName() +
+                                                    "' that cannot be embedded as a String or null. " +
+                                                    "No other approach has worked, and embedding properties as Java Serialized objects is disabled.";
+                                                if (skipUnwritableProperties)
+                                                {
+                                                    if (logger.isLoggable(MLevel.WARNING))
+                                                        logger.log(MLevel.WARNING, baseMessage + " This property has been skipped, and will not be included in the generated reference!");
+                                                }
+                                                else
+                                                    throw new NamingException(baseMessage);
                                             }
                                         }
-					refAddrs.add( addMe );
+                                        if (addMe != null)
+                                            refAddrs.add( addMe );
 				    }
 			    }
 			else
@@ -160,6 +172,8 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 		    out.add( (RefAddr) ii.next() );
 		return out;
 	    }
+        catch ( NamingException ne )
+            { throw ne; }
 	catch ( Exception e )
 	    {
 		//e.printStackTrace();

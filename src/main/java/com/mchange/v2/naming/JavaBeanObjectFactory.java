@@ -166,7 +166,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 					//System.err.println(this.getClass().getName() +
 					//": WARNING -- Expected writable property '" + propertyName + "' left at default value");
 					if (logger.isLoggable( MLevel.WARNING ))
-					    logger.warning(this.getClass().getName() + " -- Expected writable property ''" + propertyName + "'' left at default value");
+					    logger.warning(this.getClass().getName() + " -- Expected writable property '" + propertyName + "' left at default value");
 				    }
 			    }
 		    }
