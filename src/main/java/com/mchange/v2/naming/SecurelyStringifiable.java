@@ -104,7 +104,11 @@ public final class SecurelyStringifiable
                 return SECURELY_STRINGIFIED_PFX + fqcn + '\n' + (String) mStringify.invoke(null, new Object[]{o});
             }
             catch (Exception e)
-            { throw new SecurelyStringifiableException( "Attempt to securely stringify " + o + " failed with an Exception.", e ); }
+            {
+                System.err.println("IN securelyStringify EXCEPTION:");
+                e.printStackTrace();
+                throw new SecurelyStringifiableException( "Attempt to securely stringify " + o + " failed with an Exception. [" + e + "]", e );
+            }
         }
     }
 

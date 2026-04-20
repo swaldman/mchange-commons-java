@@ -17,6 +17,8 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 
     String pcfgExpression = "null";
 
+    String overriderExpression = null;
+
     public void setUseExplicitReferenceProperties( boolean explicit_reference_properties )
     { this.explicit_reference_properties = explicit_reference_properties; }
 
@@ -35,11 +37,17 @@ public class PropertyReferenceableExtension implements GeneratorExtension
     public String getPropertiesConfigExpression()
     { return this.pcfgExpression; }
 
-//     public void setJavaBeanReferenceMakerClassName( String javaBeanReferenceMakerClassName )
-//     { this.javaBeanReferenceMakerClassName = javaBeanReferenceMakerClassName; }
+    public void setReferencePropertyOverriderExpression( String overriderExpression )
+    { this.overriderExpression = overriderExpression; }
 
-//     public String getJavaBeanReferenceMakerClassName()
-//     { return javaBeanReferenceMakerClassName; }
+    public String getReferencePropertyOverriderExpression()
+    { return this.overriderExpression; }
+
+   public void setJavaBeanReferenceMakerClassName( String javaBeanReferenceMakerClassName )
+   { this.javaBeanReferenceMakerClassName = javaBeanReferenceMakerClassName; }
+
+   public String getJavaBeanReferenceMakerClassName()
+   { return javaBeanReferenceMakerClassName; }
 
     public Collection extraGeneralImports()
     { 
@@ -53,9 +61,9 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 	set.add( "javax.naming.Reference" );
 	set.add( "javax.naming.Referenceable" );
 	set.add( "javax.naming.NamingException" );
-	set.add( "com.mchange.v2.naming.JavaBeanObjectFactory" );
-	set.add( "com.mchange.v2.naming.JavaBeanReferenceMaker" );
 	set.add( "com.mchange.v2.naming.ReferenceMaker" );
+	set.add( this.factoryClassName );
+        set.add( this.javaBeanReferenceMakerClassName );
 	return set;
     }
 
@@ -81,6 +89,8 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 		for( int i = 0, len = props.length; i < len; ++i)
 		    iw.println("referenceMaker.addReferenceProperty(\"" + props[i].getName() + "\");");
 	    }
+        if ( overriderExpression != null )
+            iw.println("referenceMaker.setReferencePropertyOverrider( " + overriderExpression + " );");
 
 	iw.downIndent();
 	iw.println("}");

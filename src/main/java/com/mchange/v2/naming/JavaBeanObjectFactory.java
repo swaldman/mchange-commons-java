@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import javax.naming.spi.ObjectFactory;
 import com.mchange.v2.beans.BeansUtils;
+import com.mchange.v2.cfg.CurrentConfigFinder;
 import com.mchange.v2.lang.Coerce;
 import com.mchange.v2.ser.SerializableUtils;
 
@@ -16,6 +17,22 @@ public class JavaBeanObjectFactory implements ObjectFactory
     private final static MLogger logger = MLog.getLogger( JavaBeanObjectFactory.class );
 
     final static Object NULL_TOKEN = new Object();
+
+    JavaBeanReferencePropertyOverrider overrider = null;
+
+    CurrentConfigFinder cfgFinder = null;
+
+    public void setReferencePropertyOverrider(JavaBeanReferencePropertyOverrider overrider)
+    { this.overrider = overrider; }
+
+    public JavaBeanReferencePropertyOverrider getReferencePropertyOverrider()
+    { return this.overrider; }
+
+    public void setConfigFinder(CurrentConfigFinder cfgFinder)
+    { this.cfgFinder = cfgFinder; }
+
+    public CurrentConfigFinder getConfigFinder()
+    { return this.cfgFinder; }
 
     public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable env)
 	throws Exception
@@ -52,10 +69,15 @@ public class JavaBeanObjectFactory implements ObjectFactory
 		PropertyDescriptor pd = pds[i];
 		String propertyName = pd.getName();
 		Class  propertyType = pd.getPropertyType();
-		Object addr = refAddrsMap.remove( propertyName );
+		RefAddr addr = (RefAddr) refAddrsMap.remove( propertyName );
 		if (addr != null)
 		    {
-			if ( addr instanceof StringRefAddr )
+                        Object override;
+                        if ( this.overrider != null & (override = this.overrider.overrideDecodeRefAddr( beanClass, cfgFinder.findCurrentConfig(), propertyName, propertyType, addr )) != null )
+                            {
+                                out.put( propertyName, override );
+                            }
+			else if ( addr instanceof StringRefAddr )
 			    {
 				String content = (String) ((StringRefAddr) addr).getContent();
 				if ( Coerce.canCoerce( propertyType ) )
@@ -139,7 +161,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 	Object bean = createBlankInstance( beanClass );
 	BeanInfo bi = Introspector.getBeanInfo( bean.getClass() );
 	PropertyDescriptor[] pds = bi.getPropertyDescriptors();
-	
+
 	for (int i = 0, len = pds.length; i < len; ++i)
 	    {
 		PropertyDescriptor pd = pds[i];
@@ -171,7 +193,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 			    }
 		    }
 	    }
-	
+
 	return bean;
     }
 }

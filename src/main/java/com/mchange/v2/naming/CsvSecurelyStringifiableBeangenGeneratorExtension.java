@@ -9,12 +9,20 @@ import com.mchange.v2.codegen.bean.*;
 public class CsvSecurelyStringifiableBeangenGeneratorExtension implements GeneratorExtension
 {
     boolean baseClass = false;
+    Map propNameToEncodeOverrideFunction = new HashMap();
+    Map propNameToDecodeOverrideFunction = new HashMap();
 
     public void setBaseClass(boolean baseClass)
     { this.baseClass = baseClass; }
 
     public boolean isBaseClass()
     { return this.baseClass; }
+
+    public void setEncodeOverrideFunction(String propName, String function)
+    { propNameToEncodeOverrideFunction.put(propName, function); }
+
+    public void setDecodeOverrideFunction(String propName, String function)
+    { propNameToDecodeOverrideFunction.put(propName, function); }
 
     public Collection extraGeneralImports()
     { 
@@ -64,7 +72,10 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
                 iw.println("{");
                 iw.upIndent();
             }
-            if (propType == String.class)
+            String overrideFunction = (String) propNameToEncodeOverrideFunction.get(propName);
+            if (overrideFunction != null)
+                iw.println( "sb.append( FastCsvUtils.generateCsvLineQuotedUnterminated( new String[] {\"" + propName + "\", " + overrideFunction + "( (" + propType.getName() + ") bean." + propName + ") } ) );" );
+            else if (propType == String.class)
                 iw.println( "sb.append( FastCsvUtils.generateCsvLineQuotedUnterminated( new String[] {\"" + propName + "\", bean." + propName + "} ) );" );
 	    else if ( Coerce.canCoerce( propType ) )
                 iw.println( "sb.append( FastCsvUtils.generateCsvLineQuotedUnterminated( new String[] {\"" + propName + "\", String.valueOf( bean." + propName + ") } ) );" );
@@ -96,8 +107,8 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
         iw.println("try (CsvBufferedReader csvr = new CsvBufferedReader(new BufferedReader(new StringReader(s)));)");
         iw.println("{");
         iw.upIndent();
-        iw.println("String[] csvLine = csvr.readSplitLine();");
-        iw.println("while (csvLine != null)");
+        iw.println("String[] csvLine;");
+        iw.println("while ((csvLine = csvr.readSplitLine()) != null)");
         iw.println("{");
         iw.upIndent();
         iw.println("switch (csvLine.length)");
@@ -116,10 +127,11 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
         iw.upIndent();
         iw.println("throw new SecurelyStringifiableException(\"Expected CSV lines of one or two values. Found \" + csvLine.length + \" in...\\n\" + s);");
         iw.downIndent();
-        iw.println("}");
+        iw.println("}"); // switch
         iw.downIndent();
-        iw.println("}");
+        iw.println("}"); // while
         iw.downIndent();
+        iw.println("}"); // try
         for( int i = 0, len = props.length; i < len; ++i)
         {
             Property p = props[i];
@@ -138,7 +150,10 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
             iw.println( "if (valMap.containsKey(\"" + propName + "\"))" );
             iw.println("{");
             iw.upIndent();
-            if (propType == String.class)
+            String overrideFunction = (String) propNameToDecodeOverrideFunction.get(propName);
+            if (overrideFunction != null)
+                iw.println( "out." + propName + " = (" + propType.getName() + ") " + overrideFunction + "( (String) valMap.get( \"" + propName + "\") );" );
+            else if (propType == String.class)
                 iw.println( "out." + propName + " = (String) valMap.get( \"" + propName + "\");" );
             else if ( Coerce.canCoerce( propType ) )
             {
@@ -169,7 +184,6 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
                 iw.println("}");
             }
         }
-        iw.println("}");
         iw.println("return out;");
         iw.downIndent();
         iw.println("}");

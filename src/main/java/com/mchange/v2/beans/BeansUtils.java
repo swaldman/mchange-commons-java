@@ -43,11 +43,15 @@ public final class BeansUtils
 
     public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection ignoreProps )
 	throws IntrospectionException
+    { return equalsByAccessibleProperties( bean0, bean1, ignoreProps, false ); }
+
+    public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection ignoreProps, boolean ignoreReadOnly )
+	throws IntrospectionException
     {
         Map m0 = new HashMap();
         Map m1 = new HashMap();
-        extractAccessiblePropertiesToMap( m0, bean0, ignoreProps );
-        extractAccessiblePropertiesToMap( m1, bean1, ignoreProps );
+        extractAccessiblePropertiesToMap( m0, bean0, ignoreProps, ignoreReadOnly );
+        extractAccessiblePropertiesToMap( m1, bean1, ignoreProps, ignoreReadOnly );
         //System.err.println("Map0 -> " + m0);
         //System.err.println("Map1 -> " + m1);
         return m0.equals(m1);
@@ -55,11 +59,15 @@ public final class BeansUtils
 
     public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection ignoreProps )
 	throws IntrospectionException
+    { return equalsByAccessiblePropertiesVerbose( bean0, bean1, ignoreProps, false ); }
+
+    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection ignoreProps, boolean ignoreReadOnly )
+	throws IntrospectionException
     {
         Map m0 = new HashMap();
         Map m1 = new HashMap();
-        extractAccessiblePropertiesToMap( m0, bean0, ignoreProps );
-        extractAccessiblePropertiesToMap( m1, bean1, ignoreProps );
+        extractAccessiblePropertiesToMap( m0, bean0, ignoreProps, ignoreReadOnly );
+        extractAccessiblePropertiesToMap( m1, bean1, ignoreProps, ignoreReadOnly );
 
 	boolean out = true;
 
@@ -371,6 +379,9 @@ public final class BeansUtils
     { extractAccessiblePropertiesToMap( fillMe, bean, Collections.EMPTY_SET ); }
 
     public static void extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps ) throws IntrospectionException
+    { extractAccessiblePropertiesToMap( fillMe, bean, ignoreProps, false ); }
+
+    public static void extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps, boolean ignoreReadOnly ) throws IntrospectionException
     {
         String propName = null;
         try
@@ -381,7 +392,10 @@ public final class BeansUtils
             {
                 PropertyDescriptor pd = pds[i];
                 propName = pd.getName();
+
                 if (ignoreProps.contains( propName ))
+                    continue;
+                if (ignoreReadOnly && pd.getWriteMethod() == null)
                     continue;
 
                 Method readMethod = pd.getReadMethod();
@@ -394,12 +408,12 @@ public final class BeansUtils
 //          if (propName != null)
 //          System.err.println("Problem occurred while overwriting property: " + propName);
             if ( logger.isLoggable( MLevel.WARNING ) )
-                logger.warning("Problem occurred while overwriting property: " + propName);
+                logger.warning("Problem occurred while reading and overwriting property: " + propName);
             if (Debug.DEBUG && Debug.TRACE >= Debug.TRACE_MED && logger.isLoggable( MLevel.FINE ))
                 logger.logp( MLevel.FINE, 
                                 BeansUtils.class.getName(),
                                 "extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps )",
-                                (propName != null ? "Problem occurred while overwriting property: " + propName : "") + " throwing...",
+                                (propName != null ? "Problem occurred while reading and overwriting property: " + propName : "") + " throwing...",
                                 e );
             throw e; 
         }
@@ -407,7 +421,7 @@ public final class BeansUtils
         {
             //e.printStackTrace();
             if (Debug.DEBUG && Debug.TRACE >= Debug.TRACE_MED && logger.isLoggable( MLevel.FINE ))
-                logger.logp( MLevel.FINE, 
+                logger.logp( MLevel.FINE,
                                 BeansUtils.class.getName(),
                                 "extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps )",
                                 "Caught unexpected Exception; Converting to IntrospectionException.",

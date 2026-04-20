@@ -29,6 +29,8 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
     ReferenceIndirector indirector = new ReferenceIndirector();
 
+    JavaBeanReferencePropertyOverrider overrider = null;
+
     protected boolean skipUnwritableProperties = false;
 
     public Hashtable getEnvironmentProperties()
@@ -36,6 +38,12 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
     public void setEnvironmentProperties( Hashtable environmentProperties )
     { indirector.setEnvironmentProperties( environmentProperties ); }
+
+    public void setReferencePropertyOverrider(JavaBeanReferencePropertyOverrider overrider)
+    { this.overrider = overrider; }
+
+    public JavaBeanReferencePropertyOverrider getReferencePropertyOverrider()
+    { return this.overrider; }
 
     public void setFactoryClassName(String factoryClassName)
     { this.factoryClassName = factoryClassName; }
@@ -60,7 +68,8 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
     {
 	try
 	    {
-		BeanInfo bi = Introspector.getBeanInfo( bean.getClass() );
+                Class beanClass = bean.getClass();
+		BeanInfo bi = Introspector.getBeanInfo( beanClass );
 		PropertyDescriptor[] pds = bi.getPropertyDescriptors();
 		List refAddrs = new ArrayList();
 		String factoryClassLocation = defaultFactoryClassLocation;
@@ -98,19 +107,23 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 					factoryClassLocation = (String) val;
 				    }
 
+                                RefAddr addMe = null;
 				if (val == null)
 				    {
-					RefAddr addMe = new BinaryRefAddr( propertyName, NULL_TOKEN_BYTES );
+					addMe = new BinaryRefAddr( propertyName, NULL_TOKEN_BYTES );
 					refAddrs.add( addMe );
 				    }
+                                else if (this.overrider != null && (addMe = this.overrider.overrideRefAddr(beanClass,pcfg,propertyName,propertyType,val)) != null)
+                                    {
+					refAddrs.add( addMe );
+                                    }
 				else if ( Coerce.canCoerce( propertyType ) )
 				    {
-					RefAddr addMe = new StringRefAddr( propertyName, String.valueOf( val ) );
+					addMe = new StringRefAddr( propertyName, String.valueOf( val ) );
 					refAddrs.add( addMe );
 				    }
 				else  //other Object properties
 				    {
-					RefAddr addMe = null;
 					PropertyEditor pe = BeansUtils.findPropertyEditor( pd );
 					if (pe != null)
 					    {
@@ -140,7 +153,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
                                                     bean +
                                                     "', found a property of type '" +
                                                     pd.getName() +
-                                                    "' and concete class '" + val.getClass().getName() +
+                                                    "' and concrete class '" + val.getClass().getName() +
                                                     "' that cannot be embedded as a String or null. " +
                                                     "No other approach has worked, and embedding properties as Java Serialized objects is disabled.";
                                                 if (skipUnwritableProperties)
@@ -167,7 +180,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 			    }
 
 		    }
-		Reference out = new Reference( bean.getClass().getName(), factoryClassName, factoryClassLocation );
+		Reference out = new Reference( beanClass.getName(), factoryClassName, factoryClassLocation );
 		for (Iterator ii = refAddrs.iterator(); ii.hasNext(); )
 		    out.add( (RefAddr) ii.next() );
 		return out;
