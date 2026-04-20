@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import javax.naming.spi.ObjectFactory;
 import com.mchange.v2.beans.BeansUtils;
 import com.mchange.v2.cfg.CurrentConfigFinder;
+import com.mchange.v2.csv.FastCsvUtils;
 import com.mchange.v2.lang.Coerce;
 import com.mchange.v2.ser.SerializableUtils;
 
@@ -48,9 +49,14 @@ public class JavaBeanObjectFactory implements ObjectFactory
 		    }
 		Class beanClass = Class.forName( ref.getClassName() );
 		Set refProps = null;
-		RefAddr refPropsRefAddr = (BinaryRefAddr) refAddrsMap.remove( JavaBeanReferenceMaker.REF_PROPS_KEY );
+		RefAddr refPropsRefAddr = (StringRefAddr) refAddrsMap.remove( JavaBeanReferenceMaker.REF_PROPS_KEY );
 		if ( refPropsRefAddr != null )
-		    refProps = (Set) SerializableUtils.fromByteArray( (byte[]) refPropsRefAddr.getContent() );
+                {
+                    String[] refPropsArray = FastCsvUtils.csvSplitLine((String) refPropsRefAddr.getContent());
+		    refProps = new HashSet();
+                    Collections.addAll(refProps, refPropsArray);
+                    //System.err.println(refProps);
+                }
 		Map propMap = createPropertyMap( beanClass, refAddrsMap );
 		return findBean( beanClass, propMap, refProps );
 	    }

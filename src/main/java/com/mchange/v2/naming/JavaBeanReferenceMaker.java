@@ -7,6 +7,7 @@ import javax.naming.*;
 import com.mchange.v2.log.*;
 import java.lang.reflect.Method;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.csv.FastCsvUtils;
 import com.mchange.v2.lang.Coerce;
 import com.mchange.v2.beans.BeansUtils;
 import com.mchange.v2.ser.SerializableUtils;
@@ -78,7 +79,13 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
 		// we only include this so that on dereference we are not surprised to find some properties missing
 		if (using_ref_props)
-		    refAddrs.add( new BinaryRefAddr( REF_PROPS_KEY, SerializableUtils.toByteArray( referenceProperties ) ) );
+                {
+                    String[] refPropsArray = new String[referenceProperties.size()];
+                    referenceProperties.toArray(refPropsArray);
+                    String refPropsAsCsvLine = FastCsvUtils.generateCsvLineQuotedUnterminated(refPropsArray);
+                    //System.err.println(refPropsAsCsvLine);
+		    refAddrs.add( new StringRefAddr( REF_PROPS_KEY, refPropsAsCsvLine ) );
+                }
 
 		for (int i = 0, len = pds.length; i < len; ++i)
 		    {
