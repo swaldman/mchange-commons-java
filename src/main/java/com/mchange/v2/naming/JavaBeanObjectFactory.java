@@ -79,7 +79,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 		if (addr != null)
 		    {
                         Object override;
-                        if ( this.overrider != null & (override = this.overrider.overrideDecodeRefAddr( beanClass, cfgFinder.findCurrentConfig(), propertyName, propertyType, addr )) != null )
+                        if ( this.overrider != null && (override = this.overrider.overrideDecodeRefAddr( beanClass, (cfgFinder != null ? cfgFinder.findCurrentConfig() : null), propertyName, propertyType, addr )) != null )
                             {
                                 out.put( propertyName, override );
                             }
@@ -108,7 +108,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
                                                 logger.log(
                                                     MLevel.WARNING,
                                                     "Failed to find an acceptable means to decode StringRefAddr for property '" + propertyName +
-                                                    "' of " + beanClass + ". Content: " + content,
+                                                    "' of " + beanClass + ". Tried and failed to decode as SecurelyStringified. Content: " + content,
                                                     e
                                                 );
                                         }
