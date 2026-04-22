@@ -48,10 +48,7 @@ public final class ReferenceableUtils
 
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env )
 	throws NamingException
-    {
-        Set allowedFactoryClassNames = findMandatoryObjectFactoryWhitelist( null );
-        return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null );
-    }
+    { return referenceToObject( ref, name, nameCtx, env, (PropertiesConfig) null ); }
 
     public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, PropertiesConfig pcfg )
 	throws NamingException
