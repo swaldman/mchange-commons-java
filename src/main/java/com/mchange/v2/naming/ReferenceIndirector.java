@@ -62,15 +62,15 @@ public class ReferenceIndirector implements Indirector
         if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
         {
             if ( logger.isLoggable(MLevel.FINE) )
-                logger.log(MLevel.FINE, "Indirectly serializing using dangeous ReferenceIndirector mechanism: " + orig);
+                logger.log(MLevel.FINE, "Indirectly serializing using dangerous ReferenceIndirector mechanism: " + orig);
             Reference ref = ((Referenceable) orig).getReference();
             return new ReferenceSerialized( ref, name, contextName, environmentProperties );
         }
         else
             throw new IndirectSerializationForbiddenException(
                 "Attempted dangerous indirect serialization via Reference, which is currently forbidden. " +
-                "Indirect serialization via References may yield vulnerabilities to JNDI injection attacks. " +
-                "If you wish to enable this potentially dangerous form of serialization, set config parameter " +
+                "Indirect serialization/deserialization via References may yield vulnerabilities to JNDI injection attacks. " +
+                "If you wish to enable this potentially dangerous mechanism, set config parameter " +
                 "'" + SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE + "' to 'true'."
             );
     }
@@ -156,7 +156,7 @@ public class ReferenceIndirector implements Indirector
                         catch (NamingException ne)
                         {
                             throw new IOException(
-                                "Failed to dereference reference " + reference +
+                                "Failed to dereference reference '" + reference +
                                 "' under name '" + name + "' and nameContext '" + nameContext +
                                 "' using environment: " + envToString(env),
                                 ne
@@ -174,8 +174,8 @@ public class ReferenceIndirector implements Indirector
             else
                 throw new IndirectSerializationForbiddenException(
                    "Attempted dangerous indirect deserialization via Reference, which is currently forbidden. " +
-                   "Indirect serialization via References may yield vulnerabilities to JNDI injection attacks. " +
-                   "If you wish to enable this potentially dangerous form of serialization, set config parameter " +
+                   "Indirect serialization/deserialization via References may yield vulnerabilities to JNDI injection attacks. " +
+                   "If you wish to enable this potentially dangerous mechanism, set config parameter " +
                    "'" + SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE + "' to 'true'."
                 );
 	}
