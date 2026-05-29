@@ -11,6 +11,7 @@ import com.mchange.v2.naming.AnyNameNameGuard;
 import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.naming.ReferenceIndirector;
 import com.mchange.v2.naming.SecurityConfigKey;
+import com.mchange.v2.ser.IndirectSerializationForbiddenException;
 import com.mchange.v2.ser.IndirectlySerialized;
 
 public final class ReferenceIndirectorJUnitTestCase extends TestCase
@@ -68,6 +69,26 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
      */
     private static IndirectlySerialized makeReferenceSerialized( ReferenceIndirector indirector ) throws Exception
     { return indirector.indirectForm( new TestReferenceable() ); }
+
+    // ==========================================
+    // Open the gate for the bulk of the tests
+    //
+    // The actual functionality exercised below is unchanged by the new gating;
+    // we set the allow-sysprop to "true" for the class as a whole so the existing
+    // tests keep covering what they always did. A dedicated section further down
+    // verifies the gate itself by toggling this sysprop and/or supplying a pcfg.
+    // ==========================================
+
+    private String savedAllowSysprop;
+
+    protected void setUp()
+    {
+        savedAllowSysprop = System.getProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
+        System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true" );
+    }
+
+    protected void tearDown()
+    { restoreSystemProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, savedAllowSysprop ); }
 
     // ==========================================
     // Getter / setter tests
@@ -340,5 +361,95 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
             fail( "Expected IOException: factory not in whitelist" );
         }
         catch (IOException e) { /* expected */ }
+    }
+
+    // ==========================================
+    // Gate tests: ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE
+    //
+    // setUp() sets the allow-sysprop to "true"; individual tests below clear or
+    // override it to exercise the gate. tearDown() restores the original value.
+    // ==========================================
+
+    /** With the sysprop cleared and no pcfg supplied, indirectForm(orig) must refuse. */
+    public void testIndirectFormForbiddenWhenGateClosed() throws Exception
+    {
+        System.clearProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
+        try
+        {
+            new ReferenceIndirector().indirectForm( new TestReferenceable() );
+            fail( "Expected IndirectSerializationForbiddenException with the gate closed" );
+        }
+        catch (IndirectSerializationForbiddenException e) { /* expected */ }
+    }
+
+    /** With the sysprop cleared and no pcfg supplied, getObject(null) must refuse. */
+    public void testGetObjectForbiddenWhenGateClosed() throws Exception
+    {
+        // The ReferenceSerialized is produced while the gate is open (sysprop=true from setUp()).
+        IndirectlySerialized is = makeReferenceSerialized( new ReferenceIndirector() );
+        // Now close the gate before calling getObject().
+        System.clearProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
+        try
+        {
+            is.getObject( null );
+            fail( "Expected IndirectSerializationForbiddenException with the gate closed" );
+        }
+        catch (IndirectSerializationForbiddenException e) { /* expected */ }
+    }
+
+    /**
+     * Sysprop unset, but pcfg passed to the pcfg-aware indirectForm() opts in.
+     * Exercises the new indirectForm(orig, pcfg) overload.
+     */
+    public void testIndirectFormAllowedByPcfgWhenSyspropAbsent() throws Exception
+    {
+        System.clearProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true" );
+        IndirectlySerialized is = new ReferenceIndirector().indirectForm( new TestReferenceable(), cfg );
+        assertNotNull( is );
+    }
+
+    /** Sysprop unset, but pcfg passed to getObject(pcfg) opts in; full resolution succeeds. */
+    public void testGetObjectAllowedByPcfgWhenSyspropAbsent() throws Exception
+    {
+        PropertiesConfig openCfg = pcfg(
+            SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true",
+            SecurityConfigKey.OBJECT_FACTORY_WHITELIST, SIMPLE_FACTORY
+        );
+        // Produce the ReferenceSerialized using the pcfg-aware overload, then clear the sysprop.
+        IndirectlySerialized is = new ReferenceIndirector().indirectForm( new TestReferenceable(), openCfg );
+        System.clearProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
+        assertEquals( "SIMPLE", is.getObject( openCfg ) );
+    }
+
+    /** Sysprop=false must veto pcfg=true on the serialize side. */
+    public void testIndirectFormSyspropFalseOverridesPcfgTrue() throws Exception
+    {
+        System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "false" );
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true" );
+        try
+        {
+            new ReferenceIndirector().indirectForm( new TestReferenceable(), cfg );
+            fail( "Expected IndirectSerializationForbiddenException: sysprop=false must override pcfg=true" );
+        }
+        catch (IndirectSerializationForbiddenException e) { /* expected */ }
+    }
+
+    /** Sysprop=false must veto pcfg=true on the deserialize side. */
+    public void testGetObjectSyspropFalseOverridesPcfgTrue() throws Exception
+    {
+        // Produce the ReferenceSerialized while the gate is open (sysprop=true from setUp()).
+        IndirectlySerialized is = makeReferenceSerialized( new ReferenceIndirector() );
+        System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "false" );
+        PropertiesConfig cfg = pcfg(
+            SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true",
+            SecurityConfigKey.OBJECT_FACTORY_WHITELIST, SIMPLE_FACTORY
+        );
+        try
+        {
+            is.getObject( cfg );
+            fail( "Expected IndirectSerializationForbiddenException: sysprop=false must override pcfg=true" );
+        }
+        catch (IndirectSerializationForbiddenException e) { /* expected */ }
     }
 }
