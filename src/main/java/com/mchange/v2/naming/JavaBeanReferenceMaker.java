@@ -69,6 +69,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
     {
 	try
 	    {
+                ReferenceableUtils.ensureWhitelistedJavaBeanClass( bean, pcfg );
                 Class beanClass = bean.getClass();
 		BeanInfo bi = Introspector.getBeanInfo( beanClass );
 		PropertyDescriptor[] pds = bi.getPropertyDescriptors();

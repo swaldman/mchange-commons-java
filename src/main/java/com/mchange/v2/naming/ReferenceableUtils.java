@@ -366,6 +366,58 @@ public final class ReferenceableUtils
     private static Set commaSeparatedStringListToSet( String csList )
     { return Collections.unmodifiableSet(commaSeparatedStringListToModifiableSet(csList)); }
 
+    /* intentionally package-scope, accessed by JavaBeanReferenceMaker */
+    /* pcfg can be null */
+    static void ensureWhitelistedJavaBeanClass( Object bean, PropertiesConfig pcfg ) throws NamingException
+    { ensureWhitelistedJavaBeanClass( bean.getClass().getName(), pcfg ); }
+
+    /* intentionally package-scope, accessed by JavaBeanObjectFactory */
+    /* pcfg can be null */
+    static void ensureWhitelistedJavaBeanClass( String fqcn, PropertiesConfig pcfg ) throws NamingException
+    {
+        Set whitelisted = referenceableJavaBeanClassWhiteList( pcfg );
+        if (whitelisted != null)
+        {
+            if (!whitelisted.contains(fqcn))
+            {
+                StringBuilder sb = new StringBuilder();
+                boolean first = true;
+                for ( Object cn : whitelisted )
+                {
+                    if (!first)
+                        sb.append(",");
+                    else
+                        first = false;
+                    sb.append(cn);
+                }
+                throw new NamingException(
+                    "The whitelist of acceptable JavaBeanClasses to which to create or look up references does not contain referenced class '" + fqcn + "'. " +
+                    "Please add that class to comma-separated list at config key '" + SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST + "' if " +
+                    "you wish for this reference to be created or resolved. " +
+                    "(If this is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
+                    "Check for distinct whitelists in system properties and other config.) " +
+                    "Current whitelist: " + sb.toString() + " -- " + "Missing class: " + fqcn
+                );
+            }
+        }
+        else
+        {
+            throw new NamingException(
+                "No whitelist is set for referenceable java beans. This is dangerous. Please set '" + SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST +
+                "'. You are currently creating or dereferencing an object of class '" + fqcn + "'. If that is intended and desirable, please include it " +
+                "in the whitelist! (If this is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
+                "Check for distinct whitelists in system properties and other config.) No classes are currently whitelisted. -- Missing class: " + fqcn
+            );
+        }
+    }
+
+    private static Set referenceableJavaBeanClassWhiteList( PropertiesConfig pcfg )
+    {
+        Set out = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg );
+        if (out != null && out.size() == 0) return null;
+        else return out;
+    }
+
     // pcfg can be null
     private static Set findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
     {
