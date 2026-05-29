@@ -108,7 +108,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 
 	iw.println("Indirector indirector = " + findIndirectorExpr + ';');
 	writeInitializeIndirector( prop, propType, iw );
-	iw.println("oos.writeObject( indirector.indirectForm( " + prop.getName() + " ) );");
+	iw.println("oos.writeObject( indirector.indirectForm( " + prop.getName() + ", " + findPropertiesConfigExpression + " ) );");
 
 	iw.downIndent();
 	iw.println("}");

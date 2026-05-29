@@ -16,6 +16,7 @@ import com.mchange.v2.log.MLogger;
 import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.ser.Indirector;
 import com.mchange.v2.ser.IndirectlySerialized;
+import com.mchange.v2.ser.IndirectSerializationForbiddenException;
 import com.mchange.v2.util.MapUtils;
 
 public class ReferenceIndirector implements Indirector
@@ -53,9 +54,25 @@ public class ReferenceIndirector implements Indirector
     { this.environmentProperties = environmentProperties; }
 
     public IndirectlySerialized indirectForm( Object orig ) throws Exception
-    { 
-	Reference ref = ((Referenceable) orig).getReference();
-	return new ReferenceSerialized( ref, name, contextName, environmentProperties );
+    { return indirectForm( orig, null ); }
+
+
+    public IndirectlySerialized indirectForm( Object orig, PropertiesConfig pcfg ) throws Exception
+    {
+        if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
+        {
+            if ( logger.isLoggable(MLevel.FINE) )
+                logger.log(MLevel.FINE, "Indirectly serializing using dangeous ReferenceIndirector mechanism: " + orig);
+            Reference ref = ((Referenceable) orig).getReference();
+            return new ReferenceSerialized( ref, name, contextName, environmentProperties );
+        }
+        else
+            throw new IndirectSerializationForbiddenException(
+                "Attempted dangerous indirect serialization via Reference, which is currently forbidden. " +
+                "Indirect serialization via References may yield vulnerabilities to JNDI injection attacks. " +
+                "If you wish to enable this potentially dangerous form of serialization, set config parameter " +
+                "'" + SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE + "' to 'true'."
+            );
     }
 
     private static class ReferenceSerialized implements IndirectlySerialized
@@ -97,58 +114,70 @@ public class ReferenceIndirector implements Indirector
 
 	public Object getObject(PropertiesConfig pcfg) throws ClassNotFoundException, IOException
 	{
-	    try
-		{
-		    Context initialContext;
-		    if ( env == null )
-			initialContext = new InitialContext();
-		    else
+            if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
+            {
+                if ( logger.isLoggable(MLevel.FINE) )
+                    logger.log(MLevel.FINE, "Indirectly deserializing using dangerous ReferenceIndirector mechanism: " + this);
+                try
                     {
-                        if (ReferenceableUtils.acceptDeserializedInitialContextEnvironment(pcfg))
-                            initialContext = new InitialContext( env );
+                        Context initialContext;
+                        if ( env == null )
+                            initialContext = new InitialContext();
                         else
-                            throw new IOException(
-                                "A value indirectly serialized as a reference includes a non-default (non-null) InitialContext environment " +
-                                "by which the reference wishes to be looked up. " +
-                                "InitialContext environment parameters can redirect lookups to untrusted remote servers " +
-                                "and potentially lead to download and execution of malicious code. SecurityConfigKey '" +
-                                SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT +
-                                "' is set conservatively to false, so this operation is not supported. " +
-                                "Indirectly serialized reference: " + this.toString()
-                            );
-                    }
-
-		    Context nameContext = null;
-		    if ( contextName != null )
-                    {
-                        try
                         {
-                            ReferenceableUtils.assertAcceptableName( contextName, pcfg );
-                            nameContext = (Context) initialContext.lookup( contextName );
+                            if (ReferenceableUtils.acceptDeserializedInitialContextEnvironment(pcfg))
+                                initialContext = new InitialContext( env );
+                            else
+                                throw new IOException(
+                                    "A value indirectly serialized as a reference includes a non-default (non-null) InitialContext environment " +
+                                    "by which the reference wishes to be looked up. " +
+                                    "InitialContext environment parameters can redirect lookups to untrusted remote servers " +
+                                    "and potentially lead to download and execution of malicious code. SecurityConfigKey '" +
+                                    SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT +
+                                    "' is set conservatively to false, so this operation is not supported. " +
+                                    "Indirectly serialized reference: " + this.toString()
+                                );
                         }
-                        catch (NamingException ne) // if the name is unacceptable, fail with an informative message.
-                        { throw new IOException(ne.getMessage(), ne); }
-                    }
 
-                    try
-                    { return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); }
-                    catch (NamingException ne)
-                    {
-                        throw new IOException(
-                            "Failed to dereference reference " + reference +
-                            "' under name '" + name + "' and nameContext '" + nameContext +
-                            "' using environment: " + envToString(env),
-                            ne
-                        );
+                        Context nameContext = null;
+                        if ( contextName != null )
+                        {
+                            try
+                            {
+                                ReferenceableUtils.assertAcceptableName( contextName, pcfg );
+                                nameContext = (Context) initialContext.lookup( contextName );
+                            }
+                            catch (NamingException ne) // if the name is unacceptable, fail with an informative message.
+                            { throw new IOException(ne.getMessage(), ne); }
+                        }
+
+                        try
+                        { return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); }
+                        catch (NamingException ne)
+                        {
+                            throw new IOException(
+                                "Failed to dereference reference " + reference +
+                                "' under name '" + name + "' and nameContext '" + nameContext +
+                                "' using environment: " + envToString(env),
+                                ne
+                            );
+                        }
                     }
-		}
-	    catch (NamingException e)
-		{
-		    //e.printStackTrace();
-		    if ( logger.isLoggable( MLevel.WARNING ) )
-			logger.log( MLevel.WARNING, "Failed to acquire the Context necessary to lookup an Object.", e );
-		    throw new InvalidObjectException( "Failed to acquire the Context necessary to lookup an Object: " + e.toString() );
-		}
+                catch (NamingException e)
+                    {
+                        //e.printStackTrace();
+                        if ( logger.isLoggable( MLevel.WARNING ) )
+                            logger.log( MLevel.WARNING, "Failed to acquire the Context necessary to lookup an Object.", e );
+                        throw new InvalidObjectException( "Failed to acquire the Context necessary to lookup an Object: " + e.toString() );
+                    }
+            }
+            else
+                throw new IndirectSerializationForbiddenException(
+                   "Attempted dangerous indirect deserialization via Reference, which is currently forbidden. " +
+                   "Indirect serialization via References may yield vulnerabilities to JNDI injection attacks. " +
+                   "If you wish to enable this potentially dangerous form of serialization, set config parameter " +
+                   "'" + SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE + "' to 'true'."
+                );
 	}
     }
 }

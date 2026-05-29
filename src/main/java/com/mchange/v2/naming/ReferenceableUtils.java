@@ -153,37 +153,6 @@ public final class ReferenceableUtils
 	    }
     }
 
-    /*
-    public static boolean nameLocalityIsAcceptable( Object jndiName, PropertiesConfig pcfg )
-    {
-        boolean resolveNonlocal = permitNonlocalJndiNames( pcfg );
-        if ( jndiName instanceof String )
-            return resolveNonlocal || jndiNameIsLocal((String) jndiName);
-        else if ( jndiName instanceof Name )
-            return resolveNonlocal || jndiNameIsLocal((Name) jndiName);
-        else
-        {
-            if ( logger.isLoggable( MLevel.WARNING ) )
-                logger.log(
-                   MLevel.WARNING,
-                   "Putative JNDI name of unexpected type. We expect String or javax.naming.Name. " +
-                   "We conservatively, redundantly, disallow any attempt to lookup of jndi names of unknown types. There is no API to do so. " +
-                   "Putative JNDI name: " + jndiName
-                );
-            return false;
-        }
-    }
-
-    public static boolean jndiNameIsLocal( String name )
-    { return name.startsWith("java:"); }
-
-    public static boolean jndiNameIsLocal( Name name )
-    { return !name.isEmpty() && name.get(0).startsWith("java:"); }
-
-    public static boolean permitNonlocalJndiNames( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.PERMIT_NONLOCAL_JNDI_NAMES, pcfg, "Looking up nonlocal (or not provably local) JNDI names"); }
-    */
-
     private final static String DEFAULT_NAME_GUARD_CLASS_NAME = "com.mchange.v2.naming.ApparentlyLocalNameGuard";
 
     // for now we'll just use a simple HashMap, synchronizing access, to cache Constructors.
@@ -258,6 +227,9 @@ public final class ReferenceableUtils
                 throw new NamingException("We failed to reflectively lookup and construct configured NameGuard '" + nameGuardClassName + ". Cause: " + roe);
         }
     }
+
+    public static boolean allowIndirectSerializationViaReference( PropertiesConfig pcfg )
+    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, pcfg, "Creating or decoding dangerous Java-Serialized References when objects are Referenceable but not Serializable, or ordinary Serialization fails." ); }
 
     public static boolean generateSerializedObjectBinaryRefAddr( PropertiesConfig pcfg )
     { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, pcfg, "Serializing, via dangerous Java Serialization, objects into references (as BinaryRefAddr)" ); }
