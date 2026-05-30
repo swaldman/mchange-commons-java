@@ -8,16 +8,20 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyDescriptor;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
 import java.net.URI;
+
+import java.security.CodeSource;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -219,8 +223,8 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	    { return source; }
 	};
 
-	// compile against the same classpath this test is running on, so Widget and java.beans resolve
-	List options = Arrays.asList( "-classpath", System.getProperty( "java.class.path" ) );
+	// compile against a classpath that can resolve the sample bean (see compilationClasspath)
+	List options = Arrays.asList( "-classpath", compilationClasspath() );
 
 	boolean ok = compiler.getTask( null, fileManager, diagnostics, options, null, Collections.singletonList( sourceObject ) ).call().booleanValue();
 	if (! ok )
@@ -251,6 +255,54 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	    }
 	};
 	return loader.loadClass( fqClassName );
+    }
+
+    /**
+     * The classpath to compile the generated source against.
+     *
+     * We cannot rely solely on "java.class.path": under sbt's in-process (unforked) test runner the
+     * project's compiled test classes -- which is where our sample bean lives -- are loaded through
+     * an sbt-managed classloader and are not on the JVM system classpath, so the generated source's
+     * reference to the bean would not resolve. We therefore also add the code-source locations of the
+     * classes the generated source actually needs, which is reliable regardless of how the tests are
+     * launched.
+     */
+    private static String compilationClasspath()
+    {
+	Set entries = new LinkedHashSet();
+
+	String jcp = System.getProperty( "java.class.path" );
+	if ( jcp != null )
+	    {
+		String[] parts = jcp.split( File.pathSeparator );
+		for ( int i = 0, len = parts.length; i < len; ++i )
+		    if ( parts[i].length() > 0 )
+			entries.add( parts[i] );
+	    }
+
+	addCodeSourceLocation( entries, BeanInfoGenJUnitTestCase.class ); // location of the sample bean
+	addCodeSourceLocation( entries, BeanInfoGen.class );              // location of the generator
+
+	StringBuffer sb = new StringBuffer();
+	for ( Iterator ii = entries.iterator(); ii.hasNext(); )
+	    {
+		if ( sb.length() > 0 )
+		    sb.append( File.pathSeparatorChar );
+		sb.append( (String) ii.next() );
+	    }
+	return sb.toString();
+    }
+
+    private static void addCodeSourceLocation( Set entries, Class cl )
+    {
+	try
+	    {
+		CodeSource cs = cl.getProtectionDomain().getCodeSource();
+		if ( cs != null && cs.getLocation() != null )
+		    entries.add( new File( cs.getLocation().toURI() ).getAbsolutePath() );
+	    }
+	catch ( Exception e )
+	    { /* best effort; fall back to whatever else is on the path */ }
     }
 
     // ==========================================
