@@ -12,12 +12,14 @@ import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.io.StringWriter;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -31,22 +33,35 @@ import com.mchange.v2.io.IndentedWriter;
  * bean class -- its bean descriptor, property descriptors, event-set descriptors and method
  * descriptors.
  *
- * Property names supplied in <code>excludedProperties</code> are omitted from the generated
- * property descriptors. Because the generated <code>getPropertyDescriptors()</code> returns a
- * non-null array, the JavaBeans <code>Introspector</code> uses it verbatim rather than rediscovering
- * properties reflectively, so the accessor methods of an excluded property are no longer seen as
- * constituting a JavaBeans property. The methods themselves remain ordinary public methods and are
- * still reported among the method descriptors.
+ * Properties may be excluded from the generated property descriptors in two ways: by name (any
+ * property whose name appears in <code>excludedPropertyNames</code>) and by type (any property whose
+ * type is assignable to one of the <code>Class</code> objects in <code>excludedPropertyTypes</code>).
+ *
+ * For an indexed property, exclusion by type considers <em>both</em> the array type and the element
+ * type, independent of which accessor convention defined the property (an array-valued accessor such
+ * as <code>String[] getTags()</code>, a single-index accessor such as <code>String getTags(int)</code>,
+ * or both). Whichever of the two types the property descriptor does not directly report is derived
+ * from the other, and the property is excluded if either is assignable to an excluded type. Thus an
+ * indexed property with element type <code>String</code> is excluded whether <code>String.class</code>
+ * or <code>String[].class</code> is given, and identically regardless of how it was declared.
+ *
+ * Because the generated <code>getPropertyDescriptors()</code> returns a non-null array, the JavaBeans
+ * <code>Introspector</code> uses it verbatim rather than rediscovering properties reflectively, so
+ * the accessor methods of an excluded property are no longer seen as constituting a JavaBeans
+ * property. The methods themselves remain ordinary public methods and are still reported among the
+ * method descriptors.
  */
 public final class BeanInfoGen
 {
     private final static String GENERATOR_NAME = BeanInfoGen.class.getName();
 
-    public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedProperties )
+    public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes )
 	throws IntrospectionException, IOException
     {
-	if ( excludedProperties == null )
-	    excludedProperties = Collections.EMPTY_SET;
+	if ( excludedPropertyNames == null )
+	    excludedPropertyNames = Collections.EMPTY_SET;
+	if ( excludedPropertyTypes == null )
+	    excludedPropertyTypes = Collections.EMPTY_SET;
 
 	// IGNORE_IMMEDIATE_BEANINFO so that, on regeneration, we reproduce the information that would
 	// have been introspected without the explicit BeanInfo we are (re)generating, while still
@@ -59,7 +74,9 @@ public final class BeanInfoGen
 	for ( int i = 0, len = allPds.length; i < len; ++i )
 	    {
 		PropertyDescriptor pd = allPds[i];
-		if ( excludedProperties.contains( pd.getName() ) )
+		if ( excludedPropertyNames.contains( pd.getName() ) )
+		    continue;
+		if ( isExcludedByType( pd, excludedPropertyTypes ) )
 		    continue;
 		includedPds.add( pd );
 		if ( pd instanceof IndexedPropertyDescriptor )
@@ -106,6 +123,48 @@ public final class BeanInfoGen
 
 	iw.flush();
 	return sw.toString();
+    }
+
+    private static boolean isExcludedByType( PropertyDescriptor pd, Set excludedPropertyTypes )
+    {
+	if ( excludedPropertyTypes.isEmpty() )
+	    return false;
+
+	if ( pd instanceof IndexedPropertyDescriptor )
+	    {
+		// An indexed property can be defined by an array-valued accessor (e.g. String[] getTags()),
+		// by a single-index accessor (e.g. String getTags(int)), or by both. Depending on the
+		// convention used, the descriptor may report only the array type, only the element type, or
+		// both. To exclude such properties consistently regardless of how they were declared, we
+		// always consider both the element type and the array type, deriving whichever the descriptor
+		// does not directly report, and exclude if either is assignable to an excluded type.
+		IndexedPropertyDescriptor ipd = (IndexedPropertyDescriptor) pd;
+		Class elementType = ipd.getIndexedPropertyType();
+		Class arrayType   = ipd.getPropertyType();
+
+		if ( elementType == null && arrayType != null )
+		    elementType = arrayType.getComponentType();
+		if ( arrayType == null && elementType != null )
+		    arrayType = Array.newInstance( elementType, 0 ).getClass();
+
+		return isAssignableToAnyOf( elementType, excludedPropertyTypes )
+		    || isAssignableToAnyOf( arrayType, excludedPropertyTypes );
+	    }
+	else
+	    return isAssignableToAnyOf( pd.getPropertyType(), excludedPropertyTypes );
+    }
+
+    private static boolean isAssignableToAnyOf( Class type, Set excludedPropertyTypes )
+    {
+	if ( type == null )
+	    return false;
+	for ( Iterator ii = excludedPropertyTypes.iterator(); ii.hasNext(); )
+	    {
+		Class excludedType = (Class) ii.next();
+		if ( excludedType.isAssignableFrom( type ) )
+		    return true;
+	    }
+	return false;
     }
 
     private static void writeGetBeanDescriptor( IndentedWriter iw ) throws IOException
@@ -357,11 +416,11 @@ public final class BeanInfoGen
 		    }
 
 		Class beanClass = Class.forName( argv[0] );
-		Set excludedProperties = new HashSet();
+		Set excludedPropertyNames = new HashSet();
 		for ( int i = 1; i < argv.length; ++i )
-		    excludedProperties.add( argv[i] );
+		    excludedPropertyNames.add( argv[i] );
 
-		System.out.println( explicitBeanInfoClassSourceForBeanClass( beanClass, excludedProperties ) );
+		System.out.println( explicitBeanInfoClassSourceForBeanClass( beanClass, excludedPropertyNames, Collections.EMPTY_SET ) );
 	    }
 	catch ( Exception e )
 	    { e.printStackTrace(); }
