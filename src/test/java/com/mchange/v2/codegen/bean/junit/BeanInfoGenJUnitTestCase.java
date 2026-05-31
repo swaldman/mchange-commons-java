@@ -67,6 +67,7 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	private boolean  active;
 	private String   secret;
 	private String[] tags;
+	private String[] labels;
 
 	public String getName()                  { return name; }
 	public void   setName( String n )        { this.name = n; }
@@ -80,10 +81,15 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	public String getSecret()                { return secret; }
 	public void   setSecret( String s )      { this.secret = s; }
 
+	// indexed property defined by BOTH an array accessor and a single-index accessor
 	public String[] getTags()                { return tags; }
 	public void     setTags( String[] t )    { this.tags = t; }
 	public String   getTags( int i )         { return tags[i]; }
 	public void     setTags( int i, String v ) { tags[i] = v; }
+
+	// indexed property defined by a single-index accessor ONLY (no array accessor)
+	public String getLabels( int i )         { return labels[i]; }
+	public void   setLabels( int i, String v ) { labels[i] = v; }
 
 	public void doSomething( int count, String label ) {}
 
@@ -172,6 +178,90 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	assertEquals( Widget.class, bi.getBeanDescriptor().getBeanClass() );
     }
 
+    public void testPropertiesExcludedByType() throws Exception
+    {
+	// excluding String.class drops the String-typed scalar properties (name, secret) and, because an
+	// indexed property's element type is considered, the String-element indexed properties as well
+	BeanInfo bi = beanInfoFor( Collections.EMPTY_SET, typeExclusions( String.class ) );
+	if ( bi == null ) return;
+
+	Set propNames = propertyNames( bi );
+	assertFalse( "String property 'name' should be excluded by type.", propNames.contains( "name" ) );
+	assertFalse( "String property 'secret' should be excluded by type.", propNames.contains( "secret" ) );
+
+	assertTrue( "int property 'size' should remain.", propNames.contains( "size" ) );
+	assertTrue( "boolean property 'active' should remain.", propNames.contains( "active" ) );
+	assertTrue( "Class property 'class' should remain.", propNames.contains( "class" ) );
+
+	// as with name-based exclusion, the accessors of a type-excluded property remain ordinary methods
+	Set methods = methodNames( bi );
+	assertTrue( methods.contains( "getName" ) );
+	assertTrue( methods.contains( "setName" ) );
+    }
+
+    public void testIndexedPropertiesExcludedByElementTypeRegardlessOfConvention() throws Exception
+    {
+	// 'tags' is declared with both an array accessor and a single-index accessor; 'labels' with only
+	// a single-index accessor. Excluding the element type (String) must drop both, identically.
+	BeanInfo bi = beanInfoFor( Collections.EMPTY_SET, typeExclusions( String.class ) );
+	if ( bi == null ) return;
+
+	Set propNames = propertyNames( bi );
+	assertFalse( "Array-and-index indexed property 'tags' should be excluded by element type String.", propNames.contains( "tags" ) );
+	assertFalse( "Index-only indexed property 'labels' should be excluded by element type String.", propNames.contains( "labels" ) );
+
+	// and the indexed accessors survive as ordinary methods
+	Set methods = methodNames( bi );
+	assertTrue( methods.contains( "getTags" ) );
+	assertTrue( methods.contains( "getLabels" ) );
+    }
+
+    public void testIndexedPropertiesExcludedByArrayTypeRegardlessOfConvention() throws Exception
+    {
+	// Excluding the array type (String[]) must likewise drop both indexed properties, even 'labels',
+	// whose descriptor reports no array type (we derive it from the element type).
+	BeanInfo bi = beanInfoFor( Collections.EMPTY_SET, typeExclusions( String[].class ) );
+	if ( bi == null ) return;
+
+	Set propNames = propertyNames( bi );
+	assertFalse( "Array-and-index indexed property 'tags' should be excluded by array type String[].", propNames.contains( "tags" ) );
+	assertFalse( "Index-only indexed property 'labels' should be excluded by array type String[].", propNames.contains( "labels" ) );
+
+	// scalar String properties are not String[], so they remain
+	assertTrue( "Scalar String property 'name' should remain when excluding String[].", propNames.contains( "name" ) );
+    }
+
+    public void testPropertiesExcludedByAssignableSupertype() throws Exception
+    {
+	// every reference-typed property is assignable to Object; primitive-typed properties are not
+	BeanInfo bi = beanInfoFor( Collections.EMPTY_SET, typeExclusions( Object.class ) );
+	if ( bi == null ) return;
+
+	Set propNames = propertyNames( bi );
+	assertFalse( "Reference-typed 'name' should be excluded as assignable to Object.", propNames.contains( "name" ) );
+	assertFalse( "Reference-typed 'secret' should be excluded as assignable to Object.", propNames.contains( "secret" ) );
+	assertFalse( "Array-typed 'tags' should be excluded as assignable to Object.", propNames.contains( "tags" ) );
+	assertFalse( "Reference-typed 'class' should be excluded as assignable to Object.", propNames.contains( "class" ) );
+
+	assertTrue( "Primitive int 'size' is not assignable to Object and should remain.", propNames.contains( "size" ) );
+	assertTrue( "Primitive boolean 'active' is not assignable to Object and should remain.", propNames.contains( "active" ) );
+    }
+
+    public void testNameAndTypeExclusionsCombine() throws Exception
+    {
+	// exclude 'active' by name and String-typed properties by type
+	BeanInfo bi = beanInfoFor( exclusions( "active" ), typeExclusions( String.class ) );
+	if ( bi == null ) return;
+
+	Set propNames = propertyNames( bi );
+	assertFalse( "'active' excluded by name.", propNames.contains( "active" ) );
+	assertFalse( "'name' excluded by type.", propNames.contains( "name" ) );
+	assertFalse( "'secret' excluded by type.", propNames.contains( "secret" ) );
+	assertFalse( "String-element indexed property 'tags' excluded by type.", propNames.contains( "tags" ) );
+
+	assertTrue( "Primitive int 'size' should remain.", propNames.contains( "size" ) );
+    }
+
     // ==========================================
     // Helpers: generate -> compile -> load -> instantiate
     // ==========================================
@@ -179,9 +269,15 @@ public class BeanInfoGenJUnitTestCase extends TestCase
     /**
      * @return an instance of the generated BeanInfo for Widget, or null if no system compiler is available.
      */
-    private static BeanInfo beanInfoFor( Set excludedProperties ) throws Exception
+    private static BeanInfo beanInfoFor( Set excludedPropertyNames ) throws Exception
+    { return beanInfoFor( excludedPropertyNames, Collections.EMPTY_SET ); }
+
+    /**
+     * @return an instance of the generated BeanInfo for Widget, or null if no system compiler is available.
+     */
+    private static BeanInfo beanInfoFor( Set excludedPropertyNames, Set excludedPropertyTypes ) throws Exception
     {
-	String source = BeanInfoGen.explicitBeanInfoClassSourceForBeanClass( Widget.class, excludedProperties );
+	String source = BeanInfoGen.explicitBeanInfoClassSourceForBeanClass( Widget.class, excludedPropertyNames, excludedPropertyTypes );
 	Class beanInfoClass = compileAndLoad( BEAN_INFO_FQCN, source );
 	if ( beanInfoClass == null )
 	    return null;
@@ -313,6 +409,13 @@ public class BeanInfoGenJUnitTestCase extends TestCase
     {
 	Set out = new HashSet();
 	out.add( name );
+	return out;
+    }
+
+    private static Set typeExclusions( Class type )
+    {
+	Set out = new HashSet();
+	out.add( type );
 	return out;
     }
 
