@@ -34,6 +34,14 @@ public final class ReferenceableUtils
     // It is and must be tested by reference identity, not semantic equality
     public final static Set ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet());
 
+    private final static Set ACCEPT_ANY_JAVA_BEAN_WHITELIST;
+    static
+    {
+        Set tmp = new HashSet();
+        tmp.add("*");
+        ACCEPT_ANY_JAVA_BEAN_WHITELIST = Collections.unmodifiableSet(tmp);
+    }
+
     /**
      * A null string value in a Reference sometimes goes to the literal
      * "null". Sigh. We convert this string to a Java null.
@@ -371,6 +379,27 @@ public final class ReferenceableUtils
     static void ensureWhitelistedJavaBeanClass( Object bean, PropertiesConfig pcfg ) throws NamingException
     { ensureWhitelistedJavaBeanClass( bean.getClass().getName(), pcfg ); }
 
+    private static boolean javaBeanWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    {
+        if (!ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(whitelisted))
+            return false;
+        else if (pcfg == null) // if pcfg is null, the '*' whitelist was uniquely specified in System properties
+            return true;
+        else
+        {
+            String syspropsWhitelist = System.getProperty( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+            String pcfgWhitelist     = pcfg.getProperty( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+            if (syspropsWhitelist == null) // if syspropsWhitelist is null, the '*' whitelist was uniquely specified in pcfg
+                return true;
+            else if (pcfgWhitelist == null) // if pcfgWhitelist is null, the '*' whitelist was uniquely specified in System properties
+                return true;
+            else // the whitelist is specified in both places. make sure both are trying to disable enforcement
+                return
+                    ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(commaSeparatedStringListToModifiableSet(syspropsWhitelist)) &&
+                    ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(commaSeparatedStringListToModifiableSet(pcfgWhitelist));
+        }
+    }
+
     /* intentionally package-scope, accessed by JavaBeanObjectFactory */
     /* pcfg can be null */
     static void ensureWhitelistedJavaBeanClass( String fqcn, PropertiesConfig pcfg ) throws NamingException
@@ -378,7 +407,7 @@ public final class ReferenceableUtils
         Set whitelisted = referenceableJavaBeanClassWhiteList( pcfg );
         if (whitelisted != null)
         {
-            if (!whitelisted.contains(fqcn))
+            if (!javaBeanWhitelistIsDisabled(whitelisted, pcfg) && !whitelisted.contains(fqcn))
             {
                 StringBuilder sb = new StringBuilder();
                 boolean first = true;
