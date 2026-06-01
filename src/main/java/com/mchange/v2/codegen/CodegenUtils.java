@@ -3,6 +3,7 @@ package com.mchange.v2.codegen;
 import java.lang.reflect.*;
 import java.io.File;
 import java.io.Writer;
+import java.util.Comparator;
 import com.mchange.v1.lang.ClassUtils;
 
 public final class CodegenUtils
@@ -183,6 +184,32 @@ public final class CodegenUtils
 	sb.append( File.separatorChar );
 	return sb.toString();
     }
+
+    public static String methodToTotalSortingKey(Method m)
+    {
+        StringBuilder sb = new StringBuilder( m.getName() );
+        sb.append('(');
+        Class[] params = m.getParameterTypes();
+        for (int i = 0; i < params.length; ++i)
+        {
+            if (i !=0 )
+                sb.append(',');
+            sb.append( params[i].getName() );
+        }
+        sb.append(')');
+        sb.append( m.getReturnType().getName() ); // keep ordering total under covariant returns
+        //System.out.println(sb.toString());
+        return sb.toString();
+    }
+
+    public final static Comparator METHOD_COMPARATOR = new Comparator()
+    {
+        public int compare(Object a, Object b)
+        { return key((Method)a).compareTo(key((Method)b)); }
+
+        private String key(Method m)
+        { return methodToTotalSortingKey(m); }
+    };
 
     private CodegenUtils()
     {}

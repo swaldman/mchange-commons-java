@@ -6,6 +6,8 @@ import java.lang.reflect.*;
 import com.mchange.v2.codegen.*;
 import com.mchange.v1.lang.ClassUtils;
 
+import static com.mchange.v2.codegen.CodegenUtils.METHOD_COMPARATOR;
+
 public class DelegatorGenerator
 {
     int class_modifiers         = Modifier.PUBLIC | Modifier.ABSTRACT;
@@ -164,10 +166,19 @@ public class DelegatorGenerator
 		    eins[i] = ClassUtils.simpleClassName( extraInterfaces[i] );
 	    }
 
-	Set    imports  = new TreeSet( classComp );
-	
+	Set imports  = new TreeSet( classComp );
+
 	Method[] methods = intfcl.getMethods();
-	
+        Arrays.sort( methods, METHOD_COMPARATOR );
+
+        Method[] sortedReflectiveDelegateMethods = null;
+	if ( reflectiveDelegateMethods != null )
+        {
+            sortedReflectiveDelegateMethods = reflectiveDelegateMethods.clone();
+            Arrays.sort( sortedReflectiveDelegateMethods, METHOD_COMPARATOR );
+        }
+
+
 	//TODO: don't add array classes!
 	//build import set
 	if (! CodegenUtils.inSamePackage( intfcl.getName(), genclass ) )
@@ -185,12 +196,12 @@ public class DelegatorGenerator
 	    }
 
 	ensureImports(genclass, imports, methods );
-	
-	if ( reflectiveDelegateMethods != null )
-	    ensureImports(genclass, imports, reflectiveDelegateMethods );
+
+	if ( sortedReflectiveDelegateMethods != null )
+	    ensureImports(genclass, imports, sortedReflectiveDelegateMethods );
 
 	if ( reflectiveDelegationPolicy.delegateClass != null && !CodegenUtils.inSamePackage( reflectiveDelegationPolicy.delegateClass.getName(), genclass ) )
-	    imports.add( reflectiveDelegationPolicy.delegateClass );	   
+	    imports.add( reflectiveDelegationPolicy.delegateClass );
 
 	generateBannerComment( iw );
 	iw.println("package " + pkg + ';');
@@ -214,7 +225,7 @@ public class DelegatorGenerator
 	iw.println("protected " + sin + " inner;");
 	iw.println();
 
-	if (reflectiveDelegateMethods != null)
+	if (sortedReflectiveDelegateMethods != null)
 	    iw.println("protected Class __delegateClass = null;");
 	iw.println();
 
@@ -222,7 +233,7 @@ public class DelegatorGenerator
 	iw.println("{");
 	iw.upIndent();
 	iw.println("this.inner = inner;");
-	if (reflectiveDelegateMethods != null)
+	if (sortedReflectiveDelegateMethods != null)
 	{
 	    String delegateClassExpr;
 
@@ -232,13 +243,13 @@ public class DelegatorGenerator
 		delegateClassExpr = "inner.getClass()";
 	    else
 		delegateClassExpr = ClassUtils.simpleClassName( reflectiveDelegationPolicy.delegateClass ) + ".class";
-	        
+
 	    iw.println("this.__delegateClass = inner == null ? null : " + delegateClassExpr + ";");
         }
 	iw.downIndent();
 	iw.println("}");
 	iw.println();
-	
+
 	if ( wrapping_constructor )
 	    {
 		//System.err.println("WRAPPING CTOR MODIFIERS: " + CodegenUtils.getModifierString( wrapping_ctor_modifiers ) + " (intval: " + wrapping_ctor_modifiers + ")");
@@ -274,12 +285,12 @@ public class DelegatorGenerator
                 generateFullDelegateMethod( intfcl, genclass, method, iw );
 	    }
 
-	if ( reflectiveDelegateMethods != null )
+	if ( sortedReflectiveDelegateMethods != null )
 	{
 	    iw.println("// Methods not in core interface to be delegated via reflection");
-	    for (int i = 0, len = reflectiveDelegateMethods.length; i < len; ++i)
+	    for (int i = 0, len = sortedReflectiveDelegateMethods.length; i < len; ++i)
 	    {
-		Method method  = reflectiveDelegateMethods[i];
+		Method method  = sortedReflectiveDelegateMethods[i];
 
 		if (i != 0) iw.println();
 		iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
@@ -325,7 +336,7 @@ public class DelegatorGenerator
 		{
 		    if (! CodegenUtils.inSamePackage( args[j].getName(), genclass ) )
 			imports.add( CodegenUtils.unarrayClass( args[j] ) );
-		}       
+		}
 	    Class[] excClasses = methods[i].getExceptionTypes();
 	    for (int j = 0, jlen = excClasses.length; j < jlen; ++j)
 		{
@@ -334,20 +345,20 @@ public class DelegatorGenerator
 			    //System.err.println("Adding exception type: " + excClasses[j]);
 			    imports.add( CodegenUtils.unarrayClass( excClasses[j] ) );
 			}
-		}       
+		}
 	    if (! CodegenUtils.inSamePackage( methods[i].getReturnType().getName(), genclass ) )
 		imports.add( CodegenUtils.unarrayClass( methods[i].getReturnType() ) );
 	}
     }
 
-    protected void generateDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException 
+    protected void generateDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
 	Class  retType = method.getReturnType();
-	
+
 	iw.println( (retType == void.class ? "" : "return " ) + "inner." + CodegenUtils.methodCall( method ) + ";" );
     }
 
-    protected void generateReflectiveDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException 
+    protected void generateReflectiveDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
 	Class  retType = method.getReturnType();
 
@@ -362,7 +373,7 @@ public class DelegatorGenerator
 	iw.println("{");
 	iw.upIndent();
 	iw.println("Method m = __delegateClass.getMethod(\042" + method.getName() + "\042, " + paramTypesArrayStr + ");");
-	iw.println( (retType == void.class ? "" : "return (" + ClassUtils.simpleClassName( retType ) + ") ") + 
+	iw.println( (retType == void.class ? "" : "return (" + ClassUtils.simpleClassName( retType ) + ") ") +
 		    "m.invoke( inner, " + argArrayStr + " );" );
 	iw.downIndent();
 	iw.println("}");
@@ -397,7 +408,7 @@ public class DelegatorGenerator
 	iw.println("}");
     }
 
-    protected void generateBannerComment( IndentedWriter iw ) throws IOException 
+    protected void generateBannerComment( IndentedWriter iw ) throws IOException
     {
         // support deterministic builds, see https://reproducible-builds.org/docs/source-date-epoch/
         String sde = System.getenv("SOURCE_DATE_EPOCH");
@@ -406,7 +417,7 @@ public class DelegatorGenerator
             timestamp = new Date();
         else
             timestamp = new Date( Long.parseLong(sde) * 1000 );
-        
+
 	iw.println("/*");
 	iw.println(" * This class generated by " + this.getClass().getName());
 	iw.println(" * " + timestamp);
