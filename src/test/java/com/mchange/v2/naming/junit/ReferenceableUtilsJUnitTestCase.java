@@ -661,6 +661,198 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
     }
 
     // ==========================================
+    // referenceToObject – wildcard "*" ObjectFactory whitelist
+    //
+    // A sole-"*" ObjectFactory whitelist disables the per-factory restriction (any
+    // ObjectFactory is accepted), under the same intentional rules as the JavaBean class
+    // whitelist:
+    //
+    //   (a) "*" is the sole entry in System properties AND the PropertiesConfig, OR
+    //   (b) "*" is the sole entry in one of those places and the OTHER place has no entry
+    //       for the whitelist key at all.
+    //
+    // Pairing "*" with any other entry, in any location, must NOT disable the check -- in
+    // particular, an intersection that merely narrows down to { "*" } leaves the check
+    // enforced (and, since no real factory class equals "*", effectively rejects all).
+    //
+    // The ALPHA factory is never explicitly whitelisted in these tests, so its acceptance
+    // is proof that the per-factory restriction is genuinely disabled.
+    // ==========================================
+
+    /** A non-null PropertiesConfig that carries some unrelated property but NOT the whitelist key. */
+    private static PropertiesConfig pcfgWithoutWhitelist()
+    { return pcfg( "com.mchange.v2.naming.someUnrelatedProperty", "irrelevant" ); }
+
+    // ---- (b): "*" sole in one place, no entry in the other -> disabled ----
+
+    /** "*" sole in pcfg, no whitelist sysprop -> any factory accepted. */
+    public void testReferenceToObjectWildcardPcfgOnly() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            Object result = ReferenceableUtils.referenceToObject( ref, null, null, null, cfg );
+            assertEquals( "ALPHA", result );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    /** "*" sole in sysprop, no pcfg at all -> any factory accepted. */
+    public void testReferenceToObjectWildcardSyspropNoPcfg() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            Object result = ReferenceableUtils.referenceToObject( ref, null, null, null );
+            assertEquals( "ALPHA", result );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    /**
+     * "*" sole in sysprop, with a pcfg that is present but carries no whitelist key.
+     * Per intent (b) the check is disabled and any factory is accepted. (This is the case
+     * that exposed the wrong-key / NPE bug in whitelistIsDisabled.)
+     */
+    public void testReferenceToObjectWildcardSyspropWithUnrelatedPcfg() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            Object result = ReferenceableUtils.referenceToObject( ref, null, null, null, pcfgWithoutWhitelist() );
+            assertEquals( "ALPHA", result );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    // ---- (a): "*" sole in BOTH places -> disabled ----
+
+    /** "*" sole in BOTH sysprop and pcfg -> any factory accepted. */
+    public void testReferenceToObjectWildcardBothPlaces() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            Object result = ReferenceableUtils.referenceToObject( ref, null, null, null, cfg );
+            assertEquals( "ALPHA", result );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    // ---- "*" paired with other entries, anywhere -> NOT disabled ----
+
+    /**
+     * "*" combined with another entry in a single source is NOT a wildcard. The "*" is a
+     * literal (meaningless) factory class name: explicitly listed factories still pass, but
+     * a factory covered only by the would-be wildcard is rejected.
+     */
+    public void testReferenceToObjectWildcardMixedWithOtherEntriesNotWildcard() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*," + ALPHA_FACTORY );
+
+            // ALPHA is explicitly present -> accepted
+            Reference refAlpha = makeRef( "java.lang.String", ALPHA_FACTORY );
+            assertEquals( "ALPHA", ReferenceableUtils.referenceToObject( refAlpha, null, null, null, cfg ) );
+
+            // BETA is covered only by the (non-)wildcard -> rejected
+            Reference refBeta = makeRef( "java.lang.String", BETA_FACTORY );
+            try
+            {
+                ReferenceableUtils.referenceToObject( refBeta, null, null, null, cfg );
+                fail( "Expected NamingException: '*' mixed with other entries must not act as a wildcard" );
+            }
+            catch (NamingException e) { /* expected */ }
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    /**
+     * "*" sole in sysprop, but pcfg pairs "*" with another entry. The post-intersection
+     * whitelist is exactly { "*" }, yet the check must NOT be disabled because "*" is not
+     * the sole entry in BOTH places. The (unlisted) ALPHA factory is rejected.
+     */
+    public void testReferenceToObjectWildcardSolePropPairedPcfgNotDisabled() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*," + BETA_FACTORY );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            try
+            {
+                ReferenceableUtils.referenceToObject( ref, null, null, null, cfg );
+                fail( "Expected NamingException: '*' must be the SOLE entry in both places to disable the check" );
+            }
+            catch (NamingException e) { /* expected */ }
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    /**
+     * Two distinct multi-entry whitelists that share only "*" ("*,ALPHA" in sysprop,
+     * "*,BETA" in pcfg) narrow by intersection to exactly { "*" } -- but this
+     * intersection-derived "*" must NOT disable the check. The ALPHA factory is rejected,
+     * and since no real factory class equals the literal "*", the effective whitelist
+     * permits nothing. (This is the scenario the wrong-key bug got wrong.)
+     */
+    public void testReferenceToObjectWildcardIntersectionNarrowsToWildcardNotDisabled() throws NamingException
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*," + ALPHA_FACTORY );
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*," + BETA_FACTORY );
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            try
+            {
+                ReferenceableUtils.referenceToObject( ref, null, null, null, cfg );
+                fail( "Expected NamingException: an intersection-derived '*' must not disable the check" );
+            }
+            catch (NamingException e) { /* expected */ }
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    /**
+     * "*" in only ONE source with a restrictive list in the other: the intersection of
+     * { "*" } and { ALPHA } is empty, which collapses to "no whitelist found" -> the
+     * mandatory-whitelist check throws. A wildcard in one config cannot be smuggled past a
+     * restrictive whitelist in another.
+     */
+    public void testReferenceToObjectWildcardInOnlyOneSourceDoesNotOpen()
+    {
+        String saved = System.getProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+        try
+        {
+            System.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, "*" );          // sysprop says "anything"
+            PropertiesConfig cfg = pcfg( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, ALPHA_FACTORY ); // pcfg restricts
+            Reference ref = makeRef( "java.lang.String", ALPHA_FACTORY );
+            try
+            {
+                ReferenceableUtils.referenceToObject( ref, null, null, null, cfg );
+                fail( "Expected NamingException: '*' in one source must not widen a restrictive whitelist in another" );
+            }
+            catch (NamingException e) { /* expected */ }
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, saved ); }
+    }
+
+    // ==========================================
     // appendToReference / extractNestedReference (deprecated)
     // ==========================================
 
