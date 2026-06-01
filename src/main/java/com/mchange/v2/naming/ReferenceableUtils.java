@@ -34,12 +34,12 @@ public final class ReferenceableUtils
     // It is and must be tested by reference identity, not semantic equality
     public final static Set ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet());
 
-    private final static Set ACCEPT_ANY_JAVA_BEAN_WHITELIST;
+    private final static Set ACCEPT_ANY_WHITELIST;
     static
     {
         Set tmp = new HashSet();
         tmp.add("*");
-        ACCEPT_ANY_JAVA_BEAN_WHITELIST = Collections.unmodifiableSet(tmp);
+        ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp);
     }
 
     /**
@@ -379,26 +379,32 @@ public final class ReferenceableUtils
     static void ensureWhitelistedJavaBeanClass( Object bean, PropertiesConfig pcfg ) throws NamingException
     { ensureWhitelistedJavaBeanClass( bean.getClass().getName(), pcfg ); }
 
-    private static boolean javaBeanWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    private static boolean whitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg, String whitelistKey)
     {
-        if (!ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(whitelisted))
+        if (!ACCEPT_ANY_WHITELIST.equals(whitelisted))
             return false;
         else if (pcfg == null) // if pcfg is null, the '*' whitelist was uniquely specified in System properties
             return true;
         else
         {
-            String syspropsWhitelist = System.getProperty( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
-            String pcfgWhitelist     = pcfg.getProperty( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+            String syspropsWhitelist = System.getProperty( whitelistKey );
+            String pcfgWhitelist     = pcfg.getProperty( whitelistKey );
             if (syspropsWhitelist == null) // if syspropsWhitelist is null, the '*' whitelist was uniquely specified in pcfg
                 return true;
             else if (pcfgWhitelist == null) // if pcfgWhitelist is null, the '*' whitelist was uniquely specified in System properties
                 return true;
             else // the whitelist is specified in both places. make sure both are trying to disable enforcement
                 return
-                    ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(commaSeparatedStringListToModifiableSet(syspropsWhitelist)) &&
-                    ACCEPT_ANY_JAVA_BEAN_WHITELIST.equals(commaSeparatedStringListToModifiableSet(pcfgWhitelist));
+                    ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(syspropsWhitelist)) &&
+                    ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(pcfgWhitelist));
         }
     }
+
+    private static boolean objectFactoryWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.OBJECT_FACTORY_WHITELIST); }
+
+    private static boolean javaBeanWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST); }
 
     /* intentionally package-scope, accessed by JavaBeanObjectFactory */
     /* pcfg can be null */
@@ -456,10 +462,12 @@ public final class ReferenceableUtils
                 "No ObjectFactory whitelist found. " +
                 "When calling referenceToObject(...) using overloads that lack an explicit allowedFactoryClassNames Set, a '" +
                 SecurityConfigKey.OBJECT_FACTORY_WHITELIST + "' must be provided either as a System property or a provided com.mchange.v2.PropertiesConfig instance. " +
-                "If you really want to live dangerously and accept any ObjectFactory (why?!?), you must call an overload of referenceToObject(...) that accepts " +
-                "an explicit allowedFactoryClassNames Set, and then provide it as ReferenceableUtils..ALL_FACTORY_CLASS_NAMES"
+                "If you really want to live dangerously and accept any ObjectFactory (why?!?), you may provide a whitelist with a unique entry of '*'."
             );
-        return narrowest;
+        if (objectFactoryWhitelistIsDisabled(narrowest,pcfg))
+            return ALL_FACTORY_CLASS_NAMES;
+        else
+            return narrowest;
     }
 
     // pcfg can be null
