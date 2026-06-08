@@ -301,7 +301,7 @@ public final class BeanInfoGen
                         iw.println("if (logger.isLoggable(MLevel.WARNING))");
                         iw.println("{");
                         iw.upIndent();
-                        iw.println("logger.log(MLevel.WARNING, \"PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting.\", e);");
+                        iw.println("logger.log(MLevel.WARNING, \"PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting.\"/*, e*/);");
                         iw.downIndent();
                         iw.println("}");
 
@@ -363,7 +363,7 @@ public final class BeanInfoGen
                         iw.println("if (logger.isLoggable(MLevel.WARNING))");
                         iw.println("{");
                         iw.upIndent();
-                        iw.println("logger.log(MLevel.WARNING, \"EventSetDescriptor '" + ((EventSetDescriptor) esds[i]) + "' is not valid under the runtime VM. Skipping.\", e);");
+                        iw.println("logger.log(MLevel.WARNING, \"EventSetDescriptor '" + ((EventSetDescriptor) esds[i]) + "' is not valid under the runtime VM. Skipping.\"/*, e*/);");
                         iw.downIndent();
                         iw.println("}");
 
@@ -435,7 +435,7 @@ public final class BeanInfoGen
                             iw.println("if (logger.isLoggable(MLevel.WARNING))");
                             iw.println("{");
                             iw.upIndent();
-                            iw.println("logger.log(MLevel.WARNING, \"Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped.\", e);");
+                            iw.println("logger.log(MLevel.WARNING, \"Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped.\"/*, e*/);");
                             iw.downIndent();
                             iw.println("}");
 
