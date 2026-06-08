@@ -55,10 +55,59 @@ public final class BeanInfoGen
 {
     private final static String GENERATOR_NAME = BeanInfoGen.class.getName();
 
+    /**
+     * Convenience overload equivalent to {@link #explicitBeanInfoClassSourceForBeanClass(Class, Set, Set, boolean, boolean)}
+     * with {@code suppressDescriptorCaching} and {@code includeMLogging} both {@code false}. The generated
+     * <code>BeanInfo</code> therefore caches its descriptors (see the multi-argument overload for the
+     * trade-offs that implies) and silently omits any descriptor that proves invalid at runtime.
+     */
     public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes )
 	throws IntrospectionException, IOException
     { return explicitBeanInfoClassSourceForBeanClass( beanClass, excludedPropertyNames, excludedPropertyTypes, false, false ); }
 
+    /**
+     * Generates Java source for an explicit <code>BeanInfo</code> class describing <code>beanClass</code>.
+     *
+     * <h4>Descriptor caching ({@code suppressDescriptorCaching})</h4>
+     *
+     * <p>When {@code suppressDescriptorCaching} is {@code false} (the default), the generated
+     * <code>BeanInfo</code> computes its <code>BeanDescriptor</code> and its property, event-set, and
+     * method descriptor arrays <em>once</em>, into instance fields, and each accessor returns that cached
+     * state (handing back a defensive <code>clone()</code> of the arrays). This matches how the class is
+     * actually consumed: {@link java.beans.Introspector} maintains its own per-class cache of
+     * <code>BeanInfo</code> instances and reuses a single instance for every introspection of the bean, so
+     * regenerating and re-validating every descriptor on each accessor call would be almost pure waste.</p>
+     *
+     * <p>Caching has a cost, though, and it is not primarily about CPU. The cached descriptor <em>objects</em>
+     * are shared across all callers, and {@code java.beans} descriptors are mutable (<code>setShortDescription</code>,
+     * <code>setValue</code>, <code>setBound</code>, <code>setExpert</code>, etc.). Because the
+     * <code>Introspector</code> caches the <code>BeanInfo</code> instance, a single caller that mutates a
+     * returned descriptor poisons that shared object for <em>every</em> future caller, process-wide and
+     * indefinitely. The defensive array <code>clone()</code> protects the <em>membership</em> of each
+     * descriptor set (no caller can add or remove descriptors), but it does not protect the mutable state
+     * <em>within</em> a descriptor.</p>
+     *
+     * <p>Set {@code suppressDescriptorCaching} to {@code true} to have every accessor rebuild its descriptors
+     * fresh on each call. This is slower and produces more garbage, but it is the only configuration that
+     * gives true per-caller isolation: a mutation by one caller cannot propagate to other callers or persist
+     * into the future. (Java's bean APIs offer no read-only descriptor variant, and copy-on-read in the
+     * cached case would defeat caching entirely, so this binary flag is the practical seam.) Prefer it for
+     * security-sensitive deployments in which untrusted code may receive the <code>BeanInfo</code> and could
+     * mutate its descriptors.</p>
+     *
+     * <h4>Resilience logging ({@code includeMLogging})</h4>
+     *
+     * <p>A generated <code>BeanInfo</code> may run on a JVM or library version where some method, property,
+     * or event that existed when it was generated is no longer present; such descriptors are skipped rather
+     * than allowed to abort the whole <code>BeanInfo</code>. When {@code includeMLogging} is {@code true},
+     * each skip is logged at {@code WARNING} via {@code com.mchange.v2.log}; when {@code false}, skips are
+     * silent.</p>
+     *
+     * @param suppressDescriptorCaching if {@code true}, rebuild descriptors fresh on every accessor call
+     *        (isolated but slow) instead of caching and sharing them (fast but mutably shared)
+     * @param includeMLogging if {@code true}, log a {@code WARNING} whenever a descriptor is skipped because
+     *        it is not valid in the runtime environment
+     */
     public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes, boolean suppressDescriptorCaching, boolean includeMLogging )
 	throws IntrospectionException, IOException
     {
