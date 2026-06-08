@@ -283,23 +283,20 @@ public final class BeanInfoGen
 	    iw.println("return new MethodDescriptor[0];");
 	else
 	    {
-		iw.println("try");
-		iw.println('{');
-		iw.upIndent();
-
-		iw.println("MethodDescriptor[] mds = new MethodDescriptor[ " + mds.length + " ];");
+                iw.println("ArrayList<MethodDescriptor> methodDescriptors = new ArrayList<MethodDescriptor>();");
 		for ( int i = 0, len = mds.length; i < len; ++i )
 		    {
 			Method m = mds[i].getMethod();
-			iw.println("mds[" + i + "] = new MethodDescriptor( BEAN_CLASS.getMethod( " +
-				   quote( m.getName() ) + ", " + classArrayLiteral( m.getParameterTypes() ) + " ) );");
+                        iw.println("try");
+                        iw.println("{");
+                        iw.upIndent();
+			iw.println("methodDescriptors.add( new MethodDescriptor( BEAN_CLASS.getMethod( " + quote( m.getName() ) + ", " + classArrayLiteral( m.getParameterTypes() ) + " ) ) );");
+                        iw.downIndent();
+                        iw.println("}");
+                        iw.println("catch ( NoSuchMethodException e )");
+                        iw.println("{ /* Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped */ }");
 		    }
-		iw.println("return mds;");
-
-		iw.downIndent();
-		iw.println('}');
-		iw.println("catch ( NoSuchMethodException e )");
-		iw.println("{ throw new RuntimeException( \"Could not reflectively find a method while constructing MethodDescriptors for explicit BeanInfo of \" + BEAN_CLASS.getName() + \".\", e ); }");
+		iw.println("return methodDescriptors.toArray(new MethodDescriptor[methodDescriptors.size()]);");
 	    }
 
 	iw.downIndent();
@@ -316,6 +313,7 @@ public final class BeanInfoGen
 	iw.println("import java.beans.MethodDescriptor;");
 	iw.println("import java.beans.PropertyDescriptor;");
 	iw.println("import java.beans.SimpleBeanInfo;");
+        iw.println("import java.util.ArrayList;");
     }
 
     private static void writeClassJavaDocComment( IndentedWriter iw, Class beanClass ) throws IOException
