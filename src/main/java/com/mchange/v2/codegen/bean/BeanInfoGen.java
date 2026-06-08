@@ -57,9 +57,9 @@ public final class BeanInfoGen
 
     public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes )
 	throws IntrospectionException, IOException
-    { return explicitBeanInfoClassSourceForBeanClass( beanClass, excludedPropertyNames, excludedPropertyTypes, false ); }
+    { return explicitBeanInfoClassSourceForBeanClass( beanClass, excludedPropertyNames, excludedPropertyTypes, false, false ); }
 
-    public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes, boolean includeMLogging )
+    public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes, boolean suppressDescriptorCaching, boolean includeMLogging )
 	throws IntrospectionException, IOException
     {
 	if ( excludedPropertyNames == null )
@@ -116,13 +116,55 @@ public final class BeanInfoGen
         if ( includeMLogging )
             iw.println("private final static MLogger logger = MLog.getLogger( " + beanInfoClassName + ".class );");
 
-	writeGetBeanDescriptor( iw );
+        if ( !suppressDescriptorCaching )
+        {
+            iw.println();
+            iw.println("private BeanDescriptor       _beanDescriptor      = _getBeanDescriptor();");
+            iw.println("private PropertyDescriptor[] _propertyDescriptors = _getPropertyDescriptors();");
+            iw.println("private EventSetDescriptor[] _eventSetDescriptors = _getEventSetDescriptors();");
+            iw.println("private MethodDescriptor[]   _methodDescriptors   = _getMethodDescriptors();");
+        }
+
+        iw.println();
+	iw.println("public BeanDescriptor getBeanDescriptor()");
+	iw.print("{ ");
+        if (suppressDescriptorCaching)
+            iw.print("return _getBeanDescriptor();");
+        else
+            iw.print("return _beanDescriptor;");
+	iw.println(" }");
+        iw.println();
+	iw.println("public PropertyDescriptor[] getPropertyDescriptors()");
+	iw.print("{ ");
+        if (suppressDescriptorCaching)
+            iw.print("return _getPropertyDescriptors();");
+        else
+            iw.print("return (PropertyDescriptor[]) _propertyDescriptors.clone();");
+	iw.println(" }");
+        iw.println();
+	iw.println("public EventSetDescriptor[] getEventSetDescriptors()");
+	iw.print("{ ");
+        if (suppressDescriptorCaching)
+            iw.print("return _getEventSetDescriptors();");
+        else
+            iw.print("return (EventSetDescriptor[]) _eventSetDescriptors.clone();");
+	iw.println(" }");
+        iw.println();
+	iw.println("public MethodDescriptor[] getMethodDescriptors()");
+	iw.print("{ ");
+        if (suppressDescriptorCaching)
+            iw.print("return _getMethodDescriptors();");
+        else
+            iw.print("return (MethodDescriptor[]) _methodDescriptors.clone();");
+	iw.println(" }");
+        iw.println();
+	write_getBeanDescriptor( iw );
 	iw.println();
-	writeGetPropertyDescriptors( iw, includedPds, includeMLogging );
+	write_getPropertyDescriptors( iw, includedPds, includeMLogging );
 	iw.println();
-	writeGetEventSetDescriptors( iw, esds, includeMLogging );
+	write_getEventSetDescriptors( iw, esds, includeMLogging );
 	iw.println();
-	writeGetMethodDescriptors( iw, mds, includeMLogging );
+	write_getMethodDescriptors( iw, mds, includeMLogging );
 
 	iw.downIndent();
 	iw.println('}');
@@ -173,15 +215,15 @@ public final class BeanInfoGen
 	return false;
     }
 
-    private static void writeGetBeanDescriptor( IndentedWriter iw ) throws IOException
+    private static void write_getBeanDescriptor( IndentedWriter iw ) throws IOException
     {
-	iw.println("public BeanDescriptor getBeanDescriptor()");
+	iw.println("private BeanDescriptor _getBeanDescriptor()");
 	iw.println("{ return new BeanDescriptor( BEAN_CLASS ); }");
     }
 
-    private static void writeGetPropertyDescriptors( IndentedWriter iw, List pds, boolean includeMLogging ) throws IOException
+    private static void write_getPropertyDescriptors( IndentedWriter iw, List pds, boolean includeMLogging ) throws IOException
     {
-	iw.println("public PropertyDescriptor[] getPropertyDescriptors()");
+	iw.println("private PropertyDescriptor[] _getPropertyDescriptors()");
 	iw.println('{');
 	iw.upIndent();
 
@@ -242,9 +284,9 @@ public final class BeanInfoGen
 	    return "new PropertyDescriptor( " + quote( pd.getName() ) + ", BEAN_CLASS, " + readName + ", " + writeName + " )";
     }
 
-    private static void writeGetEventSetDescriptors( IndentedWriter iw, EventSetDescriptor[] esds, boolean includeMLogging ) throws IOException
+    private static void write_getEventSetDescriptors( IndentedWriter iw, EventSetDescriptor[] esds, boolean includeMLogging ) throws IOException
     {
-	iw.println("public EventSetDescriptor[] getEventSetDescriptors()");
+	iw.println("private EventSetDescriptor[] _getEventSetDescriptors()");
 	iw.println('{');
 	iw.upIndent();
 
@@ -315,9 +357,9 @@ public final class BeanInfoGen
 	    iw.println("eventSetDescriptors.add( " + ctor + " );");
     }
 
-    private static void writeGetMethodDescriptors( IndentedWriter iw, MethodDescriptor[] mds, boolean includeMLogging ) throws IOException
+    private static void write_getMethodDescriptors( IndentedWriter iw, MethodDescriptor[] mds, boolean includeMLogging ) throws IOException
     {
-	iw.println("public MethodDescriptor[] getMethodDescriptors()");
+	iw.println("private MethodDescriptor[] _getMethodDescriptors()");
 	iw.println('{');
 	iw.upIndent();
 
