@@ -69,6 +69,19 @@ Compile / packageBin / packageOptions += Package.ManifestAttributes("Automatic-M
 Test / parallelExecution := false
 
 Test / logLevel := Level.Debug
+
+/*
+ * Arguments passed to the JUnit test runner (sbt's junit-interface).
+ *
+ *   -a  On a test failure, show the full stack trace and exception class for AssertionErrors.
+ *       Without this, an assertion failure is reported only as its message, with no trace
+ *       pointing at the failing line.
+ *   -v  Verbose: log per-test "started"/"finished" events (rather than only a final summary),
+ *       so you can see exactly which test classes and methods ran and in what order.
+ *
+ * See the junit-interface documentation for the full set of options:
+ *   https://github.com/sbt/junit-interface
+ */
 testOptions += Tests.Argument(TestFrameworks.JUnit, "-a -v")
 
 pomExtra := pomExtraForProjectName( name.value )
