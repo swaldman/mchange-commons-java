@@ -184,19 +184,21 @@ public final class BeanInfoGen
 	    iw.println("return new PropertyDescriptor[0];");
 	else
 	    {
-		iw.println("try");
-		iw.println('{');
-		iw.upIndent();
-
-		iw.println("PropertyDescriptor[] pds = new PropertyDescriptor[ " + n + " ];");
+                iw.println("ArrayList<PropertyDescriptor> propertyDescriptors = new ArrayList<PropertyDescriptor>();");
 		for ( int i = 0; i < n; ++i )
-		    iw.println("pds[" + i + "] = " + propertyDescriptorExpression( (PropertyDescriptor) pds.get(i) ) + ';');
-		iw.println("return pds;");
+                {
+                    iw.println("try");
+                    iw.println('{');
+                    iw.upIndent();
 
-		iw.downIndent();
-		iw.println('}');
-		iw.println("catch ( IntrospectionException e )");
-		iw.println("{ throw new RuntimeException( \"Could not construct PropertyDescriptors for explicit BeanInfo of \" + BEAN_CLASS.getName() + \".\", e ); }");
+		    iw.println("propertyDescriptors.add( " + propertyDescriptorExpression( (PropertyDescriptor) pds.get(i) ) + " );");
+
+                    iw.downIndent();
+                    iw.println('}');
+                    iw.println("catch ( IntrospectionException e )");
+                    iw.println("{ /* PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting. */ }");
+                }
+		iw.println("return propertyDescriptors.toArray(new PropertyDescriptor[propertyDescriptors.size()]);");
 	    }
 
 	iw.downIndent();
@@ -228,26 +230,28 @@ public final class BeanInfoGen
 	    iw.println("return new EventSetDescriptor[0];");
 	else
 	    {
-		iw.println("try");
-		iw.println('{');
-		iw.upIndent();
-
-		iw.println("EventSetDescriptor[] esds = new EventSetDescriptor[ " + esds.length + " ];");
+                iw.println("ArrayList<EventSetDescriptor> eventSetDescriptors = new ArrayList<EventSetDescriptor>();");
 		for ( int i = 0, len = esds.length; i < len; ++i )
-		    writeEventSetDescriptorAssignment( iw, esds[i], i );
-		iw.println("return esds;");
+                {
+                    iw.println("try");
+                    iw.println('{');
+                    iw.upIndent();
 
-		iw.downIndent();
-		iw.println('}');
-		iw.println("catch ( IntrospectionException e )");
-		iw.println("{ throw new RuntimeException( \"Could not construct EventSetDescriptors for explicit BeanInfo of \" + BEAN_CLASS.getName() + \".\", e ); }");
+		    writeAddEventSetDescriptor( iw, esds[i], i );
+
+                    iw.downIndent();
+                    iw.println('}');
+                    iw.println("catch ( IntrospectionException e )");
+                    iw.println("{ /* EventSetDescriptor '" + esds[i] + "' is not valid under the runtime JVM. Skipping. */ }");
+                }
+		iw.println("return eventSetDescriptors.toArray(new EventSetDescriptor[eventSetDescriptors.size()]);");
 	    }
 
 	iw.downIndent();
 	iw.println('}');
     }
 
-    private static void writeEventSetDescriptorAssignment( IndentedWriter iw, EventSetDescriptor esd, int index ) throws IOException
+    private static void writeAddEventSetDescriptor( IndentedWriter iw, EventSetDescriptor esd, int index ) throws IOException
     {
 	String ctor = "new EventSetDescriptor( BEAN_CLASS, " + quote( esd.getName() ) + ", " +
 	    classLiteral( esd.getListenerType() ) + ", " +
@@ -267,10 +271,10 @@ public final class BeanInfoGen
 		    iw.println( var + ".setUnicast( true );" );
 		if ( notInDefault )
 		    iw.println( var + ".setInDefaultEventSet( false );" );
-		iw.println("esds[" + index + "] = " + var + ';');
+		iw.println("eventSetDescriptors.add( " + var + " );");
 	    }
 	else
-	    iw.println("esds[" + index + "] = " + ctor + ';');
+	    iw.println("eventSetDescriptors.add( " + ctor + " );");
     }
 
     private static void writeGetMethodDescriptors( IndentedWriter iw, MethodDescriptor[] mds ) throws IOException
