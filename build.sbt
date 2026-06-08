@@ -52,6 +52,22 @@ Compile / packageBin / packageOptions += Package.ManifestAttributes("Automatic-M
 //fork in Test := true
 //javaOptions in test += "-ea"
 
+/*
+ * Run test classes serially, not in parallel.
+ *
+ * Several of the security-related tests (notably the com.mchange.v2.naming.junit
+ * ReferenceIndirector / ReferenceableUtils / JavaBeanReferenceable cases) configure
+ * behavior by mutating global System properties (e.g. OBJECT_FACTORY_WHITELIST,
+ * allowIndirectSerializationViaReference) and rely on the absence of values they did
+ * not set. Since we do not fork (see above), all test classes share one JVM, and
+ * sbt's default parallel test execution lets these classes clobber each other's
+ * System-property state mid-test -- producing intermittent, ordering-dependent
+ * failures (e.g. a pcfg-supplied whitelist being intersected to empty against a
+ * sysprop whitelist set by a concurrently-running test). Serial execution gives each
+ * test class the isolated global state it assumes.
+ */
+Test / parallelExecution := false
+
 Test / logLevel := Level.Debug
 testOptions += Tests.Argument(TestFrameworks.JUnit, "-a -v")
 
