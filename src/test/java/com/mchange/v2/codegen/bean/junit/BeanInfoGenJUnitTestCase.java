@@ -263,6 +263,173 @@ public class BeanInfoGenJUnitTestCase extends TestCase
     }
 
     // ==========================================
+    // Descriptor caching (suppressDescriptorCaching flag)
+    //
+    // With caching enabled (the default), the generated BeanInfo computes each descriptor set once into
+    // instance fields and hands back a defensive clone() of the arrays -- so the array objects differ
+    // between calls, but the descriptor *elements* are shared. With caching suppressed, every accessor
+    // rebuilds its descriptors fresh, so even the elements differ between calls. See the Javadoc on
+    // BeanInfoGen.explicitBeanInfoClassSourceForBeanClass(Class,Set,Set,boolean,boolean).
+    // ==========================================
+
+    public void testBeanDescriptorCachingHonorsFlag() throws Exception
+    {
+	BeanInfo cached = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, false );
+	if ( cached == null ) return; // no compiler; skip
+
+	assertSame( "With caching enabled, getBeanDescriptor() should return the one cached instance.",
+		    cached.getBeanDescriptor(), cached.getBeanDescriptor() );
+
+	BeanInfo fresh = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, true, false );
+	assertNotSame( "With caching suppressed, getBeanDescriptor() should build a new instance each call.",
+		       fresh.getBeanDescriptor(), fresh.getBeanDescriptor() );
+    }
+
+    public void testPropertyDescriptorCachingHonorsFlag() throws Exception
+    {
+	BeanInfo cached = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, false );
+	if ( cached == null ) return;
+
+	// a defensive clone of the array each call ...
+	assertNotSame( "Cached getter should hand back a defensive array clone, not the cached array itself.",
+		       cached.getPropertyDescriptors(), cached.getPropertyDescriptors() );
+	// ... but the descriptor elements within it are shared
+	assertSame( "With caching enabled, property descriptor instances should be shared across calls.",
+		    propertyByName( cached, "name" ), propertyByName( cached, "name" ) );
+
+	BeanInfo fresh = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, true, false );
+	assertNotSame( "With caching suppressed, each call should build fresh property descriptor instances.",
+		       propertyByName( fresh, "name" ), propertyByName( fresh, "name" ) );
+    }
+
+    public void testMethodAndEventDescriptorCachingHonorsFlag() throws Exception
+    {
+	BeanInfo cached = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, false );
+	if ( cached == null ) return;
+
+	assertNotSame( "Cached method-descriptor getter should clone its array.",
+		       cached.getMethodDescriptors(), cached.getMethodDescriptors() );
+	assertNotSame( "Cached event-set getter should clone its array.",
+		       cached.getEventSetDescriptors(), cached.getEventSetDescriptors() );
+	assertSame( "With caching enabled, method descriptor instances should be shared across calls.",
+		    methodByName( cached, "getName" ), methodByName( cached, "getName" ) );
+	assertSame( "With caching enabled, event-set descriptor instances should be shared across calls.",
+		    eventSetByName( cached, "propertyChange" ), eventSetByName( cached, "propertyChange" ) );
+
+	BeanInfo fresh = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, true, false );
+	assertNotSame( "With caching suppressed, each call should build fresh method descriptor instances.",
+		       methodByName( fresh, "getName" ), methodByName( fresh, "getName" ) );
+	assertNotSame( "With caching suppressed, each call should build fresh event-set descriptor instances.",
+		       eventSetByName( fresh, "propertyChange" ), eventSetByName( fresh, "propertyChange" ) );
+    }
+
+    public void testCachedDescriptorMutationVisibleAcrossCalls() throws Exception
+    {
+	// the documented hazard: cached descriptors are shared mutable objects, so a mutation by one
+	// caller is visible to every later caller (and, via the Introspector's own BeanInfo cache, persists)
+	BeanInfo bi = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, false );
+	if ( bi == null ) return;
+
+	propertyByName( bi, "name" ).setShortDescription( "MUTATED" );
+	assertEquals( "With caching enabled, a mutation to a shared descriptor is visible to later callers.",
+		      "MUTATED", propertyByName( bi, "name" ).getShortDescription() );
+    }
+
+    public void testSuppressedDescriptorMutationIsolatedAcrossCalls() throws Exception
+    {
+	// the reason the escape hatch exists: with caching suppressed, fresh descriptors isolate callers
+	BeanInfo bi = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, true, false );
+	if ( bi == null ) return;
+
+	propertyByName( bi, "name" ).setShortDescription( "MUTATED" );
+	assertFalse( "With caching suppressed, a mutation must not leak to a freshly built descriptor.",
+		     "MUTATED".equals( propertyByName( bi, "name" ).getShortDescription() ) );
+    }
+
+    // ==========================================
+    // Resilience logging (includeMLogging flag)
+    // ==========================================
+
+    public void testMLoggingPlumbingEmittedOnlyWhenRequested() throws Exception
+    {
+	String withLogging    = sourceFor( false, true );
+	String withoutLogging = sourceFor( false, false );
+
+	assertTrue( "mlogging source should declare an MLogger.",         withLogging.indexOf( "MLogger" ) >= 0 );
+	assertTrue( "mlogging source should obtain it via MLog.",         withLogging.indexOf( "MLog.getLogger" ) >= 0 );
+	assertTrue( "mlogging source should log skips at WARNING.",       withLogging.indexOf( "MLevel.WARNING" ) >= 0 );
+	assertTrue( "mlogging source should import the mchange log API.", withLogging.indexOf( "com.mchange.v2.log" ) >= 0 );
+
+	assertTrue( "non-mlogging source should not mention MLogger.",        withoutLogging.indexOf( "MLogger" ) < 0 );
+	assertTrue( "non-mlogging source should not import the log API.",      withoutLogging.indexOf( "com.mchange.v2.log" ) < 0 );
+    }
+
+    public void testDescriptorCachingFieldsEmittedOnlyWhenCaching() throws Exception
+    {
+	String cached     = sourceFor( false, false );
+	String suppressed = sourceFor( true,  false );
+
+	assertTrue( "cached source should initialize descriptor cache fields.",
+		    cached.indexOf( "_propertyDescriptors = _getPropertyDescriptors()" ) >= 0 );
+	assertTrue( "cached source should hand back defensive clones.",
+		    cached.indexOf( "_propertyDescriptors.clone()" ) >= 0 );
+
+	assertTrue( "caching-suppressed source should not declare cache fields.",
+		    suppressed.indexOf( "_propertyDescriptors = _getPropertyDescriptors()" ) < 0 );
+	assertTrue( "caching-suppressed source should not clone (it returns fresh descriptors).",
+		    suppressed.indexOf( ".clone()" ) < 0 );
+    }
+
+    public void testMLoggingVariantProducesEquivalentWorkingBeanInfo() throws Exception
+    {
+	BeanInfo logging = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, true );
+	if ( logging == null ) return;
+	BeanInfo nonLogging = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, false, false );
+
+	assertEquals( "Enabling mlogging must not change which properties are reported.",
+		      propertyNames( nonLogging ), propertyNames( logging ) );
+	assertEquals( "Enabling mlogging must not change which methods are reported.",
+		      methodNames( nonLogging ), methodNames( logging ) );
+	assertEquals( "Enabling mlogging must not change the bean class.",
+		      Widget.class, logging.getBeanDescriptor().getBeanClass() );
+    }
+
+    // ==========================================
+    // Breadth: every flag combination compiles and reports the same descriptors
+    // ==========================================
+
+    public void testAllFlagCombinationsReportConsistentDescriptors() throws Exception
+    {
+	boolean[] options = { false, true };
+	Set referenceProps   = null;
+	Set referenceMethods = null;
+	for ( int s = 0; s < options.length; ++s )
+	    for ( int l = 0; l < options.length; ++l )
+		{
+		    BeanInfo bi = beanInfoFor( exclusions( "secret" ), Collections.EMPTY_SET, options[s], options[l] );
+		    if ( bi == null ) return; // no compiler
+
+		    String combo = "suppressDescriptorCaching=" + options[s] + ", includeMLogging=" + options[l];
+		    Set props = propertyNames( bi );
+		    assertTrue(  combo + ": expected property 'name'.",                      props.contains( "name" ) );
+		    assertTrue(  combo + ": expected indexed property 'tags'.",              props.contains( "tags" ) );
+		    assertFalse( combo + ": excluded property 'secret' must be absent.",     props.contains( "secret" ) );
+		    assertTrue(  combo + ": excluded accessor 'getSecret' must remain a method.", methodNames( bi ).contains( "getSecret" ) );
+
+		    if ( referenceProps == null )
+			{
+			    referenceProps   = props;
+			    referenceMethods = methodNames( bi );
+			}
+		    else
+			{
+			    assertEquals( combo + ": properties should be identical across flag combinations.", referenceProps, props );
+			    assertEquals( combo + ": methods should be identical across flag combinations.",    referenceMethods, methodNames( bi ) );
+			}
+		}
+    }
+
+    // ==========================================
     // Helpers: generate -> compile -> load -> instantiate
     // ==========================================
 
@@ -276,13 +443,27 @@ public class BeanInfoGenJUnitTestCase extends TestCase
      * @return an instance of the generated BeanInfo for Widget, or null if no system compiler is available.
      */
     private static BeanInfo beanInfoFor( Set excludedPropertyNames, Set excludedPropertyTypes ) throws Exception
+    { return beanInfoFor( excludedPropertyNames, excludedPropertyTypes, false, false ); }
+
+    /**
+     * @return an instance of the generated BeanInfo for Widget, generated with the given caching and
+     *         mlogging flags, or null if no system compiler is available.
+     */
+    private static BeanInfo beanInfoFor( Set excludedPropertyNames, Set excludedPropertyTypes, boolean suppressDescriptorCaching, boolean includeMLogging ) throws Exception
     {
-	String source = BeanInfoGen.explicitBeanInfoClassSourceForBeanClass( Widget.class, excludedPropertyNames, excludedPropertyTypes );
+	String source = BeanInfoGen.explicitBeanInfoClassSourceForBeanClass( Widget.class, excludedPropertyNames, excludedPropertyTypes, suppressDescriptorCaching, includeMLogging );
 	Class beanInfoClass = compileAndLoad( BEAN_INFO_FQCN, source );
 	if ( beanInfoClass == null )
 	    return null;
 	return (BeanInfo) beanInfoClass.newInstance();
     }
+
+    /**
+     * The generated BeanInfo source (excluding 'secret') for the given caching and mlogging flags, for
+     * tests that assert on the emitted source itself rather than on a compiled-and-loaded instance.
+     */
+    private static String sourceFor( boolean suppressDescriptorCaching, boolean includeMLogging ) throws Exception
+    { return BeanInfoGen.explicitBeanInfoClassSourceForBeanClass( Widget.class, exclusions( "secret" ), Collections.EMPTY_SET, suppressDescriptorCaching, includeMLogging ); }
 
     private static Class compileAndLoad( String fqClassName, final String source ) throws Exception
     {
@@ -444,5 +625,23 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	for ( int i = 0, len = mds.length; i < len; ++i )
 	    out.add( mds[i].getName() );
 	return out;
+    }
+
+    private static MethodDescriptor methodByName( BeanInfo bi, String name )
+    {
+	MethodDescriptor[] mds = bi.getMethodDescriptors();
+	for ( int i = 0, len = mds.length; i < len; ++i )
+	    if ( name.equals( mds[i].getName() ) )
+		return mds[i];
+	return null;
+    }
+
+    private static EventSetDescriptor eventSetByName( BeanInfo bi, String name )
+    {
+	EventSetDescriptor[] esds = bi.getEventSetDescriptors();
+	for ( int i = 0, len = esds.length; i < len; ++i )
+	    if ( name.equals( esds[i].getName() ) )
+		return esds[i];
+	return null;
     }
 }
