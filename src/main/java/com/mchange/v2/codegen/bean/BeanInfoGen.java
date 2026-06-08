@@ -57,6 +57,10 @@ public final class BeanInfoGen
 
     public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes )
 	throws IntrospectionException, IOException
+    { return explicitBeanInfoClassSourceForBeanClass( beanClass, excludedPropertyNames, excludedPropertyTypes, false ); }
+
+    public static String explicitBeanInfoClassSourceForBeanClass( Class beanClass, Set excludedPropertyNames, Set excludedPropertyTypes, boolean includeMLogging )
+	throws IntrospectionException, IOException
     {
 	if ( excludedPropertyNames == null )
 	    excludedPropertyNames = Collections.EMPTY_SET;
@@ -100,7 +104,7 @@ public final class BeanInfoGen
 		iw.println("package " + packageName + ';');
 		iw.println();
 	    }
-	writeImports( iw, hasIndexed );
+	writeImports( iw, hasIndexed, includeMLogging );
 	iw.println();
 	writeClassJavaDocComment( iw, beanClass );
 	iw.println("public class " + beanInfoClassName + " extends SimpleBeanInfo");
@@ -109,14 +113,16 @@ public final class BeanInfoGen
 
 	iw.println("private final static Class BEAN_CLASS = " + beanClassLiteral + ".class;");
 	iw.println();
+        if ( includeMLogging )
+            iw.println("private final static MLogger logger = MLog.getLogger( " + beanInfoClassName + ".class );");
 
 	writeGetBeanDescriptor( iw );
 	iw.println();
-	writeGetPropertyDescriptors( iw, includedPds );
+	writeGetPropertyDescriptors( iw, includedPds, includeMLogging );
 	iw.println();
-	writeGetEventSetDescriptors( iw, esds );
+	writeGetEventSetDescriptors( iw, esds, includeMLogging );
 	iw.println();
-	writeGetMethodDescriptors( iw, mds );
+	writeGetMethodDescriptors( iw, mds, includeMLogging );
 
 	iw.downIndent();
 	iw.println('}');
@@ -173,7 +179,7 @@ public final class BeanInfoGen
 	iw.println("{ return new BeanDescriptor( BEAN_CLASS ); }");
     }
 
-    private static void writeGetPropertyDescriptors( IndentedWriter iw, List pds ) throws IOException
+    private static void writeGetPropertyDescriptors( IndentedWriter iw, List pds, boolean includeMLogging ) throws IOException
     {
 	iw.println("public PropertyDescriptor[] getPropertyDescriptors()");
 	iw.println('{');
@@ -196,7 +202,23 @@ public final class BeanInfoGen
                     iw.downIndent();
                     iw.println('}');
                     iw.println("catch ( IntrospectionException e )");
-                    iw.println("{ /* PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting. */ }");
+                    if (includeMLogging)
+                    {
+                        iw.println("{");
+                        iw.upIndent();
+
+                        iw.println("if (logger.isLoggable(MLevel.WARNING))");
+                        iw.println("{");
+                        iw.upIndent();
+                        iw.println("logger.log(MLevel.WARNING, \"PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting.\", e);");
+                        iw.downIndent();
+                        iw.println("}");
+
+                        iw.downIndent();
+                        iw.println("}");
+                    }
+                    else
+                        iw.println("{ /* PropertyDescriptor for property '" + ((PropertyDescriptor) pds.get(i)).getName() + "' is not valid in the runtime VM. Omitting. */ }");
                 }
 		iw.println("return propertyDescriptors.toArray(new PropertyDescriptor[propertyDescriptors.size()]);");
 	    }
@@ -220,7 +242,7 @@ public final class BeanInfoGen
 	    return "new PropertyDescriptor( " + quote( pd.getName() ) + ", BEAN_CLASS, " + readName + ", " + writeName + " )";
     }
 
-    private static void writeGetEventSetDescriptors( IndentedWriter iw, EventSetDescriptor[] esds ) throws IOException
+    private static void writeGetEventSetDescriptors( IndentedWriter iw, EventSetDescriptor[] esds, boolean includeMLogging ) throws IOException
     {
 	iw.println("public EventSetDescriptor[] getEventSetDescriptors()");
 	iw.println('{');
@@ -242,7 +264,23 @@ public final class BeanInfoGen
                     iw.downIndent();
                     iw.println('}');
                     iw.println("catch ( IntrospectionException e )");
-                    iw.println("{ /* EventSetDescriptor '" + esds[i] + "' is not valid under the runtime JVM. Skipping. */ }");
+                    if (includeMLogging)
+                    {
+                        iw.println("{");
+                        iw.upIndent();
+
+                        iw.println("if (logger.isLoggable(MLevel.WARNING))");
+                        iw.println("{");
+                        iw.upIndent();
+                        iw.println("logger.log(MLevel.WARNING, \"EventSetDescriptor '" + ((EventSetDescriptor) esds[i]) + "' is not valid under the runtime VM. Skipping.\", e);");
+                        iw.downIndent();
+                        iw.println("}");
+
+                        iw.downIndent();
+                        iw.println("}");
+                    }
+                    else
+                        iw.println("{ /* EventSetDescriptor '" + esds[i] + "' is not valid under the runtime JVM. Skipping. */ }");
                 }
 		iw.println("return eventSetDescriptors.toArray(new EventSetDescriptor[eventSetDescriptors.size()]);");
 	    }
@@ -277,7 +315,7 @@ public final class BeanInfoGen
 	    iw.println("eventSetDescriptors.add( " + ctor + " );");
     }
 
-    private static void writeGetMethodDescriptors( IndentedWriter iw, MethodDescriptor[] mds ) throws IOException
+    private static void writeGetMethodDescriptors( IndentedWriter iw, MethodDescriptor[] mds, boolean includeMLogging ) throws IOException
     {
 	iw.println("public MethodDescriptor[] getMethodDescriptors()");
 	iw.println('{');
@@ -298,8 +336,24 @@ public final class BeanInfoGen
                         iw.downIndent();
                         iw.println("}");
                         iw.println("catch ( NoSuchMethodException e )");
-                        iw.println("{ /* Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped */ }");
-		    }
+                        if (includeMLogging)
+                        {
+                            iw.println("{");
+                            iw.upIndent();
+
+                            iw.println("if (logger.isLoggable(MLevel.WARNING))");
+                            iw.println("{");
+                            iw.upIndent();
+                            iw.println("logger.log(MLevel.WARNING, \"Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped.\", e);");
+                            iw.downIndent();
+                            iw.println("}");
+
+                            iw.downIndent();
+                            iw.println("}");
+                        }
+                        else
+                            iw.println("{ /* Method '" + m.getName() + "', which existed at the time this BeanInfo was defined, does not exist in the current runtime environment and has been skipped. */ }");
+                        }
 		iw.println("return methodDescriptors.toArray(new MethodDescriptor[methodDescriptors.size()]);");
 	    }
 
@@ -307,7 +361,7 @@ public final class BeanInfoGen
 	iw.println('}');
     }
 
-    private static void writeImports( IndentedWriter iw, boolean hasIndexed ) throws IOException
+    private static void writeImports( IndentedWriter iw, boolean hasIndexed, boolean includeMLogging ) throws IOException
     {
 	iw.println("import java.beans.BeanDescriptor;");
 	iw.println("import java.beans.EventSetDescriptor;");
@@ -318,6 +372,11 @@ public final class BeanInfoGen
 	iw.println("import java.beans.PropertyDescriptor;");
 	iw.println("import java.beans.SimpleBeanInfo;");
         iw.println("import java.util.ArrayList;");
+        if ( includeMLogging )
+        {
+            iw.println();
+            iw.println("import com.mchange.v2.log.*;");
+        }
     }
 
     private static void writeClassJavaDocComment( IndentedWriter iw, Class beanClass ) throws IOException
