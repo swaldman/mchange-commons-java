@@ -40,26 +40,35 @@ final class ConfigUtils
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
-    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
-    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, (List) null ); }
+    static MultiPropertiesConfig readUncachedClassloaderResourceConfig(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    {
+        String[] paths = condenseResources( withDefaults, defaultResources, preemptingResources, delayedLogItemsOut );
+        return read( paths, delayedLogItemsOut );
+    }
 
-    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
 	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
 	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
-	List pathsList = configuredOrHardcodedDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
+	List pathsList;
+        List raw;
+        if (withDefaults)
+            raw = configuredOrHardcodedDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
+        else
+            raw = asProvidedClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
+        pathsList = ensureHoconInterresolvability( raw );
 
 	if ( delayedLogItemsOut != null )
 	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading classloader-resource-based config for path list " + stringFromPathsList( pathsList ) ) );
 
-	return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
+	return (String[]) pathsList.toArray(new String[pathsList.size()]);
     }
 
-    static List configuredOrHardcodedDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    {
-	List raw = condensePaths( new String[][]{ defaultResources, configuredOrHardcodedDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } );
-	return ensureHoconInterresolvability( raw );
-    }
+    private static List configuredOrHardcodedDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return condensePaths( new String[][]{ defaultResources, configuredOrHardcodedDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } ); }
+
+    private static List asProvidedClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return condensePaths( new String[][]{ defaultResources, preemptingResources } ); }
 
     static String stringFromPathsList( List pathsList )
     {
@@ -102,7 +111,7 @@ final class ConfigUtils
 	BufferedReader br = null;
 	try
 	    {
-		InputStream is = MultiPropertiesConfig.class.getResourceAsStream( resourcePathsTextFileResourcePath );
+		InputStream is = ConfigUtils.class.getResourceAsStream( resourcePathsTextFileResourcePath );
 		if ( is != null )
 		    {
 			br = new BufferedReader( new InputStreamReader( is, "8859_1" ) );
@@ -231,7 +240,7 @@ final class ConfigUtils
      * Well, this is a pain.
      *
      * The issue is that multiple applications can set up mutiple HOCON overlapping paths,
-     * and users, expecting the resolution associated with one application's ful HOCON path,
+     * and users, expecting the resolution associated with one application's full HOCON path,
      * can define substitutions that can't be fulfilled in a different application's config path.
      *
      * Our solution is to detect HOCON paths that overlap, and let overlapping paths fall back
@@ -300,7 +309,7 @@ final class ConfigUtils
      * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
      */
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
-    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources ); }
+    { return readUncachedClassloaderResourceConfig( true, defaultResources, preemptingResources, null ); }
 
     /**
      * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig()
@@ -318,7 +327,7 @@ final class ConfigUtils
      * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
      */
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    { return readUncachedClassloaderResourceConfig(defaultResources, preemptingResources, delayedLogItemsOut); }
+    { return readUncachedClassloaderResourceConfig( true, defaultResources, preemptingResources, delayedLogItemsOut); }
 
     /**
      * @deprecated The vmConfig APIs are confusing. Use foundCanonicalDefaultConfig()
