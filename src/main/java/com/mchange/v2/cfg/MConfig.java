@@ -26,31 +26,19 @@ public final class MConfig
 		throw e;
 	    }
 	catch ( Exception e )
-	    { 
+	    {
 		e.printStackTrace();
-		throw new RuntimeException( e ); 
+		throw new RuntimeException( e );
 	    }
     }
 
     final static CachedStore cache = CachedStoreUtils.synchronizedCachedStore( CachedStoreFactory.createNoCleanupCachedStore( new CSManager() ) );
 
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderResourceConfig(...)
-     */
-    public static MultiPropertiesConfig readVmConfig(String[] defaults, String[] preempts)
-    { return readCachedClassloaderResourceConfig( defaults, preempts); }
+    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
+    { return ConfigUtils.readUncachedClassloaderResourceConfig( defaultResources, preemptingResources ); }
 
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderRewsourceConfig(...)
-     */
-    public static MultiPropertiesConfig readVmConfig()
-    { return readCachedClassloaderResourceConfig(); }
-
-    /**
-     * @deprecated This API is confusingly nonspecifc. Use readCachedClassloaderResourceConfig( String[] resourcePaths )
-     */
-    public static MultiPropertiesConfig readConfig( String[] resourcePaths )
-    { return readCachedClassloaderResourceConfig( resourcePaths ); }
+    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return ConfigUtils.readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut); }
 
     public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaults, String[] preempts)
     {
@@ -61,7 +49,7 @@ public final class MConfig
     }
 
     public static MultiPropertiesConfig readCachedClassloaderResourceConfig()
-    { return readVmConfig( ConfigUtils.NO_PATHS, ConfigUtils.NO_PATHS ); }
+    { return readCachedClassloaderResourceConfig( ConfigUtils.NO_PATHS, ConfigUtils.NO_PATHS ); }
 
     public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths )
     { 
@@ -103,7 +91,7 @@ public final class MConfig
 	{
 	    this.delayedLogItems = new ArrayList();
 
-	    List pathList = ConfigUtils.configuredOrDefaultClassloaderResourcePathsCondensed( defaults, preempts, delayedLogItems );
+	    List pathList = ConfigUtils.configuredOrHardcodedDefaultClassloaderResourcePathsCondensed( defaults, preempts, delayedLogItems );
 	    this.paths = (String[]) pathList.toArray( new String[ pathList.size() ] );
 	}
 
@@ -141,4 +129,22 @@ public final class MConfig
 
     private MConfig()
     {}
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderResourceConfig(...)
+     */
+    public static MultiPropertiesConfig readVmConfig(String[] defaults, String[] preempts)
+    { return readCachedClassloaderResourceConfig( defaults, preempts); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderRewsourceConfig(...)
+     */
+    public static MultiPropertiesConfig readVmConfig()
+    { return readCachedClassloaderResourceConfig(); }
+
+    /**
+     * @deprecated This API is confusingly nonspecifc. Use readCachedClassloaderResourceConfig( String[] resourcePaths )
+     */
+    public static MultiPropertiesConfig readConfig( String[] resourcePaths )
+    { return readCachedClassloaderResourceConfig( resourcePaths ); }
 }

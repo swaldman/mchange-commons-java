@@ -13,7 +13,7 @@ final class ConfigUtils
     private final static String[] DFLT_RSRC_PATHFILES       = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/com/mchange/v2/cfg/defaultConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
 
     // later paths override earlier paths
-    private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 
+    private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[]
 	{
 	    "/mchange-commons.properties",
 	    "hocon:/reference,/application,/",
@@ -40,33 +40,24 @@ final class ConfigUtils
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
-     */
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
-    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources ); }
-    
     public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
     { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, (List) null ); }
 
-    /*
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, MLogger logger)
+    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
-	List items = new ArrayList();
-	MultiPropertiesConfig out = readVmConfig( defaultResources, preemptingResources, items );
-	items.addAll( out.getDelayedLogItems() );
-	for (Iterator ii = items.iterator(); ii.hasNext(); )
-	{
-	    DelayedLogItem item = (DelayedLogItem) ii.next();
-	    logger.log( item.getLevel(), item.getText(), item.getException() );
-	}
-	return out;
-    }
-    */ 
+	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
+	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
+	List pathsList = configuredOrHardcodedDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
 
-    static List configuredOrDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+	if ( delayedLogItemsOut != null )
+	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading classloader-resource-based config for path list " + stringFromPathsList( pathsList ) ) );
+
+	return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
+    }
+
+    static List configuredOrHardcodedDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
-	List raw = condensePaths( new String[][]{ defaultResources, configuredOrDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } );
+	List raw = condensePaths( new String[][]{ defaultResources, configuredOrHardcodedDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } );
 	return ensureHoconInterresolvability( raw );
     }
 
@@ -81,29 +72,11 @@ final class ConfigUtils
 	return sb.toString();
     }
 
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
-     */
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    { return readUncachedClassloaderResourceConfig(defaultResources, preemptingResources, delayedLogItemsOut); }
-
-    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    {
-	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
-	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
-	List pathsList = configuredOrDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
-
-	if ( delayedLogItemsOut != null )
-	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading classloader-resource-based config for path list " + stringFromPathsList( pathsList ) ) );
-
-	return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
-    }
-
     private static List condensePaths(String[][] pathLists)
     {
 	// we do this in reverse, so that the "first" time
 	// we encounter a path becomes the last in the resultant
-	// list. that is, we want redundantly specified paths 
+	// list. that is, we want redundantly specified paths
 	// to have their maximum specified preference
 
 	Set pathSet = new HashSet();
@@ -139,7 +112,7 @@ final class ConfigUtils
 				rp = rp.trim();
 				if ("".equals( rp ) || rp.startsWith("#"))
 				    continue;
-				
+
 				rps.add( rp );
 			    }
 
@@ -169,13 +142,13 @@ final class ConfigUtils
 	return out;
     }
 
-    private static String[] configuredOrDefaultClassloaderResourcePaths( List delayedLogItemsOut ) 
+    private static String[] configuredOrHardcodedDefaultClassloaderResourcePaths( List delayedLogItemsOut )
     {
-	List paths = configuredOrDefaultClassloaderResourcePathList(  delayedLogItemsOut );
+	List paths = configuredOrHardcodedDefaultClassloaderResourcePathList(  delayedLogItemsOut );
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
-    private static List configuredOrDefaultClassloaderResourcePathList( List delayedLogItemsOut )
+    private static List configuredOrHardcodedDefaultClassloaderResourcePathList( List delayedLogItemsOut )
     {
 	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
 	List rps;
@@ -185,19 +158,6 @@ final class ConfigUtils
 	    rps = Arrays.asList( HARDCODED_DFLT_RSRC_PATHS );
 	return rps;
     }
-
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig()
-     */
-    public synchronized static MultiPropertiesConfig readVmConfig()
-    { return readCanonicalDefaultConfig(); }
-
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig( List delayedLogItemsOut )
-     */
-    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
-    { return readCanonicalDefaultConfig( delayedLogItemsOut ); }
-
     public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig()
     { return readVmConfig( (List) null ); }
 
@@ -220,17 +180,11 @@ final class ConfigUtils
     {
 	if ( canonicalDefaultConfig == null )
 	    {
-		List rps = configuredOrDefaultClassloaderResourcePathList( delayedLogItemsOut );
-		canonicalDefaultConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
+		List rps = configuredOrHardcodedDefaultClassloaderResourcePathList( delayedLogItemsOut );
+		canonicalDefaultConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) );
 	    }
 	return canonicalDefaultConfig;
     }
-
-    /**
-     * @deprecated The vmConfig APIs are confusing. Use foundCanonicalDefaultConfig()
-     */
-    public static synchronized boolean foundVmConfig()
-    { return foundCanonicalDefaultConfig(); }
 
     public static synchronized boolean foundCanonicalDefaultConfig()
     { return canonicalDefaultConfig != null; }
@@ -281,7 +235,7 @@ final class ConfigUtils
      * can define substitutions that can't be fulfilled in a different application's config path.
      *
      * Our solution is to detect HOCON paths that overlap, and let overlapping paths fall back
-     * to one another in an ordering preserving way, so that most-recent HOCON paths always win,
+     * to one another in an ordering preserving way, so that most-recent HOCON paths always wins,
      * and within individual HOCON paths, the explicit specification overrides, but other overlapping
      * specifications are available behind the explicit specification, in the same ordering as their
      * paths are specified for the VM
@@ -341,4 +295,49 @@ final class ConfigUtils
 
     private ConfigUtils()
     {}
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
+     */
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
+    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources ); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig()
+     */
+    public synchronized static MultiPropertiesConfig readVmConfig()
+    { return readCanonicalDefaultConfig(); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig( List delayedLogItemsOut )
+     */
+    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
+    { return readCanonicalDefaultConfig( delayedLogItemsOut ); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
+     */
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return readUncachedClassloaderResourceConfig(defaultResources, preemptingResources, delayedLogItemsOut); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use foundCanonicalDefaultConfig()
+     */
+    public static synchronized boolean foundVmConfig()
+    { return foundCanonicalDefaultConfig(); }
+
+    /*
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, MLogger logger)
+    {
+	List items = new ArrayList();
+	MultiPropertiesConfig out = readVmConfig( defaultResources, preemptingResources, items );
+	items.addAll( out.getDelayedLogItems() );
+	for (Iterator ii = items.iterator(); ii.hasNext(); )
+	{
+	    DelayedLogItem item = (DelayedLogItem) ii.next();
+	    logger.log( item.getLevel(), item.getText(), item.getException() );
+	}
+	return out;
+    }
+    */
 }

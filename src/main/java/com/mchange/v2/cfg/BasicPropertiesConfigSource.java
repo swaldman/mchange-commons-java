@@ -19,7 +19,7 @@ public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 	    { p.load( pis ); }
 	    finally
 	    {
-		try { if ( pis != null ) pis.close(); } //ensures closuer of nested rawStream as well
+		try { if ( pis != null ) pis.close(); } //ensures closure of nested rawStream as well
 		catch (IOException e) 
 		    { messages.add( new DelayedLogItem( Level.WARNING, "An IOException occurred while closing InputStream from resource path '" + identifier + "'.", e ) ); }
 	    }
