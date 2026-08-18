@@ -18,21 +18,35 @@ import java.util.Properties;
  * The resource path "/" is a special case that always refers to System
  * properties. No actual resource will be loaded.
  *
- * If the mchange-hocon-bridge jar file is available, resource paths specified
- * as "hocon:/path/to/resource" will be parsed as 
- * <a href="https://github.com/typesafehub/config/blob/master/HOCON.md">HOCON</a>,
- * whenever values can be interpreted as Strings. 
+ * If a HOCON implementation (lightbend/typesafe config, detected by probing for
+ * <tt>com.typesafe.config.Config</tt>) is available on the CLASSPATH, resource paths
+ * specified as "hocon:/path/to/resource" will be parsed as
+ * <a href="https://github.com/lightbend/config/blob/main/HOCON.md">HOCON</a>,
+ * whenever values can be interpreted as Strings. When no such implementation is
+ * present, those paths are skipped with a FINE-level log item.
  *
- * The class manages a special instance called "vmConfig" which is accessable
- * via a static method. It's resource path is list specified by a text-file,
- * itself a ClassLoader managed resource, which may be located at
- * <tt>/com/mchange/v2/cfg/vmConfigResourcePaths.txt</tt> or <tt>/mchange-config-resource-paths.txt</tt>.
- * This file should
- * be one resource path per line, with blank lines ignored and lines beginning
- * with '#' treated as comments.
+ * <p>Traditionally the library resolved a default ("vmConfig") list of resource paths
+ * from text files, themselves ClassLoader-managed resources, read and concatenated in
+ * this order:
  *
- * If no text file of resource paths are available, the following resources are
- * checked: "/mchange-commons.properties", "hocon:/reference,/application,/", "/"
+ * <ul>
+ *   <li><tt>/com/mchange/v2/cfg/vmConfigResourcePaths.txt</tt></li>
+ *   <li><tt>/com/mchange/v2/cfg/defaultConfigResourcePaths.txt</tt></li>
+ *   <li><tt>/mchange-config-resource-paths.txt</tt></li>
+ * </ul>
+ *
+ * Each file should be one resource path per line, with blank lines ignored and lines
+ * beginning with '#' treated as comments.
+ *
+ * <p>If none of those text files is available, or none of them yields any path, the
+ * following resources are checked instead:
+ * "/mchange-commons.properties", "hocon:/reference,/application,/", "/"
+ *
+ * <p><b>The {@link com.mchange.v2.cfg.MConfig} facade is the authoritative documentation
+ * for how config sources are discovered, layered, and prioritized, and is the supported
+ * entry point for acquiring configuration.</b> The <tt>readVmConfig</tt> methods on this
+ * class are deprecated; note also that they resolve paths by a different algorithm and
+ * cache into a different store than the identically named methods on <tt>MConfig</tt>.
  *
  * See <a href="../../v3/hocon/HoconPropertiesConfigSource.html">HoconPropertiesConfigSource</a> for information
  * on HOCON identifiers.
@@ -44,12 +58,14 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     /**
      * @deprecated Please use the MConfig facade class to acquire configuration
      */
+    @Deprecated
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
     { return ConfigUtils.readVmConfig( defaultResources, preemptingResources ); }
 
     /**
      * @deprecated Please use the MConfig facade class to acquire configuration
      */
+    @Deprecated
     public static MultiPropertiesConfig readVmConfig()
     { return ConfigUtils.readVmConfig(); }
 
