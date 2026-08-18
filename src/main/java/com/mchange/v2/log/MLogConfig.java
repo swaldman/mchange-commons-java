@@ -21,7 +21,7 @@ public final class MLogConfig
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
 	List bli = new ArrayList();
-	MultiPropertiesConfig tmpCONFIG = MLogConfigSource.readVmConfig( defaults, preempts, bli );
+	MultiPropertiesConfig tmpCONFIG = MLogConfigSource.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
 
 	boolean firstLoad = (CONFIG == null);
 

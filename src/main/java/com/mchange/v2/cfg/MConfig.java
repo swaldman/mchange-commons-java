@@ -34,7 +34,25 @@ public final class MConfig
 
     final static CachedStore cache = CachedStoreUtils.synchronizedCachedStore( CachedStoreFactory.createNoCleanupCachedStore( new CSManager() ) );
 
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderResourceConfig(...)
+     */
     public static MultiPropertiesConfig readVmConfig(String[] defaults, String[] preempts)
+    { return readCachedClassloaderResourceConfig( defaults, preempts); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readCachedClassloaderRewsourceConfig(...)
+     */
+    public static MultiPropertiesConfig readVmConfig()
+    { return readCachedClassloaderResourceConfig(); }
+
+    /**
+     * @deprecated This API is confusingly nonspecifc. Use readCachedClassloaderResourceConfig( String[] resourcePaths )
+     */
+    public static MultiPropertiesConfig readConfig( String[] resourcePaths )
+    { return readCachedClassloaderResourceConfig( resourcePaths ); }
+
+    public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaults, String[] preempts)
     {
 	try
 	{ return (MultiPropertiesConfig) cache.find( new PathsKey( defaults, preempts ) ); }
@@ -42,10 +60,10 @@ public final class MConfig
 	{ throw new RuntimeException( e ); }
     }
 
-    public static MultiPropertiesConfig readVmConfig()
+    public static MultiPropertiesConfig readCachedClassloaderResourceConfig()
     { return readVmConfig( ConfigUtils.NO_PATHS, ConfigUtils.NO_PATHS ); }
 
-    public static MultiPropertiesConfig readConfig( String[] resourcePaths )
+    public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths )
     { 
 	try
 	{ return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths ) ); }
@@ -69,7 +87,7 @@ public final class MConfig
     {
 	String[] paths;
 	List     delayedLogItems;
-	
+
 	public boolean equals(Object o)
 	{ 
 	    if (o instanceof PathsKey)
@@ -85,7 +103,7 @@ public final class MConfig
 	{
 	    this.delayedLogItems = new ArrayList();
 
-	    List pathList = ConfigUtils.vmCondensedPaths( defaults, preempts, delayedLogItems );
+	    List pathList = ConfigUtils.configuredOrDefaultClassloaderResourcePathsCondensed( defaults, preempts, delayedLogItems );
 	    this.paths = (String[]) pathList.toArray( new String[ pathList.size() ] );
 	}
 

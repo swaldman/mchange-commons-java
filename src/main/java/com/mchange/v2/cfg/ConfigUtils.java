@@ -8,18 +8,22 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
 // external clients should go through the MConfig facade.
 final class ConfigUtils
 {
-    private final static String[] DFLT_VM_RSRC_PATHFILES    = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+    // we retain "/com/mchange/v2/cfg/vmConfigResourcePaths.txt" for backwards compatibility,
+    // but we are trying to get rid of the ill-defined concept of "vmConfig"
+    private final static String[] DFLT_RSRC_PATHFILES       = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/com/mchange/v2/cfg/defaultConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+
+    // later paths override earlier paths
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[] 
 	{
-	    "/mchange-commons.properties", 
-	    "hocon:/reference,/application,/", 
+	    "/mchange-commons.properties",
+	    "hocon:/reference,/application,/",
 	    "/"
 	};
 
-    final static String[] NO_PATHS                  = new String[0];
+    final static String[] NO_PATHS = new String[0];
 
     //MT: protected by class' lock
-    static MultiPropertiesConfig vmConfig = null;
+    static MultiPropertiesConfig canonicalDefaultConfig = null;
 
     //public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
     //{ return new BasicMultiPropertiesConfig( resourcePath, logger ); }
@@ -36,8 +40,14 @@ final class ConfigUtils
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
+     */
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources )
-    { return readVmConfig( defaultResources, preemptingResources, (List) null ); }
+    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources ); }
+    
+    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
+    { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, (List) null ); }
 
     /*
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, MLogger logger)
@@ -54,9 +64,9 @@ final class ConfigUtils
     }
     */ 
 
-    static List vmCondensedPaths(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    static List configuredOrDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
-	List raw = condensePaths( new String[][]{ defaultResources, vmResourcePaths( delayedLogItemsOut ), preemptingResources } );
+	List raw = condensePaths( new String[][]{ defaultResources, configuredOrDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } );
 	return ensureHoconInterresolvability( raw );
     }
 
@@ -71,14 +81,20 @@ final class ConfigUtils
 	return sb.toString();
     }
 
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
+     */
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    { return readUncachedClassloaderResourceConfig(defaultResources, preemptingResources, delayedLogItemsOut); }
+
+    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
 	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
 	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
-	List pathsList = vmCondensedPaths( defaultResources, preemptingResources, delayedLogItemsOut );
-	
+	List pathsList = configuredOrDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
+
 	if ( delayedLogItemsOut != null )
-	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading VM config for path list " + stringFromPathsList( pathsList ) ) );
+	    delayedLogItemsOut.add( new DelayedLogItem(Level.FINER, "Reading classloader-resource-based config for path list " + stringFromPathsList( pathsList ) ) );
 
 	return read( (String[]) pathsList.toArray(new String[pathsList.size()]), delayedLogItemsOut );
     }
@@ -153,15 +169,15 @@ final class ConfigUtils
 	return out;
     }
 
-    private static String[] vmResourcePaths( List delayedLogItemsOut ) 
+    private static String[] configuredOrDefaultClassloaderResourcePaths( List delayedLogItemsOut ) 
     {
-	List paths = vmResourcePathList(  delayedLogItemsOut );
+	List paths = configuredOrDefaultClassloaderResourcePathList(  delayedLogItemsOut );
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
-    private static List vmResourcePathList( List delayedLogItemsOut )
+    private static List configuredOrDefaultClassloaderResourcePathList( List delayedLogItemsOut )
     {
-	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_VM_RSRC_PATHFILES, delayedLogItemsOut );
+	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
 	List rps;
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;
@@ -169,8 +185,20 @@ final class ConfigUtils
 	    rps = Arrays.asList( HARDCODED_DFLT_RSRC_PATHS );
 	return rps;
     }
-    
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig()
+     */
     public synchronized static MultiPropertiesConfig readVmConfig()
+    { return readCanonicalDefaultConfig(); }
+
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use readDefaultConfig( List delayedLogItemsOut )
+     */
+    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
+    { return readCanonicalDefaultConfig( delayedLogItemsOut ); }
+
+    public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig()
     { return readVmConfig( (List) null ); }
 
     /*
@@ -188,18 +216,24 @@ final class ConfigUtils
     }
     */
 
-    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
+    public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig( List delayedLogItemsOut )
     {
-	if ( vmConfig == null )
+	if ( canonicalDefaultConfig == null )
 	    {
-		List rps = vmResourcePathList( delayedLogItemsOut );
-		vmConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
+		List rps = configuredOrDefaultClassloaderResourcePathList( delayedLogItemsOut );
+		canonicalDefaultConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) ); 
 	    }
-	return vmConfig;
+	return canonicalDefaultConfig;
     }
 
+    /**
+     * @deprecated The vmConfig APIs are confusing. Use foundCanonicalDefaultConfig()
+     */
     public static synchronized boolean foundVmConfig()
-    { return vmConfig != null; }
+    { return foundCanonicalDefaultConfig(); }
+
+    public static synchronized boolean foundCanonicalDefaultConfig()
+    { return canonicalDefaultConfig != null; }
 
     public static void dumpByPrefix( MultiPropertiesConfig mpc, String pfx )
     {
