@@ -119,13 +119,15 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     // EMPTY
     private BasicMultiPropertiesConfig()
     {
-	this.rps = new String[0];
-	Map propsByResourcePaths = Collections.emptyMap();
-	Map propsByPrefixes = Collections.emptyMap();
-	
-	List parseMessages = Collections.emptyList();
-	
-	Properties propsByKey = new Properties();
+	// NOTE: every assignment below must target a field. These were once local
+	// declarations that merely shadowed the fields, leaving the EMPTY singleton
+	// with null propsByPrefixes, parseMessages, and propsByKey -- so getProperty,
+	// getPropertiesByPrefix, and getDelayedLogItems all threw NullPointerException.
+	this.rps                  = new String[0];
+	this.propsByResourcePaths = Collections.emptyMap();
+	this.propsByPrefixes      = Collections.emptyMap();
+	this.parseMessages        = Collections.emptyList();
+	this.propsByKey           = new Properties();
     }
 
     private void firstInit( String[] resourcePaths, List delayedLogItems )
