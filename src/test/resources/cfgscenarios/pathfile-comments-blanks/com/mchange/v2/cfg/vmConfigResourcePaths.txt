@@ -1,0 +1,6 @@
+# leading comment
+
+   /padded.properties   
+# another comment
+	
+/second.properties

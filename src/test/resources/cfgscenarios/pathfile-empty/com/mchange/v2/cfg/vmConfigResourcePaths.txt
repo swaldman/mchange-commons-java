@@ -1,0 +1,4 @@
+# nothing but comments
+
+#   /not-a-path.properties
+
