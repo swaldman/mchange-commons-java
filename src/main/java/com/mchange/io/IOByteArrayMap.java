@@ -18,7 +18,7 @@ public interface IOByteArrayMap
   /**
    *  Associates the byte[] key with the byte[] value in 
    *  the hash. If key is already present in the map, the
-   *  old value associated with it is replaced by <TT>value</TT>.
+   *  old value associated with it is replaced by {@code value}.
    */
   public void put(byte[] key, byte[] value) throws IOException;
 
@@ -35,7 +35,7 @@ public interface IOByteArrayMap
   public boolean remove(byte[] key) throws IOException; 
 
   /**
-   *  Returns true iff <TT>key</TT> is present.
+   *  Returns true iff {@code key} is present.
    */
   public boolean containsKey(byte[] key) throws IOException;
 

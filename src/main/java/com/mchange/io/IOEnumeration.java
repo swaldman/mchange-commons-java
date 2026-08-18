@@ -7,7 +7,7 @@ import java.io.*;
  * to be used by Enumerations whose retrieval 
  * of elements involves file or network access
  *
- * <P><TT>java.util.Enumeration</TT> ought to
+ * <P>{@code java.util.Enumeration} ought to
  * extend a class like this, but it doesn't...
  */
 public interface IOEnumeration

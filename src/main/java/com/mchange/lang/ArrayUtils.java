@@ -8,7 +8,7 @@ package com.mchange.lang;
 public final class ArrayUtils
 {
     /**
-     *  The array may contain nulls, but <TT>o</TT>
+     *  The array may contain nulls, but {@code o}
      *  must be non-null.
      */
     public static int indexOf(Object[] array, Object o)
