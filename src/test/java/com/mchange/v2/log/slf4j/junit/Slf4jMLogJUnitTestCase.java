@@ -25,8 +25,15 @@ public final class Slf4jMLogJUnitTestCase extends TestCase
 	Logger warn = LoggerFactory.getLogger(WARN_LOGGER);
 	assert( warn.isWarnEnabled() && !warn.isInfoEnabled() );
 
+	// NOTE: this deliberately does NOT mirror the check above, and should not be
+	// "corrected" to do so. That one works because it names the next FINER level and
+	// expects it disabled -- INFO is finer than WARN. TRACE is slf4j's finest level,
+	// so there is no finer level to name, and isDebugEnabled() is COARSER, hence
+	// necessarily true for a TRACE logger. (Our own testTraceLoggerLoggability asserts
+	// exactly that, via MLevel.FINER.) Being TRACE-enabled at all is the discriminating
+	// check here, since the root logger in logback.xml is configured at info.
 	Logger trace = LoggerFactory.getLogger(TRACE_LOGGER);
-	assert( warn.isTraceEnabled() && !warn.isDebugEnabled() );
+	assert( trace.isTraceEnabled() );
     }
 
     public void testTraceLoggerLevel()
