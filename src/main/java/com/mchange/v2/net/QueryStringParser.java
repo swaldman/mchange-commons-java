@@ -25,8 +25,19 @@ public final class QueryStringParser
                 // Handle missing '=' or empty keys/values safely
                 // we interpret the value for 'key=' and empty string,
                 // but for 'key' we retain no value
-                String key = idx > 0 ? pair.substring(0, idx) : pair;
-                Object value = idx > 0 && pair.length() > idx + 1 ? pair.substring(idx + 1) : NoValue;
+                String key;
+                Object value;
+
+                if (idx > 0)
+                {
+                    key = pair.substring(0, idx);
+                    value = pair.substring(idx + 1);
+                }
+                else
+                {
+                    key = pair;
+                    value = NoValue;
+                }
 
                 // Decode URL-encoded key characters
                 String decodedKey = URLDecoder.decode(key,"UTF8");
@@ -45,7 +56,7 @@ public final class QueryStringParser
             return queryPairs;
         }
         catch (UnsupportedEncodingException e)
-        { throw new InternalError( "Huh? Encoding 'UTF8' is not supported?!?", e ); }
+        { throw new Error( "Huh? Encoding 'UTF8' is not supported?!?", e ); }
     }
 
     private QueryStringParser() {}
