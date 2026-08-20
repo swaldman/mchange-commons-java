@@ -14,7 +14,16 @@ public abstract class MLog
     private static MLogger         _logger;
 
     static
-    { refreshConfig( null, null ); }
+    {
+        try { refreshConfig( null, null ); }
+        catch (Exception e)
+        {
+            System.err.println("An unexpected exception occurred while trying to read configuration for logging.");
+            e.printStackTrace();
+            System.err.println("MLog clients will fallback to standard error logging.");
+            forceFallback();
+        }
+    }
 
     public static synchronized boolean usingRedirectableLoggers() { return _redirectableLoggers; }
     
@@ -36,14 +45,19 @@ public abstract class MLog
     public static synchronized MLog forceFallback( MLevel level )
     {
 	MLog replaced = _mlog;
-	info("Forcing replacement of " + replaced.getClass().getName() + " with fallback (with cutoff " + level + ") -- Everything goes to System.err.");
+
+        String replacedStr = (replaced == null ? "[no defined mlog implementation]" : replaced.getClass().getName());
+
+        String message = "Forcing replacement of " + replacedStr + " with fallback (with cutoff " + level + ") -- Everything goes to System.err.";
+        if (_mlog != null) info(message);
+        else System.err.println(message);
 
 	FallbackMLog fmlog = new FallbackMLog();
 	if (level != null) fmlog.overrideCutoffLevel( level );
 	_mlog = fmlog;
 	_logger = _mlog.getLogger( MLog.class );
 
-	info("Forced replacement of " + replaced.getClass().getName() + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Everything goes to System.err.");
+	info("Forced replacement of " + replacedStr + " with fallback " + _mlog.getClass().getName() + " (with cutoff " + fmlog.cutoffLevel() + ") -- Everything goes to System.err.");
 
 	RedirectableMLogger.resetAll();
 

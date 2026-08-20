@@ -8,6 +8,8 @@ import com.mchange.v2.log.jdk14logging.Jdk14LoggingUtils;
 
 public final class FallbackMLog extends MLog
 {
+    final static String DEFAULT_CUTOFF_LEVEL_KEY = "com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL";
+
     final static MLevel DEFAULT_CUTOFF_LEVEL;
     final static String SEP;
 
@@ -21,7 +23,12 @@ public final class FallbackMLog extends MLog
     static
     {
 	MLevel dflt = null;
-	String dfltName = MLogConfig.getProperty( "com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL" );
+
+        // we have to be very careful about accessing config.
+        // sometimes we are using FallbackLog precisely because config is failing.
+	String dfltName = MLogConfig.getPropertyIfNoFailure( DEFAULT_CUTOFF_LEVEL_KEY );
+        if (dfltName == null)
+            dfltName = System.getProperty( DEFAULT_CUTOFF_LEVEL_KEY );
 	if (dfltName != null)
 	    dflt = MLevel.fromSeverity( dfltName );
 	if (dflt == null)

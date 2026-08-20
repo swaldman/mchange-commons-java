@@ -3,7 +3,6 @@ package com.mchange.v2.log;
 
 import java.util.*;
 import java.lang.reflect.Method;
-import com.mchange.v2.cfg.MLogConfigSource;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.DelayedLogItem;
 import com.mchange.v2.cfg.MConfig;
@@ -21,7 +20,7 @@ public final class MLogConfig
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
 	List bli = new ArrayList();
-	MultiPropertiesConfig tmpCONFIG = MLogConfigSource.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
+	MultiPropertiesConfig tmpCONFIG = MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
 
 	boolean firstLoad = (CONFIG == null);
 
@@ -76,6 +75,19 @@ public final class MLogConfig
     {
 	ensureLoad();
 	return CONFIG.getProperty( key ); 
+    }
+
+    public synchronized static String getPropertyOnlyIfAvailable( String key )
+    {
+	return (CONFIG != null ? CONFIG.getProperty( key ) : null);
+    }
+
+    public synchronized static String getPropertyIfNoFailure( String key )
+    {
+        try { ensureLoad(); }
+        catch (Exception e)
+        { /* ignore */ }
+	return (CONFIG != null ? CONFIG.getProperty( key ) : null);
     }
 
     // should not be called during static init to avoid cyclic dependency issues
