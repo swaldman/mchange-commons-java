@@ -3,13 +3,15 @@ package com.mchange.v2.cfg;
 import java.util.List;
 
 /**
- * Intended solely for use by com.mchange.v2.log.MLogConfig;
+ * Was intended solely for use by com.mchange.v2.log.MLogConfig, which no longer calls it:
+ * MLogConfig now goes directly to {@link MConfig.WithTraditionalDefaultSources}.
+ *
+ * @deprecated Use {@link MConfig.WithTraditionalDefaultSources} directly. This class survives
+ *             only so that any outside caller that found it keeps compiling.
  */
+@Deprecated
 public final class MLogConfigSource
 {
-    public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-    { return MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut); }
-
     /**
      * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
      */
@@ -20,4 +22,3 @@ public final class MLogConfigSource
     private MLogConfigSource()
     {}
 }
-
