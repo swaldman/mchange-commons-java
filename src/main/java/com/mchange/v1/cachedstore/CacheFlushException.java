@@ -1,7 +1,5 @@
 package com.mchange.v1.cachedstore;
 
-import com.mchange.lang.PotentiallySecondaryException;
-
 public class CacheFlushException extends CachedStoreException
 {
     public CacheFlushException(String msg, Throwable t)
