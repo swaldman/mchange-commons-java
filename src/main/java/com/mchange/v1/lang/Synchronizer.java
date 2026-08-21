@@ -4,9 +4,26 @@ import java.lang.reflect.*;
 import java.util.Set;
 import java.util.HashSet;
 
-//Java 1.3+ ONLY!!!
+//Java 1.5+ ONLY!!!
 public final class Synchronizer
 {
+    private final static Class[] EMPTY_CLASS_ARRAY = new Class[0];
+    private final static Method OBJECT_EQUALS;
+    private final static Method OBJECT_HASHCODE;
+    private final static Method OBJECT_TO_STRING;
+
+    static
+    {
+        try
+        {
+            OBJECT_EQUALS = Object.class.getMethod("equals", new Class[]{ Object.class });
+            OBJECT_HASHCODE = Object.class.getMethod("hashCode", EMPTY_CLASS_ARRAY);
+            OBJECT_TO_STRING = Object.class.getMethod("toString", EMPTY_CLASS_ARRAY);
+        }
+        catch (NoSuchMethodException e)
+        { throw new Error("Failed to find basic Object methods?!?", e); }
+    }
+
     /**
      * Creates an object that implements all the same
      * public interfaces as the original object, but that
@@ -21,8 +38,22 @@ public final class Synchronizer
 		{
                     try
                     {
-		        synchronized (proxy)
-			{ return m.invoke( o, args ); }
+                        if (m.getDeclaringClass() != Object.class)
+                        {
+                            synchronized (proxy)
+                            { return m.invoke( o, args ); }
+                        }
+                        else if (OBJECT_EQUALS.equals(m))
+                            return Boolean.valueOf(proxy == args[0]);
+                        else if (OBJECT_HASHCODE.equals(m))
+                            return Integer.valueOf(System.identityHashCode(proxy));
+                        else if (OBJECT_TO_STRING.equals(m))
+                        {
+                            synchronized (proxy)
+                            { return o.toString(); }
+                        }
+                        else
+                            throw new NoSuchMethodError("If you see this, it's a bug in " + Synchronizer.class.getName() + "; Unhandled, object method on proxy unexpectedly delivered to InvocationHandler: " + m);
                     }
                     catch (InvocationTargetException e)
                     {
