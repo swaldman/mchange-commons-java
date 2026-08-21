@@ -9,7 +9,7 @@ public final class Synchronizer
 {
     /**
      * Creates an object that implements all the same
-     * interfaces as the original object, but that
+     * public interfaces as the original object, but that
      * synchronizes all access (using the wrappers' own lock).
      */
     public static Object createSynchronizedWrapper(final Object o)
@@ -41,16 +41,28 @@ public final class Synchronizer
 				       handler );
     }
 
-    private static Class[] recurseFindInterfaces(Class cl)
+    // we could happily generate proxies of nonpublic interfaces, but calls to
+    // them would fail unless the interfaces happened to be in this class' package.
+    // we could try to make those calls succeed by calling m.setAccessible(true) before
+    // invoking the methods, but we don't want to try to create circumventions of
+    // java's ordinary accessibility rules here.
+    private static Class[] recurseFindInterfaces(final Class cl)
     {
+        Class scl = cl;
 	Set s = new HashSet();
-	while( cl != null )
+	while( scl != null )
 	    {
-		Class[] interfaces = cl.getInterfaces();
+		Class[] interfaces = scl.getInterfaces();
 		for (int i = 0, len = interfaces.length; i < len; ++i)
-		    s.add(interfaces[i]);
-		cl = cl.getSuperclass();
+                {
+                    Class intfc = interfaces[i];
+                    if ((intfc.getModifiers() & Modifier.PUBLIC) != 0)
+                        s.add(intfc);
+                }
+		scl = scl.getSuperclass();
 	    }
+        if (s.size() == 0)
+            throw new IllegalArgumentException("Cannot create a synchronizing proxy, " + cl.getName() + " implements no public interfaces.");
 	Class[] out = new Class[ s.size() ];
 	s.toArray( out );
 	return out;
