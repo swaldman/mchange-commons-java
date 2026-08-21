@@ -4,7 +4,7 @@ import java.lang.reflect.*;
 import java.util.Set;
 import java.util.HashSet;
 
-//Java 1.3 ONLY!!!
+//Java 1.3+ ONLY!!!
 public final class Synchronizer
 {
     /**
@@ -19,8 +19,20 @@ public final class Synchronizer
 		public Object invoke(Object proxy, Method m, Object[] args) 
 		    throws Throwable
 		{
-		    synchronized (proxy)
+                    try
+                    {
+		        synchronized (proxy)
 			{ return m.invoke( o, args ); }
+                    }
+                    catch (InvocationTargetException e)
+                    {
+                        // more cautious might be
+                        //Throwable t = e.getTargetException();
+                        //throw (t == null ? e : t);
+
+                        // but t should never be null, so just...
+                        throw e.getTargetException();
+                    }
 		}
 	    };
 	Class cl = o.getClass();
