@@ -56,7 +56,10 @@ class SimpleWritableCachedStore implements WritableCachedStore
 			
 			try
 			    {
-				readOnlyCache.setCachedValue( key, val );
+				if (val == REMOVE_TOKEN)
+				    readOnlyCache.removeFromCache( key );
+				else
+				    readOnlyCache.setCachedValue( key, val );
 				writeCache.remove( key );
 				if (failedWrites != null)
 				    {
