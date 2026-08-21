@@ -83,8 +83,9 @@ class SimpleWritableCachedStore implements WritableCachedStore
 	    throw new CacheFlushException("Some keys failed to write!");
     }
 
+    /** @return an unmodifiable snapshot of current failedWrites set, or null if there have been no failed writes. */
     public Set getFailedWrites()
-    { return (failedWrites == null ? null : Collections.unmodifiableSet( failedWrites ) ); }
+    { return (failedWrites == null ? null : Collections.unmodifiableSet( new HashSet(failedWrites) ) ); }
 
     public void clearPendingWrites()
     { 

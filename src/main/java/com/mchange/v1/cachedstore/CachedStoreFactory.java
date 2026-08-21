@@ -1,8 +1,6 @@
 package com.mchange.v1.cachedstore;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationHandler;
+import java.util.Iterator;
 
 /**
  * Unless otherwise noted, implementations are to be presumed
@@ -25,20 +23,46 @@ public final class CachedStoreFactory
     { return new SoftReferenceCachedStore( manager ); }
 
     public static TweakableCachedStore createSynchronousCleanupSoftKeyCachedStore(CachedStore.Manager manager)
-    { 
-	final ManualCleanupSoftKeyCachedStore inner = new ManualCleanupSoftKeyCachedStore( manager ); 
-	InvocationHandler handler = new InvocationHandler()
-	    {
-		public Object invoke(Object proxy, Method m, Object[] args) 
-		    throws Throwable
-		{
-		    inner.vacuum();
-		    return m.invoke( inner, args ); 
-		}
-	    };
-	return (TweakableCachedStore) Proxy.newProxyInstance( CachedStoreFactory.class.getClassLoader(),
-							      new Class[] { TweakableCachedStore.class },
-							      handler );
+    {
+	final ManualCleanupSoftKeyCachedStore inner = new ManualCleanupSoftKeyCachedStore( manager );
+        return new TweakableCachedStore()
+        {
+            public Object find(Object key) throws CachedStoreException
+            {
+                inner.vacuum();
+                return inner.find( key );
+            }
+
+            public void reset() throws CachedStoreException
+            {
+                inner.vacuum();
+                inner.reset();
+            }
+
+            public Object getCachedValue(Object key) throws CachedStoreException
+            {
+                inner.vacuum();
+                return inner.getCachedValue(key);
+            }
+
+            public void removeFromCache(Object key) throws CachedStoreException
+            {
+                inner.vacuum();
+                inner.removeFromCache(key);
+            }
+
+            public void setCachedValue(Object key, Object value) throws CachedStoreException
+            {
+                inner.vacuum();
+                inner.setCachedValue(key, value);
+            }
+
+            public Iterator cachedKeys() throws CachedStoreException
+            {
+                inner.vacuum();
+                return inner.cachedKeys();
+            }
+        };
     }
 
     /**

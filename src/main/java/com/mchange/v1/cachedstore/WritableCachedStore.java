@@ -24,7 +24,7 @@ public interface WritableCachedStore extends CachedStore
 
     /** 
      *	@return null if all attempts to write to backend storage
-     *	have succeeded, an unmodifiable Set of keys otherwise.
+     *	have succeeded, an unmodifiable snapshot of the key Set otherwise.
      *  failedWrites includes keys for whom a call to write or
      *  remove initially succeeded, but an attempt to flush
      *  the write to storage failed. A failed write may be

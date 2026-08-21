@@ -1,9 +1,9 @@
 package com.mchange.v1.cachedstore;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 import com.mchange.lang.PotentiallySecondary;
-import com.mchange.v1.lang.Synchronizer;
 
 public final class CachedStoreUtils
 {
@@ -21,6 +21,10 @@ public final class CachedStoreUtils
         };
     }
 
+    /**
+     *  Note {@code cachedKeys()} returns an Iterator on an unmodifiable <em>snapshot</em> of the current cachedKeys set.
+     *  Any calls to {@code remove()} will yield an {@code UnsupportedOperationException}.
+     */
     public static TweakableCachedStore synchronizedTweakableCachedStore(final TweakableCachedStore orig)
     {
         return new TweakableCachedStore()
@@ -31,7 +35,6 @@ public final class CachedStoreUtils
             public synchronized void reset() throws CachedStoreException
             { orig.reset(); }
 
-            /** @return null if the value for this key is not cached */
             public synchronized Object getCachedValue(Object key) throws CachedStoreException
             { return orig.getCachedValue(key); }
 
@@ -42,7 +45,19 @@ public final class CachedStoreUtils
             { orig.setCachedValue(key, value); }
 
             public synchronized Iterator cachedKeys() throws CachedStoreException
-            { return orig.cachedKeys(); }
+            {
+                ArrayList al = new ArrayList();
+                Iterator csIter = orig.cachedKeys();
+                while( csIter.hasNext() ) al.add(csIter.next());
+                final Iterator inner = al.iterator();
+                return new Iterator()
+                {
+                    public boolean hasNext() { return inner.hasNext(); }
+                    public Object  next()    { return inner.next(); }
+                    public void remove()
+                    { throw new UnsupportedOperationException("Remove not supported by this Iterator."); }
+                };
+            }
         };
     }
 
@@ -101,7 +116,6 @@ public final class CachedStoreUtils
 		    return (CachedStoreException) t2;
 	    }
 	return new CachedStoreException( t );
-	    
     }
 
     static CacheFlushException toCacheFlushException( Throwable t )
@@ -112,7 +126,6 @@ public final class CachedStoreUtils
 	    return (CacheFlushException) t;
 	else 
 	    return new CacheFlushException( t );
-	    
     }
 
     private CachedStoreUtils()

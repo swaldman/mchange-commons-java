@@ -1,6 +1,5 @@
 package com.mchange.v1.cachedstore;
 
-import java.util.Collections;
 import java.util.Set;
 
 class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
@@ -47,7 +46,7 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
     {}
 
     public Set  getFailedWrites() throws CachedStoreException
-    { return Collections.EMPTY_SET; }
+    { return null; }
 
     public void clearPendingWrites() throws CachedStoreException
     {}
