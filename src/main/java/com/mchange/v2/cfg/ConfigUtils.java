@@ -30,7 +30,10 @@ final class ConfigUtils
     //public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
     //{ return new BasicMultiPropertiesConfig( resourcePath, logger ); }
 
-    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems)
+    static MultiPropertiesConfig readVetoable(String[] resourcePath, List delayedLogItems) throws ConfigVetoedException
+    { return new BasicMultiPropertiesConfig( true, resourcePath, delayedLogItems ); }
+
+    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems) throws IllegalArgumentException
     { return new BasicMultiPropertiesConfig( resourcePath, delayedLogItems ); }
 
     public static MultiPropertiesConfig read(String[] resourcePath)
@@ -46,6 +49,12 @@ final class ConfigUtils
     {
         String[] paths = condenseResources( withDefaults, defaultResources, preemptingResources, delayedLogItemsOut );
         return read( paths, delayedLogItemsOut );
+    }
+
+    static MultiPropertiesConfig readVetoableUncachedClassloaderResourceConfig(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+    {
+        String[] paths = condenseResources( withDefaults, defaultResources, preemptingResources, delayedLogItemsOut );
+        return readVetoable( paths, delayedLogItemsOut );
     }
 
     static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)

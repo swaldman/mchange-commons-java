@@ -5,6 +5,8 @@ import com.mchange.v2.log.*;
 import com.mchange.v1.cachedstore.*;
 import com.mchange.v1.util.ArrayUtils;
 
+import static com.mchange.v2.cfg.DelayedLogItem.*;
+
 /**
  *  MConfig is a facade for defining configuration in a properties-file style,
  *  but where the configuration can be specified as classloader resources
@@ -223,6 +225,50 @@ public final class MConfig
         private AsProvided() {}
     }
 
+    public final static class AsProvidedVetoable {
+
+        public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        {
+            try
+                {
+                    // we want to collect any delayed log items emitted by ConfigUtils.condenseResources(...)
+                    List dlioEffective = (delayedLogItemsOut == null ? new ArrayList() : delayedLogItemsOut);
+                    String[] resourcePaths = ConfigUtils.condenseResources(false, defaultResources, preemptingResources, dlioEffective);
+                    return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths, true, dlioEffective ) );
+                }
+            catch (CachedStoreException e)
+            {
+                if (e.getCause() instanceof ConfigVetoedException )
+                    throw (ConfigVetoedException) e.getCause();
+                else
+                    throw new RuntimeException( e );
+            }
+        }
+
+        public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
+        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
+
+        public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut ) throws ConfigVetoedException
+        { return readCachedClassloaderResourceConfig(EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut); }
+
+        public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
+        { return AsProvidedVetoable.readCachedClassloaderResourceConfig( resourcePaths, (List) null ); }
+
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        { return ConfigUtils.readVetoableUncachedClassloaderResourceConfig( false, defaultResources, preemptingResources, delayedLogItemsOut ); }
+
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
+        { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
+
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut ) throws ConfigVetoedException
+        { return readUncachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut ); }
+
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
+        { return AsProvidedVetoable.readUncachedClassloaderResourceConfig( resourcePaths, (List) null ); }
+
+        private AsProvidedVetoable() {}
+    }
+
     /**
      *  Later entries in the configs array override earlier entries.
      */
@@ -238,23 +284,35 @@ public final class MConfig
     private final static class PathsKey
     {
 	String[] paths;
+        boolean  vetoable;
 	List     delayedLogItems;
 
 	public boolean equals(Object o)
 	{ 
 	    if (o instanceof PathsKey)
-		return Arrays.equals( paths, ((PathsKey) o).paths );
+            {
+                PathsKey other = (PathsKey) o;
+		return Arrays.equals( this.paths, other.paths ) && this.vetoable == other.vetoable;
+            }
 	    else
 		return false;
 	}
 
 	public int hashCode()
-	{ return ArrayUtils.hashArray( paths ); }
+	{
+            int out = ArrayUtils.hashArray( paths );
+            if (vetoable) out = ~out;
+            return out;
+        }
 
         // it's fine for delayedLogItems to be null
 	PathsKey(String[] paths, List delayedLogItems)
+        { this( paths, false, delayedLogItems ); }
+
+        PathsKey(String[] paths, boolean vetoable, List delayedLogItems)
 	{
 	    this.delayedLogItems = delayedLogItems;
+            this.vetoable = vetoable;
 	    this.paths = paths;
 	}
     }
@@ -278,9 +336,20 @@ public final class MConfig
 
 	    List<DelayedLogItem> items = new ArrayList<DelayedLogItem>();
             if (pk.delayedLogItems != null) items.addAll( pk.delayedLogItems );
-	    Object out =  ConfigUtils.read( pk.paths, items );
+	    Object out = null;
+            ConfigVetoedException cve = null;
+            try
+                { out = pk.vetoable ? ConfigUtils.readVetoable( pk.paths, items ) : ConfigUtils.read( pk.paths, items ); }
+            catch (ConfigVetoedException e)
+                {
+                    cve = e;
+                    items.add( new DelayedLogItem( Level.WARNING, "Configuration was vetoed.", e ) );
+                }
 	    dumpToLogger( items, logger );
-	    return out;
+            if (cve != null)
+                throw cve;
+            else
+                return out;
 	}
     }
 
