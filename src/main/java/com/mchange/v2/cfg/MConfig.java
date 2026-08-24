@@ -157,7 +157,7 @@ public final class MConfig
     public final static class WithTraditionalDefaultSources {
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
-        { return ConfigUtils.readUncachedClassloaderResourceConfig( true, defaultResources, preemptingResources, null ); }
+        { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         { return ConfigUtils.readUncachedClassloaderResourceConfig( true, defaultResources, preemptingResources, delayedLogItemsOut); }
