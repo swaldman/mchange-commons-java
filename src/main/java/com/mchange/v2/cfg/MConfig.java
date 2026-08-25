@@ -64,23 +64,48 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *    case-sensitive</b>; option <b>values are case-insensitive</b>. Two options are supported:</p>
  *
  *    <ul>
- *      <li>{@code permissions=useronly} &mdash; refuse the file unless its owner holds all of its
- *      read/write/execute permissions, i.e. no group or other bits are set. This is a hygiene
- *      check against a credentials file being left group- or world-readable. It examines the mode
- *      of the file it is about to read, and nothing more: not the containing directory, and not
- *      whether the path is reached through a symbolic or hard link.</li>
+ *      <li><p>{@code permissions=useronly} &mdash; a hygiene check against a credentials file
+ *      being left group- or world-readable. The file finally read must be owned by the running
+ *      user (or by root) and must have no group or other permission bits: only its owner may hold
+ *      read, write or execute permission.</p>
+ *
+ *      <p>Symbolic links are followed rather than refused, since linking configuration into place
+ *      is ordinary practice &mdash; but the whole chain is verified. Every link along the way must
+ *      also be owned by the running user or by root, because an attacker cannot {@code chown} a
+ *      link to someone else, so a link you own is a link you made. This is what stops a link from
+ *      laundering an exposed file, or from quietly redirecting the read to some other file you
+ *      happen to own. A cycle of links is refused.</p>
+ *
+ *      <p>Only the file at the end of the chain has its permission bits examined. A link's own
+ *      mode is not a usable signal: it defaults to {@code rwxr-xr-x}, so requiring owner-only bits
+ *      would refuse nearly every symbolic link, and on Linux link modes are fixed at
+ *      {@code rwxrwxrwx} and ignored by the kernel, with no portable way to change them.
+ *      Ownership is the property of a link that means something.</p>
+ *
+ *      <p>Hard links need no special treatment and get none: a hard link <i>is</i> the file,
+ *      sharing its inode, owner and permissions, so it is checked as the regular file it is.</p>
+ *
+ *      <p>What is still not examined: the <b>containing directory</b>. Someone able to write there
+ *      can delete the configuration, which no permission check can prevent, though they cannot
+ *      substitute content of their own &mdash; any file they own that you could read would have to
+ *      carry group or other bits, and would be refused. There also remains an unavoidable gap
+ *      between the check and the open, since Java offers no way to interrogate an already-open
+ *      file; the check resolves the path once and opens what it resolved, which narrows the gap
+ *      without closing it.</p></li>
  *
  *      <li>{@code required=true} &mdash; treat the absence of the file as an error rather than
  *      ignoring it. {@code required=false} is the default behavior.</li>
  *    </ul>
  *
  *    <p>Any request these options make that the library cannot honor <b>vetoes</b> the
- *    configuration &mdash; see below. That includes a file failing the permissions check, a
- *    mis-cased or unrecognized option key (so {@code ?Permissions=useronly} is an error, never a
- *    silently skipped check), an option given no value or an unrecognized value, a
- *    {@code required=true} file that is absent, and a platform that cannot report POSIX
- *    permissions when {@code permissions} was requested. What is <i>not</i> a veto: a missing
- *    file, absent {@code required=true}. Absence is not insecurity.</p></li>
+ *    configuration &mdash; see below. That includes a file failing the permissions check, a link
+ *    in its path owned by someone else, a cycle of symbolic links, a mis-cased or unrecognized
+ *    option key (so {@code ?Permissions=useronly} is an error, never a silently skipped check), an
+ *    option given no value or an unrecognized value, a {@code required=true} file that is absent,
+ *    and a platform that cannot report POSIX permissions when {@code permissions} was requested.
+ *    What is <i>not</i> a veto: a missing file, absent {@code required=true} &mdash; and that
+ *    includes a dangling symbolic link, which is simply absence wearing a link. Absence is not
+ *    insecurity.</p></li>
  *
  *    <li><p>Paths beginning {@code hocon:} are interpreted according to
  *    <a href="https://github.com/lightbend/config/blob/main/HOCON.md">HOCON</a> conventions when

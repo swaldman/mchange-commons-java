@@ -10,7 +10,9 @@ import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +39,9 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
 
     protected void setUp() throws Exception
     {
-        dir       = Files.createTempDirectory( "mchange-cfg-fileurl-" );
+        // toRealPath: on macOS the temp dir sits under /var, which is itself a symlink, and these
+        // tests reason about link chains -- we want the paths we think we have
+        dir       = Files.createTempDirectory( "mchange-cfg-fileurl-" ).toRealPath();
         userOnly  = write( "useronly.properties",  "secret.key=from-useronly\nonly.useronly=yes\n", "rw-------" );
         worldRead = write( "worldread.properties", "secret.key=from-worldread\n",                   "rw-r--r--" );
         second    = write( "second.properties",    "secret.key=from-second\nonly.second=yes\n",     "rw-------" );
@@ -56,6 +60,20 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         Files.write( p, contents.getBytes( "8859_1" ) );
         if ( posixSupported() ) Files.setPosixFilePermissions( p, PosixFilePermissions.fromString( mode ) );
         return p;
+    }
+
+    private Path symlink( String name, Path target ) throws IOException
+    {
+        Path link = dir.resolve( name );
+        Files.createSymbolicLink( link, target );
+        return link;
+    }
+
+    private Path hardlink( String name, Path target ) throws IOException
+    {
+        Path link = dir.resolve( name );
+        Files.createLink( link, target );
+        return link;
     }
 
     private static void deleteQuietly( Path p )
@@ -277,6 +295,200 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
             assertNotNull( "the veto should report the source that raised it", cve.getSource() );
         }
     }
+
+    /**
+     *  A successful useronly read reports nothing. The source now carries DelayedLogItems out on
+     *  its Parse -- it must not chatter on the ordinary path, only when the superuser could not be
+     *  identified numerically and a weaker name lookup was used instead.
+     */
+    public void testSuccessfulUserOnlyReadReportsNothing() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        MultiPropertiesConfig mpc = read( url( userOnly, "permissions=useronly" ) );
+
+        assertEquals( "from-useronly", mpc.getProperty( "secret.key" ) );
+        List<DelayedLogItem> items = mpc.getDelayedLogItems();
+        for ( DelayedLogItem item : items )
+            assertFalse( "no superuser-fallback warning should be emitted here: " + item.getText(),
+                         item.getText() != null && item.getText().contains( "superuser" ) );
+    }
+
+    // ============================================== links: symbolic and hard
+
+    /**
+     *  useronly follows symbolic links rather than refusing them -- linking config into place is
+     *  ordinary practice -- but it verifies the whole chain: every link must be owned by us (or
+     *  root), and the file finally reached must have no group or other permission bits.
+     *
+     *  Only the final file's MODE is examined. A link's own mode is not a usable signal: it
+     *  defaults to rwxr-xr-x here, and on Linux link modes are fixed at rwxrwxrwx and ignored by
+     *  the kernel. Checking it would refuse nearly every symlink.
+     */
+    public void testSymlinkToPrivateFileLoads() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = symlink( "link-to-private", userOnly );
+        try
+        { assertEquals( "from-useronly", read( url( link, "permissions=useronly" ) ).getProperty( "secret.key" ) ); }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /** The motivating case: a link is not allowed to launder an exposed file. */
+    public void testSymlinkToWorldReadableFileIsVetoed() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = symlink( "link-to-world", worldRead );
+        try
+        {
+            String msg = assertVetoed( url( link, "permissions=useronly" ) );
+            assertTrue( "should name the exposed TARGET's permissions, was: " + msg,
+                        msg.contains( "OTHERS_READ" ) || msg.contains( "GROUP_READ" ) );
+            assertTrue( "should show the chain that was walked, was: " + msg, msg.contains( "reached via" ) );
+        }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /**
+     *  And a link whose own mode has been restricted must not launder it either. On macOS/BSD
+     *  `chmod -h` can give a symlink owner-only bits, which defeats any check that merely reads
+     *  permissions with NOFOLLOW_LINKS. Following through to the target is what catches it.
+     */
+    public void testSymlinkWithRestrictedOwnModeStillChecksItsTarget() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = symlink( "link-restricted", worldRead );
+        try
+        {
+            try { Files.setAttribute( link, "posix:permissions",
+                                      PosixFilePermissions.fromString( "rw-------" ),
+                                      LinkOption.NOFOLLOW_LINKS ); }
+            catch ( Exception e ) { /* platforms that pin link modes -- the point holds either way */ }
+
+            assertVetoed( url( link, "permissions=useronly" ) );
+        }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /** Every hop is checked, not just the first. */
+    public void testMultiHopSymlinkChainLoads() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path hop2 = symlink( "hop2", userOnly );
+        Path hop1 = symlink( "hop1", hop2 );
+        try
+        { assertEquals( "from-useronly", read( url( hop1, "permissions=useronly" ) ).getProperty( "secret.key" ) ); }
+        finally
+        { deleteQuietly( hop1 ); deleteQuietly( hop2 ); }
+    }
+
+    /** A link target may be relative, and resolves against the link's directory. */
+    public void testRelativeSymlinkTargetResolves() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = dir.resolve( "relative-link" );
+        Files.createSymbolicLink( link, Paths.get( userOnly.getFileName().toString() ) );
+        try
+        { assertEquals( "from-useronly", read( url( link, "permissions=useronly" ) ).getProperty( "secret.key" ) ); }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /**
+     *  Hard links need no special handling and get none: a hard link IS the file, sharing its
+     *  inode, owner and permissions, so it arrives at the check as a regular file.
+     */
+    public void testHardLinkToPrivateFileLoads() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path hard = hardlink( "hard-to-private", userOnly );
+        try
+        { assertEquals( "from-useronly", read( url( hard, "permissions=useronly" ) ).getProperty( "secret.key" ) ); }
+        finally
+        { deleteQuietly( hard ); }
+    }
+
+    /** ...which means a hard link to an exposed file is caught for free. */
+    public void testHardLinkToWorldReadableFileIsVetoed() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path hard = hardlink( "hard-to-world", worldRead );
+        try
+        {
+            String msg = assertVetoed( url( hard, "permissions=useronly" ) );
+            assertTrue( "should name the exposed permissions, was: " + msg,
+                        msg.contains( "OTHERS_READ" ) || msg.contains( "GROUP_READ" ) );
+        }
+        finally
+        { deleteQuietly( hard ); }
+    }
+
+    /** A cycle of links must be refused, and must not spin. */
+    public void testSymlinkLoopIsVetoedAndDoesNotHang() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path a = dir.resolve( "loop-a" );
+        Path b = dir.resolve( "loop-b" );
+        Files.createSymbolicLink( a, b );
+        Files.createSymbolicLink( b, a );
+        try
+        {
+            String msg = assertVetoed( url( a, "permissions=useronly" ) );
+            assertTrue( "should say it is a cycle, was: " + msg, msg.contains( "cycle" ) );
+        }
+        finally
+        { deleteQuietly( a ); deleteQuietly( b ); }
+    }
+
+    /** A dangling link is absence, not insecurity -- it is skipped, exactly as a missing file is. */
+    public void testDanglingSymlinkIsSkippedNotVetoed() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = dir.resolve( "dangling" );
+        Files.createSymbolicLink( link, dir.resolve( "never-created.properties" ) );
+        try
+        {
+            MultiPropertiesConfig mpc = read( url( link, "permissions=useronly" ) );
+            assertEquals( 0, pathsOf( mpc ).size() );
+            assertTrue( "expected a FINE skip, not a veto", hasFineSkip( mpc ) );
+        }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /** ...but a dangling link IS a veto when the config was declared required. */
+    public void testDanglingSymlinkIsVetoedWhenRequired() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = dir.resolve( "dangling-required" );
+        Files.createSymbolicLink( link, dir.resolve( "never-created.properties" ) );
+        try
+        { assertTrue( assertVetoed( url( link, "permissions=useronly&required=true" ) ).contains( "required" ) ); }
+        finally
+        { deleteQuietly( link ); }
+    }
+
+    /** Without the permissions query, link structure is irrelevant -- nothing is examined. */
+    public void testLinksAreUncheckedWithoutThePermissionsQuery() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        Path link = symlink( "unchecked-link", worldRead );
+        Path hard = hardlink( "unchecked-hard", worldRead );
+        try
+        {
+            assertEquals( "from-worldread", read( url( link ) ).getProperty( "secret.key" ) );
+            assertEquals( "from-worldread", read( url( hard ) ).getProperty( "secret.key" ) );
+        }
+        finally
+        { deleteQuietly( link ); deleteQuietly( hard ); }
+    }
+
+    // NOTE: a link owned by a DIFFERENT user is the remaining case, and cannot be built in a
+    // single-uid test. The rule is that a link must be owned by the running user or by root,
+    // since an attacker cannot chown a link to someone else.
 
     // ================================================= missing-file handling
 
