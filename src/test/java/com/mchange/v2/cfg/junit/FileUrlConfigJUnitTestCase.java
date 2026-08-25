@@ -9,6 +9,7 @@ import com.mchange.v2.cfg.MConfig;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -49,7 +50,8 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
 
     protected void tearDown() throws Exception
     {
-        deleteQuietly( userOnly ); deleteQuietly( worldRead ); deleteQuietly( second ); deleteQuietly( dir );
+        // recursive: the deletion-risk tests build subdirectories, some of them unwritable
+        deleteRecursively( dir );
     }
 
     // ------------------------------------------------------------- fixture
@@ -78,6 +80,76 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
 
     private static void deleteQuietly( Path p )
     { try { if ( p != null ) Files.deleteIfExists( p ); } catch ( IOException e ) { /* best effort */ } }
+
+    private static void deleteRecursively( Path p )
+    {
+        try
+        {
+            if ( p == null || ! Files.exists( p, LinkOption.NOFOLLOW_LINKS ) ) return;
+            if ( Files.isDirectory( p, LinkOption.NOFOLLOW_LINKS ) )
+            {
+                // restore our own access first: these tests leave directories in odd modes
+                try { Files.setPosixFilePermissions( p, PosixFilePermissions.fromString( "rwx------" ) ); }
+                catch ( Exception e ) { /* not posix, or not ours; try the delete anyway */ }
+                try ( DirectoryStream<Path> ds = Files.newDirectoryStream( p ) )
+                { for ( Path child : ds ) deleteRecursively( child ); }
+            }
+            Files.deleteIfExists( p );
+        }
+        catch ( Exception e ) { /* best effort */ }
+    }
+
+    /** A directory under the fixture, with an explicit mode. Intermediate components are 0700. */
+    private Path mkdir( String relPath, String mode ) throws IOException
+    {
+        Path d = dir.resolve( relPath );
+        Files.createDirectories( d );
+        Files.setPosixFilePermissions( d, PosixFilePermissions.fromString( mode ) );
+        return d;
+    }
+
+    /** An 0600 properties file inside an arbitrary directory. */
+    private Path writeIn( Path parent, String name, String contents ) throws IOException
+    {
+        Path f = parent.resolve( name );
+        Files.write( f, contents.getBytes( "8859_1" ) );
+        Files.setPosixFilePermissions( f, PosixFilePermissions.fromString( "rw-------" ) );
+        return f;
+    }
+
+    /** Sets the sticky bit, or returns false where the non-standard "unix" view is unavailable. */
+    private static boolean makeSticky( Path d )
+    {
+        try
+        {
+            Files.setAttribute( d, "unix:mode", Integer.valueOf( 01777 ) );
+            Object mode = Files.getAttribute( d, "unix:mode" );
+            return mode instanceof Number && ((((Number) mode).intValue()) & 01000) != 0;
+        }
+        catch ( Exception e ) { return false; }
+    }
+
+    /**
+     *  The deletion advisory's text, or null if none was emitted. Fails if more than one appears:
+     *  the walk is supposed to stop at the first problem it finds.
+     */
+    @SuppressWarnings("unchecked")
+    private static String deletionAdvisory( MultiPropertiesConfig mpc )
+    {
+        String found = null;
+        List<DelayedLogItem> items = mpc.getDelayedLogItems();
+        for ( DelayedLogItem item : items )
+        {
+            String text = item.getText();
+            if ( DelayedLogItem.Level.WARNING.equals( item.getLevel() )
+                 && text != null && text.contains( "can delete this configuration" ) )
+            {
+                assertNull( "at most one deletion advisory per read; a second was: " + text, found );
+                found = text;
+            }
+        }
+        return found;
+    }
 
     private boolean posixSupported()
     { return dir.getFileSystem().supportedFileAttributeViews().contains( "posix" ); }
@@ -572,5 +644,151 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
     {
         if ( !posixSupported() ) return;
         assertVetoed( "FILE:" + url( worldRead, "permissions=useronly" ).substring( "file:".length() ) );
+    }
+
+    // ==================================== deletion risk from containing directories
+
+    /*
+     *  The permission and link checks establish that nobody else can change what a useronly file
+     *  SAYS. They cannot establish that it will still be there -- deletion is governed by the
+     *  directories above the file, not by the file. Since an absent, non-required file is skipped
+     *  silently, that is a way for configuration to disappear without anyone noticing, so we warn.
+     *
+     *  Advisory only. It must never veto, and never change what is read.
+     */
+
+    public void testWorldWritableParentWarnsOfDeletionRisk() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path open = mkdir( "open-parent", "rwxrwxrwx" );          // NOT sticky: anyone may unlink
+        Path f    = writeIn( open, "config.properties", "secret.key=from-open\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly" ) );
+
+        assertEquals( "the advisory must not change what is read", "from-open", mpc.getProperty( "secret.key" ) );
+        String advisory = deletionAdvisory( mpc );
+        assertNotNull( "a world-writable, non-sticky parent should be reported", advisory );
+        assertTrue( "the advisory should name the offending directory: " + advisory,
+                    advisory.contains( "directory '" + open + "'" ) );
+    }
+
+    /**
+     *  The one that keeps this advisory worth listening to.
+     *
+     *  /tmp and /var/tmp are drwxrwxrwt on every Unix: world-writable, but sticky, so only a
+     *  file's own owner (or the directory's owner, or root) may unlink it. Warning about those
+     *  would false-positive on the most common shared directories there are.
+     */
+    public void testStickyWorldWritableParentDoesNotWarn() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path shared = mkdir( "sticky-parent", "rwxrwxrwx" );
+        if ( ! makeSticky( shared ) ) return;                     // no "unix" view; nothing to test
+        Path f = writeIn( shared, "config.properties", "secret.key=from-sticky\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly" ) );
+
+        assertEquals( "from-sticky", mpc.getProperty( "secret.key" ) );
+        assertNull( "a sticky directory protects its entries and must not be reported: "
+                        + deletionAdvisory( mpc ),
+                    deletionAdvisory( mpc ) );
+    }
+
+    public void testPrivateParentDoesNotWarn() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path priv = mkdir( "private-parent", "rwx------" );
+        Path f    = writeIn( priv, "config.properties", "secret.key=from-private\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly" ) );
+
+        assertEquals( "from-private", mpc.getProperty( "secret.key" ) );
+        assertNull( "an ordinary private directory must be silent", deletionAdvisory( mpc ) );
+    }
+
+    /**
+     *  Recursion is the point, not paranoia: a 0700 directory inside a world-writable one is not
+     *  safe, because whoever can write the grandparent can rename the whole subtree aside and put
+     *  their own in its place.
+     */
+    public void testRiskyGrandparentIsFoundThroughSafeParent() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path gp     = mkdir( "open-gp", "rwxrwxrwx" );
+        Path parent = mkdir( "open-gp/tight", "rwx------" );
+        Path f      = writeIn( parent, "config.properties", "secret.key=from-nested\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly" ) );
+
+        assertEquals( "from-nested", mpc.getProperty( "secret.key" ) );
+        String advisory = deletionAdvisory( mpc );
+        assertNotNull( "the walk must continue above a safe parent", advisory );
+        assertTrue( "the grandparent is the directory at fault, not the parent: " + advisory,
+                    advisory.contains( "directory '" + gp + "'" ) );
+        assertFalse( "the safe parent should not be the one named: " + advisory,
+                     advisory.contains( "directory '" + parent + "'" ) );
+    }
+
+    /** With required=true a disappearance already throws, so there is no silent failure to warn about. */
+    public void testRequiredTrueSuppressesTheDeletionAdvisory() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path open = mkdir( "open-required", "rwxrwxrwx" );
+        Path f    = writeIn( open, "config.properties", "secret.key=from-required\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly&required=true" ) );
+
+        assertEquals( "from-required", mpc.getProperty( "secret.key" ) );
+        assertNull( "required=true already makes a deletion loud", deletionAdvisory( mpc ) );
+    }
+
+    /** The advisory belongs to useronly. Without that opt-in we say nothing about the neighborhood. */
+    public void testNoAdvisoryWithoutThePermissionsQuery() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path open = mkdir( "open-unchecked", "rwxrwxrwx" );
+        Path f    = writeIn( open, "config.properties", "secret.key=from-unchecked\n" );
+
+        MultiPropertiesConfig mpc = read( url( f ) );
+
+        assertEquals( "from-unchecked", mpc.getProperty( "secret.key" ) );
+        assertNull( "no permissions=useronly, no advisory", deletionAdvisory( mpc ) );
+    }
+
+    /** A directory owned by someone else is reported even when sticky -- its owner can still unlink. */
+    public void testAdvisorySuggestsRequiredTrueAsTheRemedy() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path open = mkdir( "open-remedy", "rwxrwxrwx" );
+        Path f    = writeIn( open, "config.properties", "secret.key=from-remedy\n" );
+
+        String advisory = deletionAdvisory( read( url( f, "permissions=useronly" ) ) );
+
+        assertNotNull( advisory, advisory );
+        assertTrue( "the advisory should point at the fix: " + advisory,
+                    advisory.contains( "required=true" ) );
+        assertTrue( "and should say why silence is the danger: " + advisory,
+                    advisory.contains( "silently" ) );
+    }
+
+    /** However alarming the neighborhood, this is advice, not a veto. */
+    public void testDeletionRiskNeverVetoes() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path open = mkdir( "open-noveto", "rwxrwxrwx" );
+        Path f    = writeIn( open, "config.properties", "only.noveto=yes\n" );
+
+        MultiPropertiesConfig mpc = read( url( f, "permissions=useronly" ), url( userOnly, "permissions=useronly" ) );
+
+        assertEquals( "yes", mpc.getProperty( "only.noveto" ) );
+        assertEquals( "the rest of the read proceeds normally", "yes", mpc.getProperty( "only.useronly" ) );
     }
 }

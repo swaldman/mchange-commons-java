@@ -85,13 +85,21 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *      <p>Hard links need no special treatment and get none: a hard link <i>is</i> the file,
  *      sharing its inode, owner and permissions, so it is checked as the regular file it is.</p>
  *
- *      <p>What is still not examined: the <b>containing directory</b>. Someone able to write there
- *      can delete the configuration, which no permission check can prevent, though they cannot
- *      substitute content of their own &mdash; any file they own that you could read would have to
- *      carry group or other bits, and would be refused. There also remains an unavoidable gap
- *      between the check and the open, since Java offers no way to interrogate an already-open
- *      file; the check resolves the path once and opens what it resolved, which narrows the gap
- *      without closing it.</p></li>
+ *      <p><b>Deletion</b> remains possible, and no check on a file can prevent it: whoever can
+ *      write a directory above it may unlink the configuration. They cannot substitute content of
+ *      their own &mdash; any file they own that you could read would have to carry group or other
+ *      bits, and would be refused &mdash; but they can make it vanish, and a file that is absent
+ *      and not {@code required} is skipped silently. Because that failure is a quiet one, the
+ *      containing directories are walked upward and a <b>warning</b> is logged naming the first
+ *      that would permit it: one not owned by the running user or root, or one writable by group
+ *      or other without the sticky bit set (the bit that makes {@code /tmp} safe to share). This
+ *      is advice and never a veto &mdash; no requirement is imposed on where configuration may
+ *      live &mdash; and the remedy it suggests is {@code required=true}, which turns a silent
+ *      disappearance into a loud failure.</p>
+ *
+ *      <p>There also remains an unavoidable gap between the check and the open, since Java offers
+ *      no way to interrogate an already-open file; the check resolves the path once and opens what
+ *      it resolved, which narrows the gap without closing it.</p></li>
  *
  *      <li>{@code required=true} &mdash; treat the absence of the file as an error rather than
  *      ignoring it. {@code required=false} is the default behavior.</li>

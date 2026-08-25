@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.nio.file.FileSystems;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.NoSuchFileException;
 
@@ -131,6 +132,11 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                 try (InputStream is = new BufferedInputStream(new FileInputStream(readPath.toFile())))
                 { props.load(is); }
 
+                // the file itself is sound. it can still be deleted by whoever can write a
+                // directory above it, which no check on the file can prevent -- so advise.
+                if (enforceUserOnlyPermissions)
+                    warnIfRemovableByOthers( identifier, readPath, requiredConfig, delayedLogItems );
+
                 return new PropertiesConfigSource.Parse(props, delayedLogItems);
             }
             catch (FileNotFoundException e)
@@ -220,6 +226,125 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             // directory -- NOT to the process working directory
             p = target.isAbsolute() ? target : p.getParent().resolve( target );
         }
+    }
+
+    /**
+     *  Advisory only. Never vetoes, never affects what is read.
+     *
+     *  The permission and ownership checks above establish that nobody else can change what this
+     *  file says. They cannot establish that the file will still be there: deletion is controlled
+     *  by the directories above it, not by the file. Whoever can write a containing directory can
+     *  unlink the configuration, and can do so at any depth -- a tight 0700 directory inside a
+     *  world-writable parent is not safe, because the parent's writer can rename the whole subtree
+     *  aside and put their own in its place. So we walk all the way up.
+     *
+     *  That matters here more than it might elsewhere because of an asymmetry in this class: with
+     *  required=true a vanished file throws, loudly. Otherwise it is skipped at FINE and the
+     *  application simply runs on without configuration it was written to expect. The quiet case
+     *  is the dangerous one, so it is the one we warn about, and required=true is the remedy we
+     *  suggest -- it converts a silent disappearance into a loud failure.
+     *
+     *  We deliberately impose no requirement on directory structure. A general configuration
+     *  library cannot demand a dedicated directory the way ssh demands ~/.ssh; config lives in
+     *  shared trees for legitimate reasons. We only point out what we notice.
+     *
+     *  And we notice only some of it. This is a BEST-EFFORT detection, deliberately biased toward
+     *  silence: where we cannot establish that a risk is present, we say nothing rather than guess.
+     *  So the absence of a warning is NOT an assurance that a file is safe from deletion -- it may
+     *  equally mean we could not tell. We stay silent, specifically, when the real path will not
+     *  resolve, so that there is no chain of directories to examine at all; when a directory along
+     *  the way cannot be stat'ed, since being unable to look at something is not evidence against
+     *  it, so the walk skips it and continues upward; and when the sticky bit cannot be read
+     *  because the non-standard "unix" attribute view is unavailable, since without it a
+     *  world-writable directory cannot be told apart from a world-writable sticky one like /tmp,
+     *  and warning about both would be worse than warning about neither.
+     *
+     *  Two further gaps are inherent rather than incidental. First, mode bits are not the only
+     *  thing that can grant write access to a directory: an ACL can, on filesystems that carry
+     *  them, and we do not examine ACLs -- so a directory we pass over in silence may still be
+     *  writable by someone else. Second, this is a point-in-time observation, as every check here
+     *  is; a directory's mode or ownership can change after we have looked at it.
+     *
+     *  Erring toward silence is the right bias for an advisory that cannot be switched off. A
+     *  warning that fires when it should not teaches people to ignore the warning, which costs
+     *  more than the cases we miss.
+     */
+    private void warnIfRemovableByOthers( String identifier, Path readPath, boolean requiredConfig,
+                                          List<DelayedLogItem> delayedLogItems )
+    {
+        // a vanished required file already throws. there is no silent failure to warn about.
+        if ( requiredConfig ) return;
+
+        Path start;
+        try { start = readPath.toRealPath(); }
+        catch ( Exception e ) { return; } // cannot resolve it, cannot advise about it
+
+        // NOTE: the walk must start from the REAL path. getParent() is purely lexical, so for a
+        // file under /etc on a system where /etc is a symlink to /private/etc, the lexical parents
+        // are /etc and / -- and /private itself is never examined at all.
+        for ( Path dir = start.getParent(); dir != null; dir = dir.getParent() )
+        {
+            PosixFileAttributes attrs;
+            try
+            { attrs = Files.readAttributes( dir, PosixFileAttributes.class ); }
+            catch ( Exception e )
+            { continue; } // a directory we cannot stat is not evidence of risk. keep walking.
+
+            String problem = null;
+
+            if (! acceptableOwner( attrs.owner(), delayedLogItems ) )
+            {
+                // note that the sticky bit does not save us here: in a sticky directory the
+                // directory's own owner may still remove anything within it.
+                problem = "is owned by '" + attrs.owner().getName() + "', neither the current user nor root";
+            }
+            else
+            {
+                Set<PosixFilePermission> perms = attrs.permissions();
+                boolean writableByOthers = perms.contains( PosixFilePermission.GROUP_WRITE )
+                                        || perms.contains( PosixFilePermission.OTHERS_WRITE );
+                if ( writableByOthers && Boolean.FALSE.equals( sticky( dir ) ) )
+                    problem = "is writable by others (" + PosixFilePermissions.toString( perms ) + ") and is not sticky";
+            }
+
+            if ( problem != null )
+            {
+                delayedLogItems.add( new DelayedLogItem( DelayedLogItem.Level.WARNING,
+                    "For '" + identifier + "', useronly permissions are set, but directory '" + dir + "' " +
+                    problem + ". Anyone able to write that directory can delete this configuration. Because it " +
+                    "is not marked required, reads would then silently proceed without it. Consider adding " +
+                    "required=true, so that a disappearance fails loudly instead." ) );
+                return; // one warning: the nearest offending directory is the one to fix first
+            }
+        }
+    }
+
+    /**
+     *  TRUE, FALSE, or null when we cannot tell.
+     *
+     *  The distinction matters. World-writable directories are ordinary and safe when sticky --
+     *  /tmp and /var/tmp are drwxrwxrwt on every Unix -- because a sticky directory lets only a
+     *  file's owner (or the directory's owner, or root) unlink it. Warning about those would be a
+     *  false positive on the most common shared directories there are, which is exactly how an
+     *  advisory teaches people to ignore it.
+     *
+     *  PosixFilePermission cannot express this: it is the nine rwx bits and nothing else. So we
+     *  read the raw mode, which requires the non-standard "unix" attribute view -- "posix" is the
+     *  standard one -- exactly as the superuser check above does. Where it is unavailable we
+     *  return null and simply decline to judge that directory, rather than guess. Unlike the
+     *  superuser fallback there is nothing to report: no security decision is weakened, we are
+     *  only withholding advice.
+     */
+    private static Boolean sticky( Path dir )
+    {
+        try
+        {
+            Object mode = Files.getAttribute( dir, "unix:mode" );
+            if ( mode instanceof Number )
+                return Boolean.valueOf( (((Number) mode).intValue() & 01000) != 0 );
+        }
+        catch ( Exception e ) { /* view unsupported; fall through to null */ }
+        return null;
     }
 
     /** Names the chain walked, when there was one, so a failure says which hop was at fault. */
