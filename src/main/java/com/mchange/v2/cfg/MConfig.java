@@ -54,6 +54,34 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *  <ul>
  *    <li><p>{@code /} is a special token that means System properties.</p></li>
  *
+ *    <li><p>Paths beginning {@code file:} are file URLs naming properties files at absolute
+ *    filesystem locations. This is for configuration you deliberately do <i>not</i> want on the
+ *    CLASSPATH, such as credentials. A file that is not found is ignored and forgotten, exactly
+ *    as a missing classloader resource is.</p>
+ *
+ *    <p>A {@code ?} in a file-url path begins a web-url-style query string carrying options.
+ *    (Filenames that embed a {@code ?} directly are therefore not supported.) Option <b>keys are
+ *    case-sensitive</b>; option <b>values are case-insensitive</b>. Two options are supported:</p>
+ *
+ *    <ul>
+ *      <li>{@code permissions=useronly} &mdash; refuse the file unless its owner holds all of its
+ *      read/write/execute permissions, i.e. no group or other bits are set. This is a hygiene
+ *      check against a credentials file being left group- or world-readable. It examines the mode
+ *      of the file it is about to read, and nothing more: not the containing directory, and not
+ *      whether the path is reached through a symbolic or hard link.</li>
+ *
+ *      <li>{@code required=true} &mdash; treat the absence of the file as an error rather than
+ *      ignoring it. {@code required=false} is the default behavior.</li>
+ *    </ul>
+ *
+ *    <p>Any request these options make that the library cannot honor <b>vetoes</b> the
+ *    configuration &mdash; see below. That includes a file failing the permissions check, a
+ *    mis-cased or unrecognized option key (so {@code ?Permissions=useronly} is an error, never a
+ *    silently skipped check), an option given no value or an unrecognized value, a
+ *    {@code required=true} file that is absent, and a platform that cannot report POSIX
+ *    permissions when {@code permissions} was requested. What is <i>not</i> a veto: a missing
+ *    file, absent {@code required=true}. Absence is not insecurity.</p></li>
+ *
  *    <li><p>Paths beginning {@code hocon:} are interpreted according to
  *    <a href="https://github.com/lightbend/config/blob/main/HOCON.md">HOCON</a> conventions when
  *    HOCON / lightbend config libraries
@@ -111,15 +139,54 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
  *  then System properties and the menagerie of resources that lightbend config examines may be
  *  invoked.</p>
  *
+ *  <h3>Vetoable configuration</h3>
+ *
+ *  <p>Most sources can only fail to find configuration. A few can refuse to supply it: a
+ *  {@code file:} URL asked to accept only owner-readable files will refuse one that anybody can
+ *  read. Such a source implements {@link VetoableConfig} and signals the refusal by throwing
+ *  {@link ConfigVetoedException}, which is checked.</p>
+ *
+ *  <p>The point of making this explicit is that a refusal aborts a read, and a read may include
+ *  resource paths the application never chose. The traditional resource-path text files are
+ *  supplied by whoever assembles the CLASSPATH, so without care an end user's configuration
+ *  choice could stop an application &mdash; or the logging library &mdash; from starting at all.
+ *  So whether a veto can reach you is a property of the API you call, decided from the source
+ *  class before anything is read:</p>
+ *
+ *  <ul>
+ *    <li><p>{@link MConfig.AsProvidedVetoable} accepts vetoable identifiers, and its methods
+ *    declare {@code throws ConfigVetoedException}. This is the only way to read a {@code file:}
+ *    URL. Use it when you want to hear about a refusal &mdash; if you asked for a security
+ *    property, you generally want to know it could not be honored rather than proceed without
+ *    the configuration it guarded.</p></li>
+ *
+ *    <li><p>{@link MConfig.AsProvided} refuses vetoable identifiers up front, with an
+ *    IllegalArgumentException naming them and pointing at {@code AsProvidedVetoable}. Every path
+ *    it reads was named by the caller in code, so naming a vetoable one is a programmer error,
+ *    and is reported before any file is opened. Note that this follows from the source class
+ *    rather than the identifier: a {@code file:} URL is refused even with no query string at
+ *    all, since nothing about it could then provoke a veto. That is the price of being able to
+ *    decide the question without reading anything.</p></li>
+ *
+ *    <li><p>{@link MConfig.WithTraditionalDefaultSources} ignores vetoes. The vetoing source is
+ *    dropped with a WARNING and every other source still loads. Its resource paths can come from
+ *    text files the application does not control, so a veto there is an end user's choice and
+ *    must degrade rather than abort.</p></li>
+ *  </ul>
+ *
+ *  <p>Cache entries are keyed by which of these you called, as well as by the resolved resource
+ *  paths, because the three do not agree about what reading those paths means.</p>
+ *
  *  <h3>Choosing an API</h3>
  *
- *  <p>You can access the traditional functionality of this library via the
- *  {@link MConfig.WithTraditionalDefaultSources}
- *  methods and the simpler as-provided functionality via {@link MConfig.AsProvided} methods.
- *  The methods that were
- *  traditionally used, {@code readVmConfig(...)}, remain, but only for backwards compatibility.</p>
+ *  <p>New code should prefer {@link MConfig.AsProvided}, or
+ *  {@link MConfig.AsProvidedVetoable} if it needs {@code file:} URLs. Both read only the
+ *  locations you name. {@link MConfig.WithTraditionalDefaultSources} remains, and is not
+ *  deprecated, but the resource-path text file machinery it implies is more complex and more
+ *  obscure than most applications want. The methods that were traditionally used,
+ *  {@code readVmConfig(...)}, remain only for backwards compatibility.</p>
  *
- *  <p>You can choose cached or uncached versions of both approaches. If you read from cached
+ *  <p>You can choose cached or uncached versions of these approaches. If you read from cached
  *  methods, the config
  *  sources will only be read once even if you call the same method multiple times. It may be
  *  simpler to
