@@ -3,6 +3,7 @@ package com.mchange.v2.cfg.junit;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -83,10 +84,15 @@ public final class ConfigCachingJUnitTestCase extends TestCase
     }
 
     /**
-     *  Both facades share one CachedStore. A traditional read and an as-provided read
-     *  that resolve to the same path list therefore return the same instance.
+     *  The two facades no longer share a cache entry, even for an identical resolved path list.
+     *
+     *  PathsKey now carries MConfig.Kind alongside the paths, because the kinds do not agree about
+     *  what a read of those paths MEANS: a veto aborts an AsProvidedVetoable read, is ignored with a
+     *  warning by a Traditional one, and should be impossible in an AsProvided one. Handing a cached
+     *  result from one kind to a caller who asked for another would hand them the wrong semantics
+     *  along with the right properties.
      */
-    public void testFacadesShareOneCache()
+    public void testFacadesDoNotShareCacheEntries()
     {
         CfgScenario s = CfgScenario.open( "no-pathfiles" );
         try
@@ -98,8 +104,11 @@ public final class ConfigCachingJUnitTestCase extends TestCase
             Object asProvided = s.asProvidedCached( new String[] {
                 "/mchange-commons.properties", "hocon:/reference,/application,/", "/" } );
 
-            assertSame( "the two facades share one CachedStore, keyed on resolved paths",
-                        traditional, asProvided );
+            assertTrue( "the resolved paths agree",
+                        Arrays.equals( s.getPropertiesResourcePaths( traditional ),
+                                       s.getPropertiesResourcePaths( asProvided ) ) );
+            assertTrue( "but the kinds differ, so the cache entries must differ",
+                        traditional != asProvided );
         }
         finally
         { s.closeQuietly(); }

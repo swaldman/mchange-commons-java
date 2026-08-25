@@ -71,6 +71,33 @@ public final class CfgScenario implements Closeable
     public static CfgScenario open( String scenarioName )
     { return open( scenarioName, true ); }
 
+    /**
+     *  Like open(..), but prepends caller-created directories to the scenario classpath.
+     *
+     *  Scenario directories under src/test/resources are fixed at build time, which is fine until
+     *  a scenario's content must name something only known at runtime -- a resource-path text file
+     *  pointing at a temp file, say. Such a directory is built by the test and passed here; being
+     *  first on the classpath, it also shadows the named scenario.
+     */
+    public static CfgScenario openWithRoots( String scenarioName, boolean withHocon, java.io.File... extraRoots )
+    {
+        List<URL> urls = new ArrayList<URL>();
+        for ( java.io.File root : extraRoots )
+        {
+            try
+            { urls.add( root.toURI().toURL() ); }
+            catch ( MalformedURLException e )
+            { throw new RuntimeException( "Could not use '" + root + "' as a classpath root", e ); }
+        }
+        urls.add( scenarioRoot( scenarioName ) );
+        urls.add( codeSourceOf( "com.mchange.v2.cfg.MConfig" ) );
+        if ( withHocon )
+            urls.add( codeSourceOf( CN_HOCON_CONFIG ) );
+
+        return new CfgScenario( scenarioName,
+                                new URLClassLoader( urls.toArray( new URL[ urls.size() ] ), platformClassLoader() ) );
+    }
+
     private CfgScenario( String name, URLClassLoader loader )
     {
         this.name   = name;

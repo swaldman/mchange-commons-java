@@ -1,0 +1,325 @@
+package com.mchange.v2.cfg.junit;
+
+import junit.framework.TestCase;
+
+import com.mchange.v2.cfg.ConfigVetoedException;
+import com.mchange.v2.cfg.DelayedLogItem;
+import com.mchange.v2.cfg.InsecureConfigurationException;
+import com.mchange.v2.cfg.MConfig;
+import com.mchange.v2.cfg.MultiPropertiesConfig;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ *  The {@code file:} resource-path scheme -- loading properties from an absolute filesystem
+ *  path -- and its query-string options {@code permissions=useronly} and {@code required}.
+ *
+ *  A file: source is a VetoableConfig, so these reads go through MConfig.AsProvidedVetoable.
+ *  What a veto MEANS to each facade is covered separately, in VetoableConfigJUnitTestCase;
+ *  here we are only asking what makes this particular source veto.
+ *
+ *  No scenario ClassLoader is needed -- a file URL's behavior does not depend on classpath
+ *  composition -- but real files with real POSIX modes are, so the fixture is a temp directory
+ *  built per test. Permission-sensitive assertions are skipped where POSIX is unavailable.
+ */
+public final class FileUrlConfigJUnitTestCase extends TestCase
+{
+    private Path dir;
+    private Path userOnly;   // 0600  secret.key=from-useronly
+    private Path worldRead;  // 0644  secret.key=from-worldread
+    private Path second;     // 0600  secret.key=from-second
+
+    protected void setUp() throws Exception
+    {
+        dir       = Files.createTempDirectory( "mchange-cfg-fileurl-" );
+        userOnly  = write( "useronly.properties",  "secret.key=from-useronly\nonly.useronly=yes\n", "rw-------" );
+        worldRead = write( "worldread.properties", "secret.key=from-worldread\n",                   "rw-r--r--" );
+        second    = write( "second.properties",    "secret.key=from-second\nonly.second=yes\n",     "rw-------" );
+    }
+
+    protected void tearDown() throws Exception
+    {
+        deleteQuietly( userOnly ); deleteQuietly( worldRead ); deleteQuietly( second ); deleteQuietly( dir );
+    }
+
+    // ------------------------------------------------------------- fixture
+
+    private Path write( String name, String contents, String mode ) throws IOException
+    {
+        Path p = dir.resolve( name );
+        Files.write( p, contents.getBytes( "8859_1" ) );
+        if ( posixSupported() ) Files.setPosixFilePermissions( p, PosixFilePermissions.fromString( mode ) );
+        return p;
+    }
+
+    private static void deleteQuietly( Path p )
+    { try { if ( p != null ) Files.deleteIfExists( p ); } catch ( IOException e ) { /* best effort */ } }
+
+    private boolean posixSupported()
+    { return dir.getFileSystem().supportedFileAttributeViews().contains( "posix" ); }
+
+    private String url( Path p, String query )
+    { return p.toUri().toString() + (query == null ? "" : "?" + query); }
+
+    private String url( Path p )
+    { return url( p, null ); }
+
+    private String missingUrl( String query )
+    { return url( dir.resolve( "definitely-absent.properties" ), query ); }
+
+    // ------------------------------------------------------------- helpers
+
+    /** file: sources are vetoable, so reads of them go through the vetoable facade. */
+    private static MultiPropertiesConfig read( String... paths ) throws ConfigVetoedException
+    { return MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( paths, new ArrayList() ); }
+
+    private static List<String> pathsOf( MultiPropertiesConfig mpc )
+    { return Arrays.asList( mpc.getPropertiesResourcePaths() ); }
+
+    /** Asserts the read is vetoed, and returns the veto's message. */
+    private static String assertVetoed( String... paths )
+    {
+        try
+        {
+            MultiPropertiesConfig mpc = read( paths );
+            fail( "expected a veto, but the read succeeded with " + Arrays.toString( mpc.getPropertiesResourcePaths() ) );
+            return null; // unreachable
+        }
+        catch ( ConfigVetoedException expected )
+        {
+            assertTrue( "a permissions/required refusal should be an InsecureConfigurationException, was "
+                            + expected.getClass().getName(),
+                        expected instanceof InsecureConfigurationException );
+            return expected.getMessage();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static boolean hasFineSkip( MultiPropertiesConfig mpc )
+    {
+        List<DelayedLogItem> items = mpc.getDelayedLogItems(); // raw List on the API
+        for ( DelayedLogItem item : items )
+            if ( DelayedLogItem.Level.FINE.equals( item.getLevel() )
+                 && item.getText() != null && item.getText().contains( "could not be found. Skipping." ) )
+                return true;
+        return false;
+    }
+
+    // =================================================== basic functionality
+
+    public void testFileUrlPropertiesAppearInConfig() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( url( userOnly ) );
+
+        assertEquals( "from-useronly", mpc.getProperty( "secret.key" ) );
+        assertEquals( "yes", mpc.getProperty( "only.useronly" ) );
+        assertEquals( Arrays.asList( url( userOnly ) ), pathsOf( mpc ) );
+    }
+
+    public void testFileUrlWithQueryStringStillLoads() throws Exception
+    { assertEquals( "from-useronly", read( url( userOnly, "permissions=useronly" ) ).getProperty( "secret.key" ) ); }
+
+    public void testLaterFileUrlWinsOnConflict() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( url( userOnly ), url( second ) );
+
+        assertEquals( "the later file URL should win", "from-second", mpc.getProperty( "secret.key" ) );
+        assertEquals( "yes", mpc.getProperty( "only.useronly" ) );
+        assertEquals( "yes", mpc.getProperty( "only.second" ) );
+    }
+
+    public void testFileUrlOrderIsSignificant() throws Exception
+    { assertEquals( "from-useronly", read( url( second ), url( userOnly ) ).getProperty( "secret.key" ) ); }
+
+    /** file: and classpath-resource sources layer together, later winning. */
+    public void testFileUrlLayersWithClasspathResources() throws Exception
+    {
+        final String RSRC_A = "/com/mchange/v2/cfg/junit/a.properties"; // user.home=/a/home
+        Path homeOverride = write( "home.properties", "user.home=/from/file/url\n", "rw-------" );
+        try
+        {
+            assertEquals( "the file URL listed later should win",
+                          "/from/file/url", read( RSRC_A, url( homeOverride ) ).getProperty( "user.home" ) );
+            assertEquals( "the classpath resource listed later should win",
+                          "/a/home", read( url( homeOverride ), RSRC_A ).getProperty( "user.home" ) );
+        }
+        finally
+        { deleteQuietly( homeOverride ); }
+    }
+
+    // ==================================================== permissions matrix
+
+    public void testUserOnlyPermissionsAccepted() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        assertEquals( "from-useronly", read( url( userOnly, "permissions=useronly" ) ).getProperty( "secret.key" ) );
+    }
+
+    public void testWorldReadableFileIsVetoed()
+    {
+        if ( !posixSupported() ) return;
+        String msg = assertVetoed( url( worldRead, "permissions=useronly" ) );
+        assertTrue( "the message should name the offending permissions, was: " + msg,
+                    msg.contains( "OTHERS_READ" ) || msg.contains( "GROUP_READ" ) );
+    }
+
+    public void testWorldReadableFileLoadsWithoutTheQuery() throws Exception
+    {
+        assertEquals( "permissions should only be checked when asked for",
+                      "from-worldread", read( url( worldRead ) ).getProperty( "secret.key" ) );
+    }
+
+    public void testPermissionsValueIsCaseInsensitive() throws Exception
+    {
+        if ( !posixSupported() ) return;
+        assertVetoed( url( worldRead, "permissions=UserOnly" ) ); // understood and enforced, not ignored
+        assertEquals( "from-useronly", read( url( userOnly, "permissions=USERONLY" ) ).getProperty( "secret.key" ) );
+    }
+
+    /**
+     *  The query KEY is case-sensitive, and a mis-cased key vetoes rather than being ignored.
+     *  This is the fail-open case: a capitalized key must never quietly skip the permissions
+     *  check on a world-readable file.
+     */
+    public void testMisCasedPermissionsKeyIsVetoedNotIgnored()
+    {
+        String msg = assertVetoed( url( worldRead, "Permissions=useronly" ) );
+        assertTrue( "the message should name the offending key, was: " + msg, msg.contains( "Permissions" ) );
+    }
+
+    public void testPermissionsKeyWithNoValueIsVetoed()
+    {
+        String msg = assertVetoed( url( worldRead, "permissions" ) );
+        assertTrue( "should mention the missing value, was: " + msg, msg.contains( "no value" ) );
+    }
+
+    public void testEmptyPermissionsValueIsVetoed()
+    { assertVetoed( url( worldRead, "permissions=" ) ); }
+
+    public void testUnsupportedPermissionsValueIsVetoed()
+    {
+        String msg = assertVetoed( url( worldRead, "permissions=everyone" ) );
+        assertTrue( "should name the offending value, was: " + msg, msg.contains( "everyone" ) );
+    }
+
+    public void testUnsupportedQueryKeyIsVetoed()
+    {
+        String msg = assertVetoed( url( userOnly, "permissoins=useronly" ) );
+        assertTrue( "should name the offending key, was: " + msg, msg.contains( "permissoins" ) );
+    }
+
+    /** A veto aborts the whole read -- it does not merely drop the offending path. */
+    public void testVetoAbortsTheEntireRead()
+    {
+        if ( !posixSupported() ) return;
+        // the good source is listed FIRST, so "abort" is distinguishable from "skip the bad one"
+        assertVetoed( url( userOnly ), url( worldRead, "permissions=useronly" ) );
+    }
+
+    /** The veto carries the source and identifier that produced it, not just a message. */
+    public void testVetoIdentifiesItsSourceAndIdentifier()
+    {
+        if ( !posixSupported() ) return;
+        String id = url( worldRead, "permissions=useronly" );
+        try
+        {
+            read( id );
+            fail( "expected a veto" );
+        }
+        catch ( ConfigVetoedException cve )
+        {
+            assertEquals( "the veto should report the identifier it choked on", id, cve.getIdentifier() );
+            assertNotNull( "the veto should report the source that raised it", cve.getSource() );
+        }
+    }
+
+    // ================================================= missing-file handling
+
+    public void testMissingFileIsSkipped() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( null ) );
+        assertEquals( 0, pathsOf( mpc ).size() );
+        assertTrue( "expected a FINE skip notice", hasFineSkip( mpc ) );
+    }
+
+    /**
+     *  Absence is not insecurity: a missing file must be skipped even when
+     *  permissions=useronly is requested, rather than vetoing.
+     */
+    public void testMissingFileWithPermissionsQueryIsAlsoJustSkipped() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ) );
+        assertEquals( 0, pathsOf( mpc ).size() );
+        assertTrue( "expected a FINE skip, not a veto", hasFineSkip( mpc ) );
+    }
+
+    public void testMissingFileDoesNotDisturbOtherSources() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ), url( userOnly ) );
+
+        assertEquals( "from-useronly", mpc.getProperty( "secret.key" ) );
+        assertEquals( Arrays.asList( url( userOnly ) ), pathsOf( mpc ) );
+    }
+
+    // ============================================================= required
+
+    public void testRequiredTrueWithPresentFileLoads() throws Exception
+    { assertEquals( "from-useronly", read( url( userOnly, "required=true" ) ).getProperty( "secret.key" ) ); }
+
+    public void testRequiredTrueWithMissingFileIsVetoed()
+    {
+        String msg = assertVetoed( missingUrl( "required=true" ) );
+        assertTrue( "should say the file was required, was: " + msg, msg.contains( "required" ) );
+    }
+
+    public void testRequiredFalseWithMissingFileIsSkipped() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "required=false" ) );
+        assertEquals( 0, pathsOf( mpc ).size() );
+        assertTrue( hasFineSkip( mpc ) );
+    }
+
+    public void testRequiredAndPermissionsCompose() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        assertEquals( "both satisfied -> loads", "from-useronly",
+                      read( url( userOnly, "permissions=useronly&required=true" ) ).getProperty( "secret.key" ) );
+
+        // present but insecure, and required: the permissions failure is what reports
+        String msg = assertVetoed( url( worldRead, "permissions=useronly&required=true" ) );
+        assertTrue( "expected the permissions failure, was: " + msg,
+                    msg.contains( "OTHERS_READ" ) || msg.contains( "GROUP_READ" ) );
+
+        // absent and required: required is what reports
+        assertTrue( assertVetoed( missingUrl( "permissions=useronly&required=true" ) ).contains( "required" ) );
+    }
+
+    public void testMalformedRequiredValueIsVetoed()
+    {
+        assertVetoed( url( userOnly, "required" ) );
+        assertVetoed( url( userOnly, "required=" ) );
+        assertVetoed( url( userOnly, "required=yes" ) );
+        assertVetoed( url( userOnly, "required=true&required=false" ) );
+    }
+
+    // ------------------------------------------------ capitalized scheme
+
+    public void testCapitalizedSchemeIsHonored() throws Exception
+    {
+        String upper = "FILE:" + url( userOnly ).substring( "file:".length() );
+        assertEquals( "from-useronly", read( upper ).getProperty( "secret.key" ) );
+    }
+
+    public void testCapitalizedSchemeStillEnforcesPermissions()
+    {
+        if ( !posixSupported() ) return;
+        assertVetoed( "FILE:" + url( worldRead, "permissions=useronly" ).substring( "file:".length() ) );
+    }
+}
