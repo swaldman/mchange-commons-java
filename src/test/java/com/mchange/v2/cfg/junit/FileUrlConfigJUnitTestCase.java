@@ -153,6 +153,45 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         { deleteQuietly( homeOverride ); }
     }
 
+    /**
+     *  Precedence between the two non-classpath schemes, in both directions.
+     *
+     *  file:-vs-classpath and hocon:-vs-classpath are each covered elsewhere, so file:-vs-hocon
+     *  follows transitively -- but only if precedence really is a property of position in the
+     *  resolved path list rather than of the kind of source. This asserts it directly.
+     *
+     *  A HOCON element containing a colon is read as a URL, so the HOCON side can be a temp file
+     *  too, and the test needs no build-time classpath resource.
+     */
+    public void testFileUrlAndHoconPathLayerInPositionOrder() throws Exception
+    {
+        Path conf = dir.resolve( "layered.conf" );
+        Files.write( conf, "shared.key = from-hocon\nonly.hocon = yes\n".getBytes( "8859_1" ) );
+
+        Path props = write( "layered.properties", "shared.key=from-file-url\nonly.fileurl=yes\n", "rw-------" );
+
+        String hoconPath = "hocon:" + conf.toUri().toString();
+        String fileUrl   = url( props );
+
+        try
+        {
+            MultiPropertiesConfig hoconFirst = read( hoconPath, fileUrl );
+            assertEquals( "the file URL is later, so it wins",
+                          "from-file-url", hoconFirst.getProperty( "shared.key" ) );
+            assertEquals( "the HOCON source still contributes its own keys",
+                          "yes", hoconFirst.getProperty( "only.hocon" ) );
+            assertEquals( "yes", hoconFirst.getProperty( "only.fileurl" ) );
+
+            MultiPropertiesConfig fileFirst = read( fileUrl, hoconPath );
+            assertEquals( "reversed, the HOCON path is later, so it wins",
+                          "from-hocon", fileFirst.getProperty( "shared.key" ) );
+            assertEquals( "yes", fileFirst.getProperty( "only.hocon" ) );
+            assertEquals( "yes", fileFirst.getProperty( "only.fileurl" ) );
+        }
+        finally
+        { deleteQuietly( conf ); deleteQuietly( props ); }
+    }
+
     // ==================================================== permissions matrix
 
     public void testUserOnlyPermissionsAccepted() throws Exception
