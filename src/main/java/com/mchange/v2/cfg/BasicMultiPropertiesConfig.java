@@ -16,61 +16,6 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     final static BasicMultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig();
 
-    static final class SystemPropertiesConfigSource implements PropertiesConfigSource
-    {
-	public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
-	{
-	    if ( "/".equals( identifier ) )
-		return new Parse( (Properties) System.getProperties().clone(), Collections.<DelayedLogItem>emptyList() );
-	    else
-		throw new Exception(  String.format("Unexpected identifier for System properties: '%s'", identifier) );
-	}
-    }
-
-    static boolean isHoconPath( String identifier )
-    { return (identifier.length() > HOCON_PFX_LEN && identifier.substring(0,6).toLowerCase().equals("hocon:")); }
-
-    private static PropertiesConfigSource configSource( boolean acceptVetoable, String identifier ) throws Exception
-    {
-	boolean hocon = isHoconPath( identifier );
-        boolean file  = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
-
-        PropertiesConfigSource out;
-
-	if (!hocon && !file && !identifier.startsWith("/"))
-	    throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a file URL nor a HOCON path. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:')", identifier));
-
-	if ( hocon )
-	    {
-		try
-		    {
-			Class.forName( HOCON_CFG_CNAME );
-			out = new HoconPropertiesConfigSource();
-		    }
-		catch (ClassNotFoundException e)
-		    {
-			//Okay. Apparently the HOCON bridge lib is not available. Let's see if the resource is present.
-			int sfx_index = identifier.lastIndexOf('#');
-			String resourcePath = sfx_index > 0 ? identifier.substring( HOCON_PFX_LEN, sfx_index ) : identifier.substring( HOCON_PFX_LEN );
-			if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
-			    throw new FileNotFoundException( String.format("HOCON lib (typesafe-config) is not available. Also, no resource available at '%s' for HOCON identifier '%s'.", resourcePath, identifier) );
-			else
-			    throw new Exception(String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON lib (typesafe-config) is not available.", identifier), e);
-		    }
-	    }
-	else if ( "/".equals(identifier) )
-	    out = new SystemPropertiesConfigSource();
-        else if (file)
-            out = new FileUrlPropertiesConfigSource();
-	else
-	    out = new BasicPropertiesConfigSource();
-
-        if ((!acceptVetoable) && (out instanceof VetoableConfig))
-            throw new IllegalArgumentException( "Resource identifier '" + identifier + "' represents vetoable configuration, but the requested configuration does not support vetoable config." );
-
-        return out;
-    }
-
     String[] rps;
     Map  propsByResourcePaths;
     Map  propsByPrefixes;
@@ -79,18 +24,27 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     Properties propsByKey;
 
-    public BasicMultiPropertiesConfig(String[] resourcePaths)
-    { this( resourcePaths, null ); }
+    static class VetoThrowing {
+        static VetoThrowing INSTANCE = new VetoThrowing();
+        private VetoThrowing() {}
+    }
 
-    public BasicMultiPropertiesConfig(String[] resourcePaths, List delayedLogItems)
+    public BasicMultiPropertiesConfig(String[] resourcePaths)
+    { this( MConfig.Kind.Traditional, resourcePaths, null ); } // mimics the traditional behavior of the library as closely as we now make available
+
+    // VetoThrowing implies MConfig.Kind.AsProvidedVetoable
+    BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
     {
-	firstInitNotVetoable( resourcePaths, delayedLogItems );
+	firstInit( MConfig.Kind.AsProvidedVetoable, resourcePaths, delayedLogItems );
 	finishInit( delayedLogItems );
     }
 
-    BasicMultiPropertiesConfig(boolean acceptVetoable, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
+    // non-VetoThrowing implies MConfig.Kind.AsProvided or MConfig.Kind.Traditional
+    BasicMultiPropertiesConfig(MConfig.Kind kind, String[] resourcePaths, List delayedLogItems)
     {
-	firstInit( acceptVetoable, resourcePaths, delayedLogItems );
+        if (kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
+            throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
+	firstInitNotVetoThrowing( kind, resourcePaths, delayedLogItems );
 	finishInit( delayedLogItems );
     }
 
@@ -133,56 +87,115 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     private DelayedLogItem fileNotFoundDelayedItem(String rp, Exception e)
     { return new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping. [%s]", rp, e.toString()) ); }
 
-    private void firstInitNotVetoable( String[] resourcePaths, List delayedLogItems )
+    private void firstInitNotVetoThrowing( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems )
     {
-        try
-        { firstInit( false, resourcePaths, delayedLogItems ); }
-        catch (ConfigVetoedException e)
-        { throw new RuntimeException("Bad PropertiesConfigSource: We should never see a ConfigVetoedException from a non-VetoableConfig!", e); }
+        try { firstInit( kind, resourcePaths, delayedLogItems ); }
+        catch (ConfigVetoedException cve)
+        { throw new RuntimeException("Internal inconsistency! All ConfigVetoedExceptions should have been handled by this point: " + cve, cve); }
     }
 
-    private void firstInit( boolean acceptVetoable, String[] resourcePaths, List delayedLogItems ) throws ConfigVetoedException
+    private void logCveForAsProvided(ConfigVetoedException cve, List delayedLogItems)
+    {
+        String identifier = cve.getIdentifier();
+        String identifierPart = identifier == null ? "" : " The resource it was trying to read was '" + identifier + "'. Config provided by identifier will be ignored.";
+        String longAssMessage =
+            "A PropertiesConfigSource tried to veto config in a BasicMultiPropertiesConfig that should have excluded vetoable config! " +
+            "This is either a bug in the com.mchange.v2.cfg library, or a bug in the PropertiesConfigSource, which should not throw " +
+            "a ConfigVetoedException unless it implements the VetoableConfig interface, which should have prevented its participation " +
+            "in this PropertiesConfigSource. The PropertiesConfigSource that threw the unexpected Exception was " + cve.getSource() + "." +
+            identifierPart;
+        delayedLogItems.add( new DelayedLogItem( Level.WARNING, longAssMessage, cve ) );
+    }
+
+    private void logCveForAsProvidedVetoable(ConfigVetoedException cve, List delayedLogItems)
+    {
+        String identifier = cve.getIdentifier();
+        String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
+        String msg = "A PropertiesConfigSource (" + cve.getSource() + ") has vetoed config in a BasicMultiPropertiesConfig" + identifierPart + " An Exception will be thrown.";
+        delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
+    }
+
+    private void logCveForTraditional(ConfigVetoedException cve, List delayedLogItems)
+    {
+        String identifier = cve.getIdentifier();
+        String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
+        String msg = "A PropertiesConfigSource (" + cve.getSource() + ") has vetoed config in a BasicMultiPropertiesConfig" + identifierPart + " Any associated configuration has been ignored!";
+        delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
+    }
+
+    private void firstInit( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems ) throws ConfigVetoedException
     {
 	boolean syserr = false;
-	if (delayedLogItems == null)
+        if (delayedLogItems == null)
         {
             delayedLogItems = new ArrayList();
             syserr = true;
         }
 
-	Map  pbrp = new HashMap();
-	List goodPaths = new ArrayList();
+        try
+        {
 
-	for( int i = 0, len = resourcePaths.length; i < len; ++i )
-	    {
-		String rp = resourcePaths[i];
+            Map  pbrp = new HashMap();
+            List goodPaths = new ArrayList();
 
-		try
-		{
-		    PropertiesConfigSource cs = configSource( acceptVetoable, rp );
-		    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
-		    pbrp.put( rp, parse.getProperties() );
-		    goodPaths.add( rp );
-		    delayedLogItems.addAll( parse.getDelayedLogItems() );
-		}
-                catch ( ConfigVetoedException cve ) // should only ever be seen if acceptVetoable is true. otherwise IllegalArgumentException
-                { throw cve; }
-		catch ( NoSuchFileException nsfe )
+            List<ConfigVetoedException> cves = new ArrayList<>();
+
+            for( int i = 0, len = resourcePaths.length; i < len; ++i )
+            {
+                String rp = resourcePaths[i];
+
+                try
+                {
+                    PropertiesConfigSource cs = ConfigUtils.propertiesConfigSourceForIdentifier( rp, delayedLogItems );
+                    if (cs == null)
+                        throw new FileNotFoundException( "'" + rp + "' could not be found. Skipping." );
+                    else
+                    {
+                        PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
+                        pbrp.put( rp, parse.getProperties() );
+                        goodPaths.add( rp );
+                        delayedLogItems.addAll( parse.getDelayedLogItems() );
+                    }
+                }
+                catch (ConfigVetoedException cve)
+                { cves.add(cve); }
+                catch ( NoSuchFileException nsfe )
                 { delayedLogItems.add( fileNotFoundDelayedItem(rp,nsfe) ); }
-		catch ( FileNotFoundException fnfe )
+                catch ( FileNotFoundException fnfe )
                 { delayedLogItems.add( fileNotFoundDelayedItem(rp,fnfe) ); }
-                catch ( IllegalArgumentException iae )
-                { throw iae; }
-		catch ( Exception e )
+                catch ( Exception e )
                 { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
-	    }
+            }
 
-	this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
-	this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
-	this.parseMessages = Collections.unmodifiableList( delayedLogItems );
+            this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
+            this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
 
-	if ( syserr )
-	    dumpToSysErr( delayedLogItems );
+            if (cves.size() != 0)
+            {
+                if (kind == MConfig.Kind.AsProvided)
+                    for (ConfigVetoedException cve : cves)
+                        logCveForAsProvided(cve, delayedLogItems);
+                else if (kind == MConfig.Kind.AsProvidedVetoable)
+                {
+                    ConfigVetoedException last = null;
+                    for (ConfigVetoedException cve : cves)
+                    {
+                        last = cve;
+                        logCveForAsProvidedVetoable(cve, delayedLogItems);
+                    }
+                    throw last;
+                }
+                else if (kind == MConfig.Kind.Traditional)
+                    for (ConfigVetoedException cve : cves)
+                        logCveForTraditional(cve, delayedLogItems);
+            }
+        }
+        finally
+        {
+            this.parseMessages = Collections.unmodifiableList( delayedLogItems );
+            if ( syserr )
+                dumpToSysErr( delayedLogItems );
+        }
     }
 
     /**

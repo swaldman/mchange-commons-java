@@ -20,9 +20,139 @@ final class ConfigUtils
 	    "/"
 	};
 
-    final static String[] NO_PATHS = new String[0];
+    final static String[] EMPTY_STRING_ARRAY = new String[0];
 
-    private final static String HOCON_PFX = "hocon:";
+    final static String HOCON_PFX     = "hocon:";
+    final static int    HOCON_PFX_LEN = HOCON_PFX.length();
+
+    private final static String HOCON_CFG_CNAME = "com.typesafe.config.Config";
+
+    // MT: protected by class' lock (currently never modified after construction, but that might change)
+    //     we build lazily, so we can have log items
+    final static Map<Class<?>,PropertiesConfigSource> pcsInstances = new HashMap<>();
+
+    synchronized static PropertiesConfigSource propertiesConfigSource(String fqcn, List delayedLogItems)
+    {
+        Class<?> clz = null;
+        try
+        {
+            clz = Class.forName(fqcn);
+            PropertiesConfigSource out = pcsInstances.get(clz);
+            if ( out == null )
+            {
+                out = (PropertiesConfigSource) clz.getDeclaredConstructor().newInstance();
+                pcsInstances.put(clz, out);
+            }
+            return out;
+        }
+        catch (Exception e)
+        {
+            if (delayedLogItems != null)
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING, "PropertiesConfigSource for " + fqcn + " could not be constructed.", e ) );
+            return null;
+        }
+    }
+
+    // eventually this should be extensible via some public API
+    static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List delayedLogItems)
+    {
+	boolean hocon = isHoconPath( identifier );
+        boolean file  = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
+
+        // NOTE: this validation used to live in BasicMultiPropertiesConfig.configSource. Without it,
+        // a malformed identifier falls through to BasicPropertiesConfigSource, fails to resolve as a
+        // classloader resource, and is reported as a quiet FINE "could not be found" -- which reads as
+        // "your file is missing" when the real problem is that the path is not well formed at all.
+        if (!hocon && !file && !identifier.startsWith("/"))
+            throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a file URL nor a HOCON path. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:')", identifier));
+
+        PropertiesConfigSource out;
+
+	if ( hocon )
+        {
+            try
+            {
+                Class.forName( HOCON_CFG_CNAME ); // so that lazy classloads doesn't fool us
+                out = propertiesConfigSource("com.mchange.v3.hocon.HoconPropertiesConfigSource", delayedLogItems);
+            }
+            catch (ClassNotFoundException e)
+            {
+                out = null;
+                if (delayedLogItems != null)
+                    delayedLogItems.add( new DelayedLogItem( Level.WARNING, "Class not found while testing for HOCON lib (typesafe-config).", e ) );
+            }
+            if (out == null)
+            {
+                //Okay. Apparently the HOCON bridge lib is not available. Let's see if the resource is present.
+                int sfx_index = identifier.lastIndexOf('#');
+                String resourcePath = sfx_index > 0 ? identifier.substring( HOCON_PFX_LEN, sfx_index ) : identifier.substring( HOCON_PFX_LEN );
+                if (delayedLogItems != null)
+                {
+                    if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
+                        delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("HOCON lib (typesafe-config) is not available. Also, no resource available at '%s' for HOCON identifier '%s'.", resourcePath, identifier) ) );
+                    else
+                        delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON lib (typesafe-config) is not available.", identifier) ) );
+                }
+            }
+        }
+	else if ( "/".equals(identifier) )
+	    out = propertiesConfigSource( SystemPropertiesConfigSource.class.getName(), delayedLogItems );
+        else if (file)
+	    out = propertiesConfigSource( FileUrlPropertiesConfigSource.class.getName(), delayedLogItems );
+	else
+	    out = propertiesConfigSource( BasicPropertiesConfigSource.class.getName(), delayedLogItems );
+
+        return out;
+    }
+
+    static boolean isHoconPath( String identifier )
+    { return identifier.toLowerCase().startsWith("hocon:"); }
+
+    static boolean pointsToVetoableConfig( String identifier, List delayedLogItems )
+    {
+        // null will return false, properly
+        try
+        { return propertiesConfigSourceForIdentifier( identifier, delayedLogItems ) instanceof VetoableConfig; }
+        catch ( IllegalArgumentException e )
+        {
+            // a malformed identifier is not vetoable. we do not report it here: this method is only
+            // asking a question, and the identifier will be read (and complained about) shortly.
+            return false;
+        }
+    }
+
+    static boolean containsVetoableConfig(String[] identifiers, List delayedLogItems)
+    {
+        if (identifiers == null) return false;
+        for (int i = identifiers.length-1; i >= 0; --i)
+            if (pointsToVetoableConfig(identifiers[i], delayedLogItems))
+                return true;
+        return false;
+    }
+
+    private static List<String> listVetoableConfigFrom(String[] identifiers, List delayedLogItems)
+    {
+        List<String> out = new ArrayList<>();
+        if (identifiers == null) return out; // callers may pass null; condenseResources normalizes, but it runs later
+        int len = identifiers.length;
+        for (int i = 0; i < len; ++i)
+        {
+            String identifier = identifiers[i];
+            if (pointsToVetoableConfig(identifier, delayedLogItems))
+                out.add(identifier);
+        }
+        return out;
+    }
+
+    private static List<String> listVetoableConfigFrom(String[] defaults, String[] preempts, List delayedLogItems)
+    {
+        List<String> out = listVetoableConfigFrom(defaults,delayedLogItems);
+        out.addAll( listVetoableConfigFrom(preempts,delayedLogItems) );
+        return out;
+    }
+
+    static String[] vetoableConfigFrom(String[] defaults, String[] preempts, List delayedLogItems)
+    { return listVetoableConfigFrom( defaults, preempts, delayedLogItems).toArray(EMPTY_STRING_ARRAY); }
 
     //MT: protected by class' lock
     static MultiPropertiesConfig canonicalDefaultConfig = null;
@@ -30,11 +160,8 @@ final class ConfigUtils
     //public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
     //{ return new BasicMultiPropertiesConfig( resourcePath, logger ); }
 
-    static MultiPropertiesConfig readVetoable(String[] resourcePath, List delayedLogItems) throws ConfigVetoedException
-    { return new BasicMultiPropertiesConfig( true, resourcePath, delayedLogItems ); }
-
-    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems) throws IllegalArgumentException
-    { return new BasicMultiPropertiesConfig( resourcePath, delayedLogItems ); }
+    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems)
+    { return new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, resourcePath, delayedLogItems ); } // retain traditional behavior as closely as possible
 
     public static MultiPropertiesConfig read(String[] resourcePath)
     { return new BasicMultiPropertiesConfig( resourcePath ); }
@@ -51,16 +178,10 @@ final class ConfigUtils
         return read( paths, delayedLogItemsOut );
     }
 
-    static MultiPropertiesConfig readVetoableUncachedClassloaderResourceConfig(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
-    {
-        String[] paths = condenseResources( withDefaults, defaultResources, preemptingResources, delayedLogItemsOut );
-        return readVetoable( paths, delayedLogItemsOut );
-    }
-
     static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
-	defaultResources = ( defaultResources == null ? NO_PATHS : defaultResources );
-	preemptingResources = ( preemptingResources == null ? NO_PATHS : preemptingResources );
+	defaultResources = ( defaultResources == null ? EMPTY_STRING_ARRAY : defaultResources );
+	preemptingResources = ( preemptingResources == null ? EMPTY_STRING_ARRAY : preemptingResources );
 	List pathsList;
         List raw;
         if (withDefaults)
@@ -355,7 +476,7 @@ final class ConfigUtils
 
 	// pass 1 -- build the indices
 	for ( String path : paths ) {
-	    if (BasicMultiPropertiesConfig.isHoconPath( path )) {
+	    if (isHoconPath( path )) {
 		List<String> elements = hoconPathElements( path );
 		hoconPathToElementsList.put( path, elements );
 		for (String element : elements ) {
@@ -378,7 +499,7 @@ final class ConfigUtils
 
 	// pass 2 -- rewrite each HOCON path to fall back to the paths it overlaps
 	for ( String path : paths ) {
-	    if (BasicMultiPropertiesConfig.isHoconPath( path )) {
+	    if (isHoconPath( path )) {
 		List<String> elements = hoconPathToElementsList.get( path );
 
 		// every HOCON path we overlap (this one included -- filtered out below)
@@ -408,7 +529,7 @@ final class ConfigUtils
 		// that is what preserves "a later path in the list wins" among them.
 		List<String> newElementsList = new ArrayList<String>();
 		for( String orderSettingPath : paths ) {
-		    if (BasicMultiPropertiesConfig.isHoconPath( orderSettingPath )) {
+		    if (isHoconPath( orderSettingPath )) {
 			if ( orderSettingPath != path ) { // we add the current path's elements last, since last overrides
 			    if ( pathSet.contains( orderSettingPath ) ) {
 				newElementsList.addAll( hoconPathToElementsList.get( orderSettingPath ) );

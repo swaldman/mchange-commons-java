@@ -1,4 +1,4 @@
 package com.mchange.v2.cfg;
 
-public interface VetoableConfig
+public interface VetoableConfig extends PropertiesConfigSource
 {}

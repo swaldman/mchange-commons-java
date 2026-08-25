@@ -20,6 +20,10 @@ public final class MLogConfig
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
 	List bli = new ArrayList();
+
+        // note that it's important that we read the config uncached here, because we call this from MLog's class init,
+        // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
+        // or deadlocks
 	MultiPropertiesConfig tmpCONFIG = MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
 
 	boolean firstLoad = (CONFIG == null);

@@ -61,7 +61,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             for (String s : parsedQueryString.keySet())
             {
                 if (!QUERY_KEYS.contains(s))
-                    throw new InsecureConfigurationException("identifier query string contains an unsupported key '" + s + "'. Note that keys are case-sensitive.");
+                    throw new InsecureConfigurationException(this, identifier, "identifier query string contains an unsupported key '" + s + "'. Note that keys are case-sensitive.");
             }
             boolean enforceUserOnlyPermissions = false;
             boolean requiredConfig = false;
@@ -71,12 +71,12 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             if (permissionsValues != null)
             {
                 if (permissionsValues.size() == 0)
-                    throw new InsecureConfigurationException("'" + identifier + "' specifies a '" + PERMISSIONS_KEY + "' key but no value. Please supply a value, or remove the key.");
+                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + PERMISSIONS_KEY + "' key but no value. Please supply a value, or remove the key.");
 
                 for (String s : permissionsValues)
                 {
                     if (!PERMISSIONS_VALUES.contains(s.toLowerCase()))
-                        throw new InsecureConfigurationException("identifier query string contains an unsupported value '" + s + "' for key '" + PERMISSIONS_KEY + "'.");
+                        throw new InsecureConfigurationException(this, identifier, "identifier query string contains an unsupported value '" + s + "' for key '" + PERMISSIONS_KEY + "'.");
                     if (PERMISSIONS_USER_ONLY_LC.equalsIgnoreCase(s))
                         enforceUserOnlyPermissions = true;
                 }
@@ -87,15 +87,15 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             {
                 int sz = requiredValues.size();
                 if (sz == 0)
-                    throw new InsecureConfigurationException("'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but no value. Please supply a value, or remove the key.");
+                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but no value. Please supply a value, or remove the key.");
                 else if (sz > 1)
-                    throw new InsecureConfigurationException("'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but too many values (" + sz + "). Please supply a unique value, or remove the key.");
+                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but too many values (" + sz + "). Please supply a unique value, or remove the key.");
                 else
                 {
                     String requiredStr = requiredValues.get(0).toLowerCase();
                     if ("true".equals(requiredStr)) requiredConfig = true;
                     else if ("false".equals(requiredStr)) requiredConfig = false;
-                    else throw new InsecureConfigurationException("'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key, which must take a value 'true' or 'false', but instead takes a value of '" + requiredStr + "'.");
+                    else throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key, which must take a value 'true' or 'false', but instead takes a value of '" + requiredStr + "'.");
                 }
             }
 
@@ -121,7 +121,9 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                     catch (Exception e)
                     {
                         throw new InsecureConfigurationException(
-                           "This configuration was specified as requiring specific file permissions, but the current environment does not supprt reading file permissions, or the read failed. " +
+                           this,
+                           identifier,
+                           "This configuration was specified as requiring specific file permissions, but the current environment does not support reading file permissions, or the read failed. " +
                            "Either eliminate the permissions requirement from config source identifier '" + identifier + "' or else run in an environment that supports POSIX file permissions.",
                            e
                         );
@@ -131,7 +133,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                     permissions.remove(PosixFilePermission.OWNER_WRITE);
                     permissions.remove(PosixFilePermission.OWNER_EXECUTE);
                     if (permissions.size() != 0)
-                        throw new InsecureConfigurationException("For '" + identifier + "', useronly permissions are set, but file '" + propsPathStr + "' has other permissions set: " + permissions);
+                        throw new InsecureConfigurationException(this, identifier, "For '" + identifier + "', useronly permissions are set, but file '" + propsPathStr + "' has other permissions set: " + permissions);
                 }
 
                 Properties props = new Properties();
@@ -153,7 +155,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     private Exception handleExceptionIndicatingFileNotFound(String identifier, boolean requiredConfig, Exception e)
     {
         if (requiredConfig)
-            return new InsecureConfigurationException("Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.");
+            return new InsecureConfigurationException(this, identifier, "Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.");
         else
             return e;
     }
