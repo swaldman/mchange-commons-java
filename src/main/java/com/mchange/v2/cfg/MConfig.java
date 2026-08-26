@@ -6,6 +6,7 @@ import com.mchange.v1.cachedstore.*;
 import com.mchange.v1.util.ArrayUtils;
 
 import static com.mchange.v2.cfg.DelayedLogItem.*;
+import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
 
 /**
  *  MConfig is a facade for defining configuration in a properties-file style,
@@ -282,9 +283,7 @@ public final class MConfig
 
     public final static class WithTraditionalDefaultSources {
 
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
-        { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
-
+        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             try { return readForKind( Kind.Traditional, defaultResources, preemptingResources, delayedLogItemsOut).withClassLoaderSafeParseMessages(); }
@@ -292,7 +291,7 @@ public final class MConfig
             { throw new RuntimeException("BUG! MConfig.readForKind(...) with Kind.Traditional should never throw a ConfigVetoedException.", e ); }
         }
 
-        public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             try
                 {
@@ -305,25 +304,40 @@ public final class MConfig
             { throw new RuntimeException( e ); }
         }
 
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
+
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
-        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null); }
+        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null); } // cached path logs internally
+
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig()
+        { return readUncachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY ); }
 
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig()
-        { return readCachedClassloaderResourceConfig( ConfigUtils.EMPTY_STRING_ARRAY, ConfigUtils.EMPTY_STRING_ARRAY ); }
+        { return readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY ); }
 
         private WithTraditionalDefaultSources() {}
     }
 
     public final static class AsProvided {
 
-        private static void requireNoVetoableConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
-            String[] vetoableConfig = ConfigUtils.vetoableConfigFrom( defaultResources, preemptingResources, delayedLogItemsOut );
-            if (vetoableConfig.length != 0)
-                throw new IllegalArgumentException( "At least one identifier contains vetoable config. Use MConfig.AsProvidedVetoable to support these resources: " + Arrays.toString(vetoableConfig) );
+            try
+            {
+                requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
+                return readForKind( Kind.AsProvided, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages();
+            }
+            catch (ConfigVetoedException e)
+            { throw new RuntimeException( "BUG! MConfig.readForKind(...) with Kind.AsProvided should never throw a ConfigVetoedException.", e ); }
         }
 
-        public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
             try
@@ -338,40 +352,42 @@ public final class MConfig
         }
 
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
-        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
-
-        public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut )
-        { return readCachedClassloaderResourceConfig(ConfigUtils.EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut); }
+        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); } // cached path logs internally
 
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths )
-        { return AsProvided.readCachedClassloaderResourceConfig( resourcePaths, (List) null ); }
-
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
-        {
-            try
-            {
-                requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
-                return readForKind( Kind.AsProvided, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages();
-            }
-            catch (ConfigVetoedException e)
-            { throw new RuntimeException( "BUG! MConfig.readForKind(...) with Kind.AsProvided should never throw a ConfigVetoedException.", e ); }
-        }
+        { return AsProvided.readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, null ); } // cached path logs internally
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
-        { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
-
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut )
-        { return readUncachedClassloaderResourceConfig( ConfigUtils.EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut ); }
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths )
-        { return AsProvided.readUncachedClassloaderResourceConfig( resourcePaths, (List) null ); }
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return AsProvided.readUncachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
+
+        private static void requireNoVetoableConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        {
+            String[] vetoableConfig = ConfigUtils.vetoableConfigFrom( defaultResources, preemptingResources, delayedLogItemsOut );
+            if (vetoableConfig.length != 0)
+                throw new IllegalArgumentException( "At least one identifier contains vetoable config. Use MConfig.AsProvidedVetoable to support these resources: " + Arrays.toString(vetoableConfig) );
+        }
 
         private AsProvided() {}
     }
 
     public final static class AsProvidedVetoable {
 
-        public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
+
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
         {
             try
                 {
@@ -390,25 +406,24 @@ public final class MConfig
         }
 
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
-        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
-
-        public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut ) throws ConfigVetoedException
-        { return readCachedClassloaderResourceConfig(ConfigUtils.EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut); }
+        { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); } // cached path logs internally
 
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
-        { return AsProvidedVetoable.readCachedClassloaderResourceConfig( resourcePaths, (List) null ); }
-
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
-        { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
+        { return AsProvidedVetoable.readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, null ); } // cached path logs internally
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
-        { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
-
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths, List delayedLogItemsOut ) throws ConfigVetoedException
-        { return readUncachedClassloaderResourceConfig( ConfigUtils.EMPTY_STRING_ARRAY, resourcePaths, delayedLogItemsOut ); }
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
-        { return AsProvidedVetoable.readUncachedClassloaderResourceConfig( resourcePaths, (List) null ); }
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return AsProvidedVetoable.readUncachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
 
         private AsProvidedVetoable() {}
     }
