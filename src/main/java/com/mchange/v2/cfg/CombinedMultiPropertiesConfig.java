@@ -14,10 +14,10 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	this.configs = configs; 
 
 	List allPaths = new LinkedList();
-	
+
 	for (int i = configs.length - 1; i >= 0; --i)
 	    {
-		String[] rps = configs[i].getPropertiesResourcePaths();
+		String[] rps = ConfigUtils.nullFilter(configs[i].getPropertiesResourcePaths()); // there shoukd be no null values, but out of an abundance of caution
 		for (int j = rps.length - 1; j >= 0; --j)
 		    {
 			String rp = rps[j];
@@ -39,7 +39,8 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	for ( int i = 0, len = resourcePaths.length; i < len; ++i )
 	{
 	    String rp = resourcePaths[i];
-	    out.put( rp, getPropertiesByResourcePath(rp) );
+            Properties props = this.getPropertiesByResourcePath(rp);
+	    out.put( rp, props == null ? new Properties() : props );
 	}
 	return Collections.unmodifiableMap( out );
     }
@@ -55,7 +56,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
     public String[] getPropertiesResourcePaths()
     { return (String[]) resourcePaths.clone(); }
-    
+
     public Properties getPropertiesByResourcePath(String path)
     {
 	// Not robust to overlapping resource paths
@@ -76,33 +77,28 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 		Properties check = config.getPropertiesByResourcePath(path);
 		if ( check != null ) out.putAll( check );
 	    }
-	return ( out.size() > 0 ? out : null );
+	return out;
     }
-    
+
     public Properties getPropertiesByPrefix(String pfx)
     {
 	List entries = new LinkedList();
 	for (int i = configs.length - 1; i >= 0; --i)
-	    {
-		MultiPropertiesConfig config = configs[i];
-		Properties check = config.getPropertiesByPrefix(pfx);
-		if (check != null)
-		    entries.addAll( 0, check.entrySet() );
-	    }
-	if (entries.size() == 0)
-	    return null;
-	else
-	    {
-		Properties out = new Properties();
-		for (Iterator ii = entries.iterator(); ii.hasNext(); )
-		    {
-			Map.Entry entry = (Map.Entry) ii.next();
-			out.put( entry.getKey(), entry.getValue() );
-		    }
-		return out;
-	    }
+        {
+            MultiPropertiesConfig config = configs[i];
+            Properties check = config.getPropertiesByPrefix(pfx);
+            if (check != null)
+                entries.addAll( 0, check.entrySet() );
+        }
+        Properties out = new Properties();
+        for (Iterator ii = entries.iterator(); ii.hasNext(); )
+            {
+                Map.Entry entry = (Map.Entry) ii.next();
+                out.put( entry.getKey(), entry.getValue() );
+            }
+        return out;
     }
-    
+
     public String getProperty( String key )
     {
 	for (int i = configs.length - 1; i >= 0; --i)

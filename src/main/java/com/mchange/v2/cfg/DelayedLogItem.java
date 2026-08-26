@@ -17,7 +17,10 @@ public final class DelayedLogItem
     
     public DelayedLogItem(Level level, String text, Throwable exception)
     {
-	this.level     = level;
+        if (level == null || text == null)
+            throw new IllegalArgumentException("Neither of arguments level or text is permitted to be null. [level: " + level + ", text: " + text + "]");
+
+  	this.level     = level;
 	this.text      = text;
 	this.exception = exception;
     }

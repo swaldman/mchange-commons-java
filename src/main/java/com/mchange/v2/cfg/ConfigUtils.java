@@ -61,13 +61,6 @@ final class ConfigUtils
 	boolean hocon = isHoconPath( identifier );
         boolean file  = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
 
-        // NOTE: this validation used to live in BasicMultiPropertiesConfig.configSource. Without it,
-        // a malformed identifier falls through to BasicPropertiesConfigSource, fails to resolve as a
-        // classloader resource, and is reported as a quiet FINE "could not be found" -- which reads as
-        // "your file is missing" when the real problem is that the path is not well formed at all.
-        if (!hocon && !file && !identifier.startsWith("/"))
-            throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a file URL nor a HOCON path. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:')", identifier));
-
         PropertiesConfigSource out;
 
 	if ( hocon )
@@ -101,8 +94,10 @@ final class ConfigUtils
 	    out = propertiesConfigSource( SystemPropertiesConfigSource.class.getName(), delayedLogItems );
         else if (file)
 	    out = propertiesConfigSource( FileUrlPropertiesConfigSource.class.getName(), delayedLogItems );
-	else
+	else if (identifier.startsWith("/"))
 	    out = propertiesConfigSource( BasicPropertiesConfigSource.class.getName(), delayedLogItems );
+        else
+            throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a file URL nor a HOCON path. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:')", identifier));
 
         return out;
     }
@@ -182,8 +177,8 @@ final class ConfigUtils
 
     static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
     {
-	defaultResources = ( defaultResources == null ? EMPTY_STRING_ARRAY : defaultResources );
-	preemptingResources = ( preemptingResources == null ? EMPTY_STRING_ARRAY : preemptingResources );
+	defaultResources = ( defaultResources == null ? EMPTY_STRING_ARRAY : nullFilter(defaultResources) );
+	preemptingResources = ( preemptingResources == null ? EMPTY_STRING_ARRAY : nullFilter(preemptingResources) );
 	List pathsList;
         List raw;
         if (withDefaults)
@@ -291,6 +286,48 @@ final class ConfigUtils
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
+    static String[] nullFilter(String[] path)
+    {
+        List<String> filtered = new ArrayList<>();
+        for (String entry : path)
+            if (entry != null)
+                filtered.add(entry);
+        return (String[]) filtered.toArray(EMPTY_STRING_ARRAY);
+    }
+
+    static String[] nullCheckPathArguments(String argName, String[] path, List<DelayedLogItem> delayedLogItems)
+    {
+        String[] out;
+        if (path == null)
+            throw new IllegalArgumentException( argName + " must not be null" );
+        boolean containsNulls = false;
+        for (String entry : path)
+            if (entry == null)
+            {
+                containsNulls = true;
+                break;
+            }
+        if (containsNulls)
+        {
+            delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' contains null values, which will be ignored.", null ) );
+            out = nullFilter(path);
+            if (out.length == 0)
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' is empty after removing null values.", null ) );
+        }
+        else
+            out = path;
+
+        return out;
+    }
+
+    static List<DelayedLogItem> stripThrowables(List<DelayedLogItem> delayedLogItems)
+    {
+        List<DelayedLogItem> out = new ArrayList<>();
+        for ( DelayedLogItem dli : delayedLogItems )
+            out.add( new DelayedLogItem( dli.getLevel(), dli.getText(), null ) );
+        return out;
+    }
+
     private final static AtomicBoolean usingDefaultPathsMessageSeen = new AtomicBoolean(false);
 
     // note that this log message is dangerous to test, because it will only be emitted the first time
@@ -338,7 +375,9 @@ final class ConfigUtils
 	if ( canonicalDefaultConfig == null )
 	    {
 		List rps = configuredOrHardcodedDefaultClassloaderResourcePathList( delayedLogItemsOut );
-		canonicalDefaultConfig = new BasicMultiPropertiesConfig( (String[]) rps.toArray( new String[ rps.size() ] ) );
+
+                // retain traditional behavior, capture delayedLogItemsOut
+                canonicalDefaultConfig = new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, (String[]) rps.toArray( new String[ rps.size() ] ), delayedLogItemsOut ); 
 	    }
 	return canonicalDefaultConfig;
     }

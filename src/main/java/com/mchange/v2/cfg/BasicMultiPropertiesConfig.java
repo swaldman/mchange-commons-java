@@ -11,9 +11,6 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 {
-    private final static String HOCON_CFG_CNAME = "com.typesafe.config.Config";
-    private final static int    HOCON_PFX_LEN   = 6; // includes colon, hocon:
-
     final static BasicMultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig();
 
     String[] rps;
@@ -29,12 +26,30 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         private VetoThrowing() {}
     }
 
+    public BasicMultiPropertiesConfig withClassLoaderSafeParseMessages() // strips Throwables that might pin ClassLoaders
+    {
+        BasicMultiPropertiesConfig out = new BasicMultiPropertiesConfig(this);
+        out.parseMessages = Collections.unmodifiableList(ConfigUtils.stripThrowables(this.parseMessages));
+        return out;
+    }
+
+    private BasicMultiPropertiesConfig(BasicMultiPropertiesConfig copyMe)
+    {
+        this.rps = (String[]) copyMe.rps.clone();
+        this.propsByResourcePaths = Collections.unmodifiableMap(new HashMap(copyMe.propsByResourcePaths));
+        this.propsByPrefixes = Collections.unmodifiableMap(new HashMap(copyMe.propsByPrefixes));
+        this.parseMessages = Collections.unmodifiableList(new ArrayList(copyMe.parseMessages));
+        this.propsByKey = new Properties();
+        propsByKey.putAll( copyMe.propsByKey );
+    }
+
     public BasicMultiPropertiesConfig(String[] resourcePaths)
     { this( MConfig.Kind.Traditional, resourcePaths, null ); } // mimics the traditional behavior of the library as closely as we now make available
 
     // VetoThrowing implies MConfig.Kind.AsProvidedVetoable
     BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
     {
+        ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, delayedLogItems);
 	firstInit( MConfig.Kind.AsProvidedVetoable, resourcePaths, delayedLogItems );
 	finishInit( delayedLogItems );
     }
@@ -42,6 +57,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     // non-VetoThrowing implies MConfig.Kind.AsProvided or MConfig.Kind.Traditional
     BasicMultiPropertiesConfig(MConfig.Kind kind, String[] resourcePaths, List delayedLogItems)
     {
+        ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, delayedLogItems);
         if (kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
             throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
 	firstInitNotVetoThrowing( kind, resourcePaths, delayedLogItems );
@@ -49,7 +65,13 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     }
 
     public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
-    { this( new String[] { notionalResourcePath }, resourcePathToPropertiesMap( notionalResourcePath, props ), Collections.emptyList() ); }
+    {
+        this(
+             (notionalResourcePath == null ? badNotionalResourcePath() : new String[] { notionalResourcePath }),
+             resourcePathToPropertiesMap( notionalResourcePath, props ),
+             Collections.emptyList()
+        );
+    }
 
     private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
     {
@@ -57,6 +79,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	out.put( notionalResourcePath, props );
 	return out;
     }
+
+    private static String[] badNotionalResourcePath()
+    { throw new IllegalArgumentException("notionalResourcePath must not be null"); }
 
     BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
     {

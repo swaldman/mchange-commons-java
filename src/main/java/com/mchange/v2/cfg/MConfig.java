@@ -287,7 +287,7 @@ public final class MConfig
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
-            try { return readForKind( Kind.Traditional, defaultResources, preemptingResources, delayedLogItemsOut); }
+            try { return readForKind( Kind.Traditional, defaultResources, preemptingResources, delayedLogItemsOut).withClassLoaderSafeParseMessages(); }
             catch (ConfigVetoedException e)
             { throw new RuntimeException("BUG! MConfig.readForKind(...) with Kind.Traditional should never throw a ConfigVetoedException.", e ); }
         }
@@ -351,7 +351,7 @@ public final class MConfig
             try
             {
                 requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
-                return readForKind( Kind.AsProvided, defaultResources, preemptingResources, delayedLogItemsOut );
+                return readForKind( Kind.AsProvided, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages();
             }
             catch (ConfigVetoedException e)
             { throw new RuntimeException( "BUG! MConfig.readForKind(...) with Kind.AsProvided should never throw a ConfigVetoedException.", e ); }
@@ -399,7 +399,7 @@ public final class MConfig
         { return AsProvidedVetoable.readCachedClassloaderResourceConfig( resourcePaths, (List) null ); }
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
-        { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ); }
+        { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
 
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
         { return readUncachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); }
@@ -449,15 +449,13 @@ public final class MConfig
             return out;
         }
 
-        // it's fine for delayedLogItems to be null
-	// PathsKey(String[] paths, List delayedLogItems)
-        // { this( paths, false, delayedLogItems ); }
-
+        // the defensive close is overkill for now, paths
+        // is handed unshared values. but just in case things change
         PathsKey(String[] paths, Kind kind, List delayedLogItems)
 	{
 	    this.delayedLogItems = delayedLogItems;
             this.kind  = kind;
-	    this.paths = paths;
+	    this.paths = (String[]) paths.clone();
 	}
     }
 
@@ -484,7 +482,7 @@ public final class MConfig
             ConfigVetoedException cve = null;
             try
                 {
-                    out = readForKind(pk.kind, pk.paths, items);
+                    out = readForKind(pk.kind, pk.paths, items).withClassLoaderSafeParseMessages();
                 }
             catch (ConfigVetoedException e)
                 {
@@ -492,6 +490,14 @@ public final class MConfig
                     items.add( new DelayedLogItem( Level.WARNING, "Configuration was vetoed.", e ) );
                 }
 	    dumpToLogger( items, logger() );
+
+            // delayedLogItems are not conceptually part of the state of the key,
+            // they are just carries along to be logged. they hold throwables,
+            // which can pin ClassLoaders
+            //
+            // once they've been logged, we can get rid of them.
+            pk.delayedLogItems = null;
+
             if (cve != null)
                 throw cve;
             else
@@ -500,7 +506,7 @@ public final class MConfig
     }
 
 
-    static MultiPropertiesConfig readForKind(Kind kind, String[] defaultResources, String[] preemptingResources, List delayedLogItems) throws ConfigVetoedException
+    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] defaultResources, String[] preemptingResources, List delayedLogItems) throws ConfigVetoedException
     {
         if (kind == Kind.Traditional)
         {
@@ -514,7 +520,7 @@ public final class MConfig
         }
     }
 
-    static MultiPropertiesConfig readForKind(Kind kind, String[] resourcePath, List delayedLogItems) throws ConfigVetoedException
+    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] resourcePath, List delayedLogItems) throws ConfigVetoedException
     {
         if (kind == Kind.AsProvided || kind == Kind.Traditional)
             return new BasicMultiPropertiesConfig( kind, resourcePath, delayedLogItems );
