@@ -91,6 +91,54 @@ public final class CfgScenarioSelfCheckJUnitTestCase extends TestCase
         }
     }
 
+    /**
+     *  The shim must be DEFINED BY the scenario ClassLoader.
+     *
+     *  <p>It exists to call MConfig's package-private cached readers, and package-private access
+     *  is granted per runtime package -- same name AND same ClassLoader. If the scenario loader
+     *  ever fell back to the copy on the ordinary test classpath, the shim would still link and
+     *  the calls would still succeed, but against the wrong MConfig: the wrong cache, the wrong
+     *  canonicalDefaultConfig, and none of the scenario's resources. Nothing would fail loudly,
+     *  so assert it directly.</p>
+     */
+    public void testShimIsDefinedByTheScenarioClassLoader()
+    {
+        CfgScenario s = CfgScenario.open( SCENARIO );
+        try
+        {
+            Class<?> shim = s.shimClass();
+            assertTrue( "the shim must not be the test classpath's copy",
+                        shim != com.mchange.v2.cfg.MConfigCachedReadShim.class );
+            assertTrue( "the shim must be defined by the scenario ClassLoader",
+                        shim.getClassLoader() == s.classLoader() );
+            assertTrue( "and must therefore share a runtime package with the scenario's MConfig",
+                        shim.getClassLoader() == s.mconfigClass().getClassLoader() );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  Staging the shim must not drag the rest of target/test-classes onto a scenario's
+     *  classpath. Its root holds /mchange-commons.properties -- one of the hardcoded backstop
+     *  paths -- so a scenario that could see it would silently gain configuration it is
+     *  supposed to lack, and the BackstopDefaults tests would be testing nothing.
+     */
+    public void testShimRootContributesNothingButTheShim()
+    {
+        CfgScenario s = CfgScenario.open( SCENARIO );
+        try
+        {
+            Object mpc = s.asProvidedCached( new String[] { "/mchange-commons.properties" } );
+            assertNull( "the shim's code source leaked onto the scenario classpath",
+                        s.getProperty( mpc, "com.mchange.v2.log.MLog" ) );
+            assertEquals( "an unreadable path should be dropped",
+                          0, s.getPropertiesResourcePaths( mpc ).length );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
     /** The JDK must remain reachable through the platform parent loader. */
     public void testSystemPropertiesSourceWorksInScenario()
     {

@@ -96,7 +96,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( new String[] { vetoing }, new ArrayList() );
+            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
             fail( "expected a ConfigVetoedException" );
         }
         catch ( ConfigVetoedException expected )
@@ -107,7 +107,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     public void testVetoableFacadeReadsNormallyWhenNothingVetoes() throws Exception
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( new String[] { fine }, new ArrayList() );
+            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { fine }, new ArrayList() );
         assertEquals( "from-plain", mpc.getProperty( "plain.key" ) );
     }
 
@@ -135,7 +135,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     {
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] { vetoing }, new ArrayList() );
+            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -153,7 +153,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         String absent = dir.resolve( "not-there.properties" ).toUri().toString() + "?required=true";
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] { absent }, new ArrayList() );
+            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { absent }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -165,7 +165,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     {
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] { fine, vetoing }, new ArrayList() );
+            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { fine, vetoing }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -187,7 +187,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         try
         {
             // no query string at all: nothing here could possibly veto
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] { fine }, new ArrayList() );
+            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { fine }, new ArrayList() );
             fail( "expected IllegalArgumentException even for an option-free file: URL" );
         }
         catch ( IllegalArgumentException expected )
@@ -198,7 +198,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     public void testAsProvidedAcceptsNonVetoableIdentifiers()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] { "/" }, new ArrayList() );
+            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { "/" }, new ArrayList() );
         assertEquals( System.getProperty( "user.home" ), mpc.getProperty( "user.home" ) );
     }
 

@@ -2,12 +2,16 @@ package com.mchange.v2.cfg.junit;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -52,20 +56,20 @@ public final class CfgScenario implements Closeable
         "com.mchange.v2.cfg.MConfig$WithTraditionalDefaultSources";
     private final static String CN_HOCON_CONFIG = "com.typesafe.config.Config";
 
+    /** Reaches the cached readers, which are package-private. See shimRoot(). */
+    private final static String CN_SHIM = "com.mchange.v2.cfg.MConfigCachedReadShim";
+
+    /** No caller-supplied resources on this side of the read. */
+    private final static String[] NO_PATHS = new String[0];
+
+    // MT: guarded by this class' lock, via shimRoot()
+    private static URL shimRoot = null;
+
     private final String          name;
     private final URLClassLoader  loader;
 
     public static CfgScenario open( String scenarioName, boolean withHocon )
-    {
-        List<URL> urls = new ArrayList<URL>();
-        urls.add( scenarioRoot( scenarioName ) );
-        urls.add( codeSourceOf( "com.mchange.v2.cfg.MConfig" ) );
-        if ( withHocon )
-            urls.add( codeSourceOf( CN_HOCON_CONFIG ) );
-
-        URLClassLoader cl = new URLClassLoader( urls.toArray( new URL[ urls.size() ] ), platformClassLoader() );
-        return new CfgScenario( scenarioName, cl );
-    }
+    { return openWithRoots( scenarioName, withHocon ); }
 
     /** Convenience: scenarios that do not care about HOCON still get the library. */
     public static CfgScenario open( String scenarioName )
@@ -91,6 +95,7 @@ public final class CfgScenario implements Closeable
         }
         urls.add( scenarioRoot( scenarioName ) );
         urls.add( codeSourceOf( "com.mchange.v2.cfg.MConfig" ) );
+        urls.add( shimRoot() );
         if ( withHocon )
             urls.add( codeSourceOf( CN_HOCON_CONFIG ) );
 
@@ -139,6 +144,57 @@ public final class CfgScenario implements Closeable
         { throw new RuntimeException( "Could not derive scenario root URL from '" + s + "'", e ); }
     }
 
+    /**
+     *  A classpath root holding MConfigCachedReadShim and nothing else.
+     *
+     *  <p>The shim must be DEFINED BY the scenario ClassLoader, or its package-private calls
+     *  into MConfig would resolve against the copy on the ordinary test classpath instead of
+     *  the scenario's. But its code source is target/test-classes, whose root also holds
+     *  /mchange-commons.properties and /logging.properties -- and /mchange-commons.properties
+     *  is one of the hardcoded backstop paths, so putting that directory on a scenario's
+     *  classpath would silently supply configuration the scenario is supposed to lack. The
+     *  BackstopDefaults tests exist precisely to check what happens when it is absent.</p>
+     *
+     *  <p>So the one class file is copied out to a directory of its own, once per JVM.</p>
+     */
+    private synchronized static URL shimRoot()
+    {
+        if ( shimRoot == null )
+        {
+            String classResource = '/' + CN_SHIM.replace( '.', '/' ) + ".class";
+            try
+            {
+                Path root = Files.createTempDirectory( "mchange-cfg-shim-" );
+
+                Path dir = root.resolve( CN_SHIM.substring( 0, CN_SHIM.lastIndexOf( '.' ) ).replace( '.', '/' ) );
+                Files.createDirectories( dir );
+
+                Path classFile = dir.resolve( CN_SHIM.substring( CN_SHIM.lastIndexOf( '.' ) + 1 ) + ".class" );
+                InputStream is = CfgScenario.class.getResourceAsStream( classResource );
+                if ( is == null )
+                    throw new IllegalStateException( "Expected " + classResource + " on the test classpath" );
+                try
+                { Files.copy( is, classFile ); }
+                finally
+                { is.close(); }
+
+                // deleteOnExit removes in reverse order of registration, so the shallowest
+                // must be registered first for the class file to go before its directories
+                List<Path> chain = new ArrayList<Path>();
+                for ( Path p = classFile; p != null && !p.equals( root.getParent() ); p = p.getParent() )
+                    chain.add( p );
+                Collections.reverse( chain );
+                for ( Path p : chain )
+                    p.toFile().deleteOnExit();
+
+                shimRoot = root.toUri().toURL();
+            }
+            catch ( IOException e )
+            { throw new RuntimeException( "Could not stage " + CN_SHIM + " for the scenario ClassLoader", e ); }
+        }
+        return shimRoot;
+    }
+
     private static URL codeSourceOf( String className )
     {
         try
@@ -159,29 +215,25 @@ public final class CfgScenario implements Closeable
     public Class<?> mconfigClass()
     { return load( CN_MCONFIG ); }
 
+    /** The child's copy of the cached-reader shim. See shimRoot(). */
+    public Class<?> shimClass()
+    { return load( CN_SHIM ); }
+
     public Object asProvidedCached( String[] resourcePaths, List delayedLogItemsOut )
-    {
-        return call( load( CN_ASPROVIDED ), "readCachedClassloaderResourceConfig",
-                     new Class[] { String[].class, List.class },
-                     new Object[] { resourcePaths, delayedLogItemsOut } );
-    }
+    { return asProvidedCached( NO_PATHS, resourcePaths, delayedLogItemsOut ); }
 
     public Object asProvidedCached( String[] resourcePaths )
     { return asProvidedCached( resourcePaths, null ); }
 
     public Object asProvidedCached( String[] defaults, String[] preempts, List delayedLogItemsOut )
     {
-        return call( load( CN_ASPROVIDED ), "readCachedClassloaderResourceConfig",
+        return call( load( CN_SHIM ), "asProvidedCached",
                      new Class[] { String[].class, String[].class, List.class },
                      new Object[] { defaults, preempts, delayedLogItemsOut } );
     }
 
     public Object asProvidedUncached( String[] resourcePaths, List delayedLogItemsOut )
-    {
-        return call( load( CN_ASPROVIDED ), "readUncachedClassloaderResourceConfig",
-                     new Class[] { String[].class, List.class },
-                     new Object[] { resourcePaths, delayedLogItemsOut } );
-    }
+    { return asProvidedUncached( NO_PATHS, resourcePaths, delayedLogItemsOut ); }
 
     public Object asProvidedUncached( String[] resourcePaths )
     { return asProvidedUncached( resourcePaths, null ); }
@@ -195,7 +247,7 @@ public final class CfgScenario implements Closeable
 
     public Object traditionalCached( String[] defaults, String[] preempts, List delayedLogItemsOut )
     {
-        return call( load( CN_TRADITIONAL ), "readCachedClassloaderResourceConfig",
+        return call( load( CN_SHIM ), "traditionalCached",
                      new Class[] { String[].class, String[].class, List.class },
                      new Object[] { defaults, preempts, delayedLogItemsOut } );
     }

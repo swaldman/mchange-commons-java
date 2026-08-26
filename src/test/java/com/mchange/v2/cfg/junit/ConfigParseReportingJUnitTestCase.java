@@ -31,6 +31,9 @@ import java.util.List;
  */
 public final class ConfigParseReportingJUnitTestCase extends TestCase
 {
+    /** No caller-supplied resources on the defaults side of the read. */
+    private final static String[] NONE = new String[0];
+
     private Path dir;
 
     protected void setUp() throws Exception
@@ -74,7 +77,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
         try
         {
             MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
-                new String[] { vetoingAbsentUrl() }, captured );
+                NONE, new String[] { vetoingAbsentUrl() }, captured );
             fail( "expected a veto" );
         }
         catch ( ConfigVetoedException expected )
@@ -92,7 +95,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
         try
         {
             MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
-                new String[] { vetoingAbsentUrl() }, new ArrayList() );
+                NONE, new String[] { vetoingAbsentUrl() }, new ArrayList() );
             fail( "expected a veto" );
         }
         catch ( ConfigVetoedException expected )
@@ -113,7 +116,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
         try
         {
             MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
-                new String[] { vetoingAbsentUrl() }, new ArrayList() );
+                NONE, new String[] { vetoingAbsentUrl() }, new ArrayList() );
             fail( "expected a veto" );
         }
         catch ( ConfigVetoedException expected )
@@ -131,7 +134,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     public void testHoconPerResourceDiagnosticsSurviveItsThrow()
     {
         MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
-            new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
+            NONE, new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
 
         assertTrue( "the per-resource diagnostic accumulated before the throw was lost: " + itemsOf( mpc ),
                     hasItem( itemsOf( mpc ), "Missing or empty HOCON configuration for resource path" ) );
@@ -141,7 +144,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     public void testHoconReportsBothTheDetailAndTheSummary()
     {
         MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
-            new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
+            NONE, new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
 
         List<DelayedLogItem> items = itemsOf( mpc );
         assertTrue( "detail missing: "  + items, hasItem( items, "Missing or empty HOCON configuration" ) );
@@ -152,7 +155,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     public void testAThrowingSourceDoesNotDisturbTheSourcesAroundIt()
     {
         MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
-            new String[] { "hocon:no-such-hocon-resource", "/com/mchange/v2/cfg/junit/a.properties" },
+            NONE, new String[] { "hocon:no-such-hocon-resource", "/com/mchange/v2/cfg/junit/a.properties" },
             new ArrayList() );
 
         assertEquals( "the reachable source must still load", "/a/home", mpc.getProperty( "user.home" ) );
@@ -167,7 +170,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     public void testOrdinaryAbsenceIsStillReportedByTheFramework()
     {
         MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
-            new String[] { "/no-such-resource-anywhere.properties" }, new ArrayList() );
+            NONE, new String[] { "/no-such-resource-anywhere.properties" }, new ArrayList() );
 
         assertTrue( "the generic skip report should be unaffected: " + itemsOf( mpc ),
                     hasItem( itemsOf( mpc ), "could not be found. Skipping." ) );
