@@ -84,9 +84,6 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	this.propsByKey           = new Properties();
     }
 
-    private DelayedLogItem fileNotFoundDelayedItem(String rp, Exception e)
-    { return new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping. [%s]", rp, e.toString()) ); }
-
     private void firstInitNotVetoThrowing( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems )
     {
         try { firstInit( kind, resourcePaths, delayedLogItems ); }
@@ -158,11 +155,18 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
                     }
                 }
                 catch (ConfigVetoedException cve)
-                { cves.add(cve); }
+                {
+                    cves.add(cve);
+                    delayedLogItems.addAll( cve.getDelayedLogItems() );
+                }
+                catch (OwnLogCarryingMissingFileException lcmfe)
+                { delayedLogItems.addAll( lcmfe.getDelayedLogItems() ); } // its own report, in place of the generic one
+                catch (ConfigParseException cpe) // catch-all
+                { delayedLogItems.addAll( cpe.getDelayedLogItems() ); }
                 catch ( NoSuchFileException nsfe )
-                { delayedLogItems.add( fileNotFoundDelayedItem(rp,nsfe) ); }
+                { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,nsfe) ); }
                 catch ( FileNotFoundException fnfe )
-                { delayedLogItems.add( fileNotFoundDelayedItem(rp,fnfe) ); }
+                { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,fnfe) ); }
                 catch ( Exception e )
                 { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
             }

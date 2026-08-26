@@ -522,6 +522,18 @@ public final class MConfig
             return new BasicMultiPropertiesConfig(BasicMultiPropertiesConfig.VetoThrowing.INSTANCE, resourcePath, delayedLogItems);
     }
 
+    /**
+     *  The ordinary FINE report of an identifier that turned up nothing.
+     *
+     *  <p>Public so that a source throwing {@link OwnLogCarryingMissingFileException} can supply
+     *  the very item its caller would otherwise have supplied, and so report an absence in the
+     *  familiar words. Note what the name insists on: this item says the configuration is being
+     *  <i>skipped</i>. Do not use it where the absence is not in fact being skipped &mdash; where
+     *  it vetoes the read, say &mdash; or the log will contradict what actually happened.</p>
+     */
+    public static DelayedLogItem skippingFileNotFoundDelayedItem(String rp, Exception e)
+    { return new DelayedLogItem( Level.FINE, String.format("The configuration file for resource identifier '%s' could not be found. Skipping. [%s]", rp, e.toString()) ); }
+
     private MConfig()
     {}
 

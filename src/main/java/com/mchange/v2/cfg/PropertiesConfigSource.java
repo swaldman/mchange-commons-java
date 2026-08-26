@@ -16,6 +16,14 @@ import java.io.FileNotFoundException;
  *  of a single call belongs in a local variable, and anything it wants to report belongs in the
  *  {@link Parse} it returns.</p>
  *
+ *  <p>An implementation that reports anything &mdash; and then fails &mdash; <b>must</b> throw a
+ *  {@link ConfigParseException}, carrying those reports. A {@link Parse} is the only other way an
+ *  implementation can say anything, and a Parse is built only on the success path, so items
+ *  accumulated before a throw of any other type are silently discarded. This is easy to get wrong
+ *  and invisible when you do: the read merely goes quiet. See {@link ConfigParseException} for the
+ *  obligation in full, and {@link OwnLogCarryingMissingFileException} for the case where a source
+ *  wants to report an absence in its own words rather than accept the generic one.</p>
+ *
  *  <p>An implementation that may refuse to supply configuration at all &mdash; rather than
  *  merely failing to find it &mdash; should implement {@link VetoableConfig} and signal the
  *  refusal by throwing {@link ConfigVetoedException}. Doing so is what allows a caller to opt
@@ -33,6 +41,12 @@ public interface PropertiesConfigSource
      *  means only that nothing was found at this identifier: the path is dropped and the
      *  remaining sources are read, reported at FINE. Any other exception is reported at WARNING,
      *  and likewise drops only this path.</p>
+     *
+     *  <p>Both of those are reported <i>for</i> the source, by its caller. A
+     *  {@link ConfigParseException} is the opposite arrangement: it is reported by nobody, and
+     *  carries its own account instead. Throw one whenever this method has accumulated
+     *  {@link DelayedLogItem}s that would otherwise be lost with the Parse it will never
+     *  return.</p>
      *
      *  <p>A {@link ConfigVetoedException} is different in kind: it does not mean "I could not
      *  read this", it means "this configuration must not be used". Only a {@link VetoableConfig}

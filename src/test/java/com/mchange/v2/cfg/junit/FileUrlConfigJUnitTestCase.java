@@ -201,6 +201,25 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         return false;
     }
 
+    /** The security-sensitive absence WARNING, or null. Fails if more than one appears. */
+    @SuppressWarnings("unchecked")
+    private static String absenceWarning( MultiPropertiesConfig mpc )
+    {
+        String found = null;
+        List<DelayedLogItem> items = mpc.getDelayedLogItems();
+        for ( DelayedLogItem item : items )
+        {
+            String text = item.getText();
+            if ( DelayedLogItem.Level.WARNING.equals( item.getLevel() )
+                 && text != null && text.contains( "SECURITY-SENSITIVE" ) )
+            {
+                assertNull( "at most one absence warning per read; a second was: " + text, found );
+                found = text;
+            }
+        }
+        return found;
+    }
+
     // =================================================== basic functionality
 
     public void testFileUrlPropertiesAppearInConfig() throws Exception
@@ -525,7 +544,9 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         {
             MultiPropertiesConfig mpc = read( url( link, "permissions=useronly" ) );
             assertEquals( 0, pathsOf( mpc ).size() );
-            assertTrue( "expected a FINE skip, not a veto", hasFineSkip( mpc ) );
+            // a dangling link is an absence like any other, and under useronly with required
+            // unstated that absence is now reported at WARNING rather than passed over at FINE
+            assertNotNull( "expected a skip with a warning, not a veto", absenceWarning( mpc ) );
         }
         finally
         { deleteQuietly( link ); }
@@ -575,11 +596,15 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
      *  Absence is not insecurity: a missing file must be skipped even when
      *  permissions=useronly is requested, rather than vetoing.
      */
+    /**
+     *  Still skipped rather than vetoed -- but no longer quietly. See the absence-reporting
+     *  section below for the levels; what matters here is that absence is not insecurity.
+     */
     public void testMissingFileWithPermissionsQueryIsAlsoJustSkipped() throws Exception
     {
         MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ) );
         assertEquals( 0, pathsOf( mpc ).size() );
-        assertTrue( "expected a FINE skip, not a veto", hasFineSkip( mpc ) );
+        assertNotNull( "expected a skip, not a veto", absenceWarning( mpc ) );
     }
 
     public void testMissingFileDoesNotDisturbOtherSources() throws Exception
@@ -790,5 +815,95 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
 
         assertEquals( "yes", mpc.getProperty( "only.noveto" ) );
         assertEquals( "the rest of the read proceeds normally", "yes", mpc.getProperty( "only.useronly" ) );
+    }
+
+    // ============================ absence of a security-sensitive file: how loudly to report it
+
+    /*
+     *  Writing permissions=useronly says this file matters -- it is where credentials live. If it
+     *  is then absent and nothing was said about whether it is required, that is far more likely
+     *  a mistake (a bad path, a botched deploy, a deletion of the kind the advisory above warns
+     *  about) than an intention, and passing it over at FINE hides exactly the failure the reader
+     *  most wants to know about. So required is treated as three states, not two:
+     *
+     *      required=true    absence is an error       -> veto
+     *      required unstated  absence is suspicious   -> skip, but WARN
+     *      required=false   absence is intended       -> skip quietly, at FINE
+     *
+     *  The third state is what makes the second tolerable: there is a way to say "yes, I know"
+     *  and get silence, so the warning never becomes noise nobody can turn off.
+     */
+
+    public void testAbsentUserOnlyFileWarnsWhenRequiredIsUnstated() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ) );
+
+        String warning = absenceWarning( mpc );
+        assertNotNull( "an unexplained absent credentials file should not pass at FINE", warning );
+        assertEquals( "still skipped, never vetoed", 0, pathsOf( mpc ).size() );
+    }
+
+    /** The opt-out, and the reason the warning above is tolerable: saying so buys silence. */
+    public void testExplicitRequiredFalseSilencesTheAbsenceWarning() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly&required=false" ) );
+
+        assertNull( "required=false says the absence is intended", absenceWarning( mpc ) );
+        assertTrue( "and it drops back to the ordinary FINE skip", hasFineSkip( mpc ) );
+        assertEquals( 0, pathsOf( mpc ).size() );
+    }
+
+    /** required=true is unchanged: absence is an error, not something to warn about and move past. */
+    public void testRequiredTrueStillVetoesRatherThanWarning()
+    {
+        assertVetoed( missingUrl( "permissions=useronly&required=true" ) );
+    }
+
+    /** The escalation belongs to useronly. An ordinary absent file is still an ordinary FINE skip. */
+    public void testAbsentFileWithoutUserOnlyIsNotEscalated() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( null ) );
+
+        assertNull( "no permissions=useronly, no escalation", absenceWarning( mpc ) );
+        assertTrue( hasFineSkip( mpc ) );
+    }
+
+    /**
+     *  The warning replaces the generic skip item rather than joining it. That is the whole
+     *  purpose of AlreadyLoggedFileNotFoundException: without it the same absence would be
+     *  reported twice, once at WARNING and once at FINE.
+     */
+    public void testAbsenceIsReportedOnceNotTwice() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ) );
+
+        assertNotNull( absenceWarning( mpc ) );
+        assertFalse( "the generic FINE skip should be suppressed, not added alongside",
+                     hasFineSkip( mpc ) );
+    }
+
+    /** The warning has to survive the trip out of a throwing source, or it is never seen at all. */
+    public void testAbsenceWarningNamesBothRemedies() throws Exception
+    {
+        String warning = absenceWarning( read( missingUrl( "permissions=useronly" ) ) );
+
+        assertNotNull( warning );
+        assertTrue( "should name the identifier at fault: " + warning,
+                    warning.contains( "definitely-absent.properties" ) );
+        assertTrue( "should offer required=true to insist: " + warning,
+                    warning.contains( "required=true" ) );
+        assertTrue( "should offer required=false to silence: " + warning,
+                    warning.contains( "required=false" ) );
+    }
+
+    /** An absent security-sensitive file must not disturb the sources around it. */
+    public void testAbsenceWarningDoesNotDisturbOtherSources() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( missingUrl( "permissions=useronly" ),
+                                          url( userOnly, "permissions=useronly" ) );
+
+        assertNotNull( absenceWarning( mpc ) );
+        assertEquals( "the present source still loads", "from-useronly", mpc.getProperty( "secret.key" ) );
+        assertEquals( 1, pathsOf( mpc ).size() );
     }
 }

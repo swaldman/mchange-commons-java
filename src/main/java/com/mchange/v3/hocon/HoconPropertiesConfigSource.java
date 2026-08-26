@@ -195,7 +195,11 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 	    }
 
 	    if ( configs.size() == 0)
-		throw new FileNotFoundException( String.format("Could not find HOCON configuration at any of the listed resources in '%s'", identifier) );
+            {
+                String msg = String.format("Could not find HOCON configuration at any of the listed resources in '%s'", identifier);
+                dlis.add( new DelayedLogItem( Level.FINE, msg, null ) );
+		throw new OwnLogCarryingMissingFileException( msg, null, dlis );
+            }
 	    else
 		{
 		    Config bigConfig = ConfigFactory.empty();
