@@ -3,6 +3,8 @@ package com.mchange.v2.cfg;
 import java.util.*;
 import java.io.*;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 // external clients should go through the MConfig facade.
@@ -289,6 +291,10 @@ final class ConfigUtils
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
+    private final static AtomicBoolean usingDefaultPathsMessageSeen = new AtomicBoolean(false);
+
+    // note that this log message is dangerous to test, because it will only be emitted the first time
+    // the method is called.
     private static List configuredOrHardcodedDefaultClassloaderResourcePathList( List delayedLogItemsOut )
     {
 	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
@@ -296,7 +302,17 @@ final class ConfigUtils
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;
 	else
+        {
+            if (delayedLogItemsOut != null && !usingDefaultPathsMessageSeen.getAndSet(true))
+            {
+                String msg =
+                    "No paths identifying locations for configuration were found in any of the default resources! Default resources checked are " +
+                    Arrays.toString(DFLT_RSRC_PATHFILES) + ". In the absence of explicitly provided locations, the following default locations will be checked for configuration: " +
+                    Arrays.toString(HARDCODED_DFLT_RSRC_PATHS);
+                delayedLogItemsOut.add( new DelayedLogItem(Level.INFO, msg, null) );
+            }
 	    rps = Arrays.asList( HARDCODED_DFLT_RSRC_PATHS );
+        }
 	return rps;
     }
     public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig()
