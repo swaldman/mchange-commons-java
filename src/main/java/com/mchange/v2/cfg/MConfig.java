@@ -283,7 +283,12 @@ public final class MConfig
 
     public final static class WithTraditionalDefaultSources {
 
-        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
+        /**
+         * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
+         * and log the items yourself.
+         *
+         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             try { return readForKind( Kind.Traditional, defaultResources, preemptingResources, delayedLogItemsOut).withClassLoaderSafeParseMessages(); }
@@ -291,6 +296,10 @@ public final class MConfig
             { throw new RuntimeException("BUG! MConfig.readForKind(...) with Kind.Traditional should never throw a ConfigVetoedException.", e ); }
         }
 
+        /**
+         * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
+         * you'll se the logged items twice.
+         */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             try
@@ -304,6 +313,9 @@ public final class MConfig
             { throw new RuntimeException( e ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources )
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -311,12 +323,21 @@ public final class MConfig
             finally { dumpToLogger( dlis, logger() ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
         { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null); } // cached path logs internally
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig()
         { return readUncachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY ); }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig()
         { return readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY ); }
 
@@ -325,7 +346,12 @@ public final class MConfig
 
     public final static class AsProvided {
 
-        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
+        /**
+         * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
+         * and log the items yourself.
+         *
+         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             try
@@ -337,6 +363,10 @@ public final class MConfig
             { throw new RuntimeException( "BUG! MConfig.readForKind(...) with Kind.AsProvided should never throw a ConfigVetoedException.", e ); }
         }
 
+        /**
+         * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
+         * you'll se the logged items twice.
+         */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
             requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
@@ -351,12 +381,21 @@ public final class MConfig
             { throw new RuntimeException( e ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
         { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); } // cached path logs internally
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths )
         { return AsProvided.readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, null ); } // cached path logs internally
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources)
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -364,6 +403,9 @@ public final class MConfig
             finally { dumpToLogger( dlis, logger() ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths )
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -383,10 +425,19 @@ public final class MConfig
 
     public final static class AsProvidedVetoable {
 
-        /* This variant is the only one suitable for use by MLog. The rest hit loggers. */
+        /**
+         * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
+         * and log the items yourself.
+         *
+         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
         { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
 
+        /**
+         * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
+         * you'll se the logged items twice.
+         */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
         {
             try
@@ -405,12 +456,21 @@ public final class MConfig
             }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
         { return readCachedClassloaderResourceConfig( defaultResources, preemptingResources, null ); } // cached path logs internally
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readCachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
         { return AsProvidedVetoable.readCachedClassloaderResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, null ); } // cached path logs internally
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -418,6 +478,9 @@ public final class MConfig
             finally { dumpToLogger( dlis, logger() ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedClassloaderResourceConfig( String[] resourcePaths ) throws ConfigVetoedException
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
