@@ -10,8 +10,8 @@ import com.mchange.v2.cfg.MConfig;
 public final class MLogConfig
 {
     // MT: all now mutable references, protected by class' lock
-    private static MultiPropertiesConfig CONFIG              = null;
-    private static List                  BOOTSTRAP_LOG_ITEMS = null;
+    private static MultiPropertiesConfig config              = null;
+    private static List<DelayedLogItem>  bootstrapLogItems   = null;
     private static Method                delayedDumpToLogger = null;
 
     public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
@@ -19,37 +19,38 @@ public final class MLogConfig
 	String[] defaults = new String[] { "/com/mchange/v2/log/default-mchange-log.properties"  };
 	String[] preempts = new String[] { "/mchange-log.properties", "/" };
 
-	List bli = new ArrayList();
+	List<DelayedLogItem> bli = new ArrayList<>();
 
         // note that it's important that we read the config uncached here, because we call this from MLog's class init,
         // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
         // or deadlocks
-	MultiPropertiesConfig tmpCONFIG = MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
+	MultiPropertiesConfig tmpConfig = MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig( defaults, preempts, bli );
 
-	boolean firstLoad = (CONFIG == null);
+	boolean firstLoad = (config == null);
 
 	if ( overrides != null )
 	{
 	    int olen = overrides.length;
 	    MultiPropertiesConfig[] combineMe = new MultiPropertiesConfig[ olen + 1 ];
-	    combineMe[0] = tmpCONFIG;
+	    combineMe[0] = tmpConfig;
 	    for ( int i = 0; i < olen; ++i )
 		combineMe[ i + 1 ] = overrides[i];
+	    config = MConfig.combine( combineMe );
+            bli.addAll( config.getDelayedLogItems() );
 	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (firstLoad ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
-	    CONFIG = MConfig.combine( combineMe );
 	}
 	else
 	{
 	    if ( !firstLoad )
 		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without overrides.") );
-	    CONFIG = tmpCONFIG;
+	    config = tmpConfig;
 	}
-	BOOTSTRAP_LOG_ITEMS = bli;
+	bootstrapLogItems = bli;
     }
 
     // should be called only from static synchronized methods
     private static void ensureLoad()
-    { if (CONFIG == null) refresh( null, null); }
+    { if (config == null) refresh( null, null); }
 
     // should be called only from static synchronized methods
     private static void ensureDelayedDumpToLogger()
@@ -78,12 +79,12 @@ public final class MLogConfig
     public synchronized static String getProperty( String key )
     {
 	ensureLoad();
-	return CONFIG.getProperty( key ); 
+	return config.getProperty( key ); 
     }
 
     public synchronized static String getPropertyOnlyIfAvailable( String key )
     {
-	return (CONFIG != null ? CONFIG.getProperty( key ) : null);
+	return (config != null ? config.getProperty( key ) : null);
     }
 
     public synchronized static String getPropertyIfNoFailure( String key )
@@ -91,43 +92,66 @@ public final class MLogConfig
         try { ensureLoad(); }
         catch (Exception e)
         { /* ignore */ }
-	return (CONFIG != null ? CONFIG.getProperty( key ) : null);
+	return (config != null ? config.getProperty( key ) : null);
     }
 
+    private static String dedupKey(DelayedLogItem dli) { return dli.getLevel().toString() + "\u0000" + dli.getText().toString(); }
+
     // should not be called during static init to avoid cyclic dependency issues
+    //
+    // this got more complicated because we strip throwables off of log items before
+    // retaining them, to avoid pinning ClassLoaders in memory. so sometimes we see
+    // "duplicates" that are actually the same item, just one has its exception property
+    // trimmed. so, we deduplicate on only level and text, but we prefer to log items
+    // with throwables if we have one.
     public synchronized static void logDelayedItems( MLogger logger )
-    { 
-	ensureLoad();
-	ensureDelayedDumpToLogger();
+    {
+        ensureLoad();
+        ensureDelayedDumpToLogger();
 
-	List items = new ArrayList();
-	items.addAll( BOOTSTRAP_LOG_ITEMS );
-	items.addAll( CONFIG.getDelayedLogItems() );
+        if ( bootstrapLogItems != null ) // we only want to log them once, we don't want to retain their Throwables
+        {
+            List<DelayedLogItem> items = new ArrayList<>();
+            items.addAll( bootstrapLogItems );
 
-	Set uniquerizer = new HashSet();
-	uniquerizer.addAll( items );
-	
-	for( Iterator ii = items.iterator(); ii.hasNext(); )
-	{
-	    Object item = ii.next();
+            Set<String>                uniquerizer = new HashSet<>();
+            Map<String,DelayedLogItem> preferred   = new HashMap<>();
 
-	    if (uniquerizer.contains( item ) )
-	    {
-		uniquerizer.remove( item );
+            for ( DelayedLogItem item : items )
+            {
+                String ddkey = dedupKey(item);
+                uniquerizer.add( ddkey );
+                if (item.getException() != null && !preferred.containsKey(ddkey))
+                    preferred.put(ddkey, item);
+            }
 
-		try { delayedDumpToLogger.invoke( null, new Object[] { item, logger } ); }
-		catch ( Exception e )
-		    {
-			// bad, bad, shouldn't happen
-			e.printStackTrace();
-			throw new Error(e);
-		    }
-	    }
-	}
+            for( Iterator<DelayedLogItem> ii = items.iterator(); ii.hasNext(); )
+            {
+                DelayedLogItem item = ii.next();
+                String ddkey = dedupKey(item);
+
+                if (uniquerizer.contains( ddkey ) )
+                {
+                    uniquerizer.remove( ddkey );
+
+                    DelayedLogItem loggableItem = preferred.get(ddkey);
+                    if (loggableItem == null) loggableItem = item;
+
+                    try { delayedDumpToLogger.invoke( null, new Object[] { loggableItem, logger } ); }
+                    catch ( Exception e )
+                    {
+                        // bad, bad, shouldn't happen
+                        e.printStackTrace();
+                        throw new Error(e);
+                    }
+                }
+            }
+            bootstrapLogItems = null;
+        }
     }
 
     public synchronized static String dump()
-    { return CONFIG.toString(); }
+    { return config.toString(); }
 
     private MLogConfig()
     {}
