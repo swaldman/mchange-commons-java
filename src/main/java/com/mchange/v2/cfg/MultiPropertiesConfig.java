@@ -77,13 +77,13 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
 
     public abstract String[] getPropertiesResourcePaths();
 
-    /** @return an empty list, even if path is unknown, just to avoid downstream NullPointerExceptions */
+    /** @return an empty Properties, even if path is unknown, just to avoid downstream NullPointerExceptions */
     public abstract Properties getPropertiesByResourcePath(String path);
 
     /**
      *  The special prefix "" returns all the Properties
      *
-     *  @return an empty list, even if path is unknown, just to avoid downstream NullPointerExceptions
+     *  @return an empty Properties, even if prefix is unknown, just to avoid downstream NullPointerExceptions
      */
     public abstract Properties getPropertiesByPrefix(String pfx);
 

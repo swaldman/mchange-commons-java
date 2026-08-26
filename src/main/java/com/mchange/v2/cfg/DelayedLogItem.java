@@ -20,7 +20,7 @@ public final class DelayedLogItem
         if (level == null || text == null)
             throw new IllegalArgumentException("Neither of arguments level or text is permitted to be null. [level: " + level + ", text: " + text + "]");
 
-  	this.level     = level;
+	this.level     = level;
 	this.text      = text;
 	this.exception = exception;
     }

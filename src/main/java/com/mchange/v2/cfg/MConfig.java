@@ -449,7 +449,7 @@ public final class MConfig
             return out;
         }
 
-        // the defensive close is overkill for now, paths
+        // the defensive clone is overkill for now, paths
         // is handed unshared values. but just in case things change
         PathsKey(String[] paths, Kind kind, List delayedLogItems)
 	{
@@ -492,7 +492,7 @@ public final class MConfig
 	    dumpToLogger( items, logger() );
 
             // delayedLogItems are not conceptually part of the state of the key,
-            // they are just carries along to be logged. they hold throwables,
+            // they are just carried along to be logged. they hold throwables,
             // which can pin ClassLoaders
             //
             // once they've been logged, we can get rid of them.

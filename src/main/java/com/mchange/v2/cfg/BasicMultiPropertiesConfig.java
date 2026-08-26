@@ -49,19 +49,39 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     // VetoThrowing implies MConfig.Kind.AsProvidedVetoable
     BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
     {
-        ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, delayedLogItems);
-	firstInit( MConfig.Kind.AsProvidedVetoable, resourcePaths, delayedLogItems );
-	finishInit( delayedLogItems );
+        boolean syserr = (delayedLogItems == null);
+        List dlis = (syserr ? new ArrayList() : delayedLogItems);
+        try
+        {
+            String[] safeResourcePaths = ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, dlis);
+            firstInit( MConfig.Kind.AsProvidedVetoable, safeResourcePaths, dlis );
+            finishInit( dlis );
+        }
+        finally
+        {
+            this.parseMessages = Collections.unmodifiableList( new ArrayList(dlis) );
+            if ( syserr ) dumpToSysErr( dlis );
+        }
     }
 
     // non-VetoThrowing implies MConfig.Kind.AsProvided or MConfig.Kind.Traditional
     BasicMultiPropertiesConfig(MConfig.Kind kind, String[] resourcePaths, List delayedLogItems)
     {
-        ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, delayedLogItems);
-        if (kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
-            throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
-	firstInitNotVetoThrowing( kind, resourcePaths, delayedLogItems );
-	finishInit( delayedLogItems );
+        boolean syserr = (delayedLogItems == null);
+        List dlis = (syserr ? new ArrayList() : delayedLogItems);
+        try
+        {
+            String[] safeResourcePaths = ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, dlis);
+            if (kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
+                throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
+            firstInitNotVetoThrowing( kind, safeResourcePaths, dlis );
+            finishInit( dlis );
+        }
+        finally
+        {
+            this.parseMessages = Collections.unmodifiableList( new ArrayList(dlis) );
+            if ( syserr ) dumpToSysErr( dlis );
+        }
     }
 
     public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
@@ -75,6 +95,8 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
     {
+        if (notionalResourcePath == null) throw new IllegalArgumentException("notionalResourcePath should not be null.");
+        if (props == null) throw new IllegalArgumentException("props should not be null.");
 	Map out = new HashMap();
 	out.put( notionalResourcePath, props );
 	return out;
@@ -92,7 +114,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	dlis.addAll( parseMessages );
 	finishInit( dlis );
 
-	this.parseMessages = dlis;
+	this.parseMessages = Collections.unmodifiableList(dlis);
     }
 
     // EMPTY
@@ -147,103 +169,76 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     private void firstInit( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems ) throws ConfigVetoedException
     {
-	boolean syserr = false;
-        if (delayedLogItems == null)
+        Map  pbrp = new HashMap();
+        List goodPaths = new ArrayList();
+
+        List<ConfigVetoedException> cves = new ArrayList<>();
+
+        for( int i = 0, len = resourcePaths.length; i < len; ++i )
         {
-            delayedLogItems = new ArrayList();
-            syserr = true;
+            String rp = resourcePaths[i];
+
+            try
+            {
+                PropertiesConfigSource cs = ConfigUtils.propertiesConfigSourceForIdentifier( rp, delayedLogItems );
+                if (cs == null)
+                    throw new FileNotFoundException( "'" + rp + "' is not valid or could not be found. Skipping." );
+                else
+                {
+                    PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
+                    pbrp.put( rp, parse.getProperties() );
+                    goodPaths.add( rp );
+                    delayedLogItems.addAll( parse.getDelayedLogItems() );
+                }
+            }
+            catch (ConfigVetoedException cve)
+            {
+                cves.add(cve);
+                delayedLogItems.addAll( cve.getDelayedLogItems() );
+            }
+            catch (OwnLogCarryingMissingFileException lcmfe)
+            { delayedLogItems.addAll( lcmfe.getDelayedLogItems() ); } // its own report, in place of the generic one
+            catch (ConfigParseException cpe) // catch-all
+            { delayedLogItems.addAll( cpe.getDelayedLogItems() ); }
+            catch ( NoSuchFileException nsfe )
+            { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,nsfe) ); }
+            catch ( FileNotFoundException fnfe )
+            { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,fnfe) ); }
+            catch ( Exception e )
+            { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
         }
 
-        try
+        this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
+        this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
+
+        if (cves.size() != 0)
         {
-
-            Map  pbrp = new HashMap();
-            List goodPaths = new ArrayList();
-
-            List<ConfigVetoedException> cves = new ArrayList<>();
-
-            for( int i = 0, len = resourcePaths.length; i < len; ++i )
+            if (kind == MConfig.Kind.AsProvided)
+                for (ConfigVetoedException cve : cves)
+                    logCveForAsProvided(cve, delayedLogItems);
+            else if (kind == MConfig.Kind.AsProvidedVetoable)
             {
-                String rp = resourcePaths[i];
-
-                try
+                ConfigVetoedException last = null;
+                for (ConfigVetoedException cve : cves)
                 {
-                    PropertiesConfigSource cs = ConfigUtils.propertiesConfigSourceForIdentifier( rp, delayedLogItems );
-                    if (cs == null)
-                        throw new FileNotFoundException( "'" + rp + "' could not be found. Skipping." );
-                    else
-                    {
-                        PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );
-                        pbrp.put( rp, parse.getProperties() );
-                        goodPaths.add( rp );
-                        delayedLogItems.addAll( parse.getDelayedLogItems() );
-                    }
+                    last = cve;
+                    logCveForAsProvidedVetoable(cve, delayedLogItems);
                 }
-                catch (ConfigVetoedException cve)
-                {
-                    cves.add(cve);
-                    delayedLogItems.addAll( cve.getDelayedLogItems() );
-                }
-                catch (OwnLogCarryingMissingFileException lcmfe)
-                { delayedLogItems.addAll( lcmfe.getDelayedLogItems() ); } // its own report, in place of the generic one
-                catch (ConfigParseException cpe) // catch-all
-                { delayedLogItems.addAll( cpe.getDelayedLogItems() ); }
-                catch ( NoSuchFileException nsfe )
-                { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,nsfe) ); }
-                catch ( FileNotFoundException fnfe )
-                { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,fnfe) ); }
-                catch ( Exception e )
-                { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
+                throw last;
             }
-
-            this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
-            this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
-
-            if (cves.size() != 0)
-            {
-                if (kind == MConfig.Kind.AsProvided)
-                    for (ConfigVetoedException cve : cves)
-                        logCveForAsProvided(cve, delayedLogItems);
-                else if (kind == MConfig.Kind.AsProvidedVetoable)
-                {
-                    ConfigVetoedException last = null;
-                    for (ConfigVetoedException cve : cves)
-                    {
-                        last = cve;
-                        logCveForAsProvidedVetoable(cve, delayedLogItems);
-                    }
-                    throw last;
-                }
-                else if (kind == MConfig.Kind.Traditional)
-                    for (ConfigVetoedException cve : cves)
-                        logCveForTraditional(cve, delayedLogItems);
-            }
-        }
-        finally
-        {
-            this.parseMessages = Collections.unmodifiableList( delayedLogItems );
-            if ( syserr )
-                dumpToSysErr( delayedLogItems );
+            else if (kind == MConfig.Kind.Traditional)
+                for (ConfigVetoedException cve : cves)
+                    logCveForTraditional(cve, delayedLogItems);
         }
     }
 
     /**
-     *  rps, propsByResourcePaths, and parseMessages should be set before finishInit()
+     *  rps and propsByResourcePaths should be set before finishInit()
      */
     private void finishInit( List delayedLogItems )
     {
-	boolean syserr = false;
-	if (delayedLogItems == null)
-	    {
-		delayedLogItems = new ArrayList();
-		syserr = true;
-	    }
-
 	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths, delayedLogItems ) );
 	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths, delayedLogItems );
-
-	if ( syserr )
-	    dumpToSysErr( delayedLogItems );
     }
 
     public List getDelayedLogItems()

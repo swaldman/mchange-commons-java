@@ -17,7 +17,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
 	for (int i = configs.length - 1; i >= 0; --i)
 	    {
-		String[] rps = ConfigUtils.nullFilter(configs[i].getPropertiesResourcePaths()); // there shoukd be no null values, but out of an abundance of caution
+		String[] rps = ConfigUtils.nullFilter(configs[i].getPropertiesResourcePaths()); // there should be no null values, but out of an abundance of caution
 		for (int j = rps.length - 1; j >= 0; --j)
 		    {
 			String rp = rps[j];

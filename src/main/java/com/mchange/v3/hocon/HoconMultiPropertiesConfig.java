@@ -19,6 +19,8 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
 
     public HoconMultiPropertiesConfig( String quasiResourcePath, Config config )
     {
+        if (quasiResourcePath == null)
+            throw new IllegalArgumentException("quasiResourcePath must not be null.");
 	this.quasiResourcePath = quasiResourcePath;
 	this.props = propsForConfig( config );
     }
@@ -79,24 +81,19 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
 	    return false;
 	}
     }
-    
+
     @Override
-    public String[] getPropertiesResourcePaths() 
+    public String[] getPropertiesResourcePaths()
     { return new String[] { quasiResourcePath }; }
 
     @Override
     public Properties getPropertiesByResourcePath(String path)
     {
-	if ( path.equals( quasiResourcePath ) )
-	{
-	    Properties out = new Properties();
-	    out.putAll( props );
-	    return out;
-	}
-	else
-	    return null;
+        Properties out = new Properties();
+        if ( quasiResourcePath.equals( path ) ) out.putAll( props );
+        return out;
     }
-    
+
     @Override
     public synchronized Properties getPropertiesByPrefix(String pfx)
     {

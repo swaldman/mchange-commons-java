@@ -58,6 +58,8 @@ final class ConfigUtils
     // eventually this should be extensible via some public API
     static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List delayedLogItems)
     {
+        if (identifier == null) return null;
+
 	boolean hocon = isHoconPath( identifier );
         boolean file  = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
 
@@ -309,10 +311,10 @@ final class ConfigUtils
             }
         if (containsNulls)
         {
-            delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' contains null values, which will be ignored.", null ) );
+            if (delayedLogItems != null) delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' contains null values, which will be ignored.", null ) );
             out = nullFilter(path);
             if (out.length == 0)
-                delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' is empty after removing null values.", null ) );
+                if (delayedLogItems != null) delayedLogItems.add( new DelayedLogItem( Level.WARNING, "List of configuration sources '" + argName + "' is empty after removing null values.", null ) );
         }
         else
             out = path;
@@ -377,7 +379,7 @@ final class ConfigUtils
 		List rps = configuredOrHardcodedDefaultClassloaderResourcePathList( delayedLogItemsOut );
 
                 // retain traditional behavior, capture delayedLogItemsOut
-                canonicalDefaultConfig = new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, (String[]) rps.toArray( new String[ rps.size() ] ), delayedLogItemsOut ); 
+                canonicalDefaultConfig = new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, (String[]) rps.toArray( new String[ rps.size() ] ), delayedLogItemsOut ).withClassLoaderSafeParseMessages(); 
 	    }
 	return canonicalDefaultConfig;
     }
