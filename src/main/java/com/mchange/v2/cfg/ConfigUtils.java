@@ -167,6 +167,9 @@ final class ConfigUtils
 
     /**
      *  Later entries in the configs array override earlier entries.
+     *
+     *  <p>See {@link MConfig#combine} for the full rules, and for the one case in which they
+     *  conflict and the resulting value is undefined.</p>
      */
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }

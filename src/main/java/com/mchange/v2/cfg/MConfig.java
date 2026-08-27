@@ -504,6 +504,59 @@ public final class MConfig
 
     /**
      *  Later entries in the configs array override earlier entries.
+     *
+     *  <p>Two rules govern the result, and they are ordinarily in agreement:</p>
+     *
+     *  <ul>
+     *    <li><b>Array position.</b> Where two configs define the same key, the one later in
+     *    {@code configs} wins.</li>
+     *
+     *    <li><b>Resource-path preference.</b> The combined config reports one merged list of
+     *    resource paths, in increasing order of preference, and a key defined at more than one
+     *    path takes its value from the latest path defining it. A path named by several configs
+     *    appears once, and <b>collapses to its highest-preference position</b> &mdash; that of
+     *    the last config naming it. The properties at that path are the merge of every
+     *    contributing config's, later contributions winning.</li>
+     *  </ul>
+     *
+     *  <p>Merging rather than shadowing is the point of the second rule: a config that names an
+     *  already-named path adds to it and overrides where they collide, rather than replacing it
+     *  wholesale, so keys unique to an earlier contributor survive.</p>
+     *
+     *  <h3>Where the two rules disagree</h3>
+     *
+     *  <p>They can be made to conflict, and when they are, <b>the resulting value is
+     *  undefined</b> &mdash; not arbitrary, but not currently specified either. Combine
+     *  {@code A(1), B, A(2)}, where {@code A(1)} and {@code B} disagree about some key that
+     *  {@code A(2)} never mentions:</p>
+     *
+     *  <ul>
+     *    <li>by array position, {@code B} is later than {@code A(1)}, so {@code B}'s value
+     *    should win;</li>
+     *    <li>by resource-path preference, path {@code A} sits after {@code B} (it collapsed to
+     *    {@code A(2)}'s position), and path {@code A} still carries {@code A(1)}'s value for
+     *    that key, because {@code A(2)} contributed nothing to overwrite it &mdash; so
+     *    {@code A(1)}'s value should win.</li>
+     *  </ul>
+     *
+     *  <p>A path can hold only one position, so a key contributed by any config naming it is
+     *  promoted to the position of the last config naming it. Position is tracked per path;
+     *  precedence is owed per config. With a repeated path the two cannot both be honored.</p>
+     *
+     *  <p>What is <i>not</i> undefined is that the views agree with each other.
+     *  {@link MultiPropertiesConfig#getProperty} must return the value held at the
+     *  highest-preference resource path that defines the key, and no view may report a value
+     *  no contributing config ever declared. That leaves exactly two admissible outcomes, and
+     *  a caller who cares should assume either may hold:</p>
+     *
+     *  <pre>
+     *    getProperty(key) -&gt; A(1)'s value   and   getPropertiesByResourcePath(A) -&gt; A(1)'s value
+     *    getProperty(key) -&gt; B's value      and   getPropertiesByResourcePath(A) -&gt; key absent
+     *  </pre>
+     *
+     *  <p>This implementation currently yields the first. That is a coherent choice rather than
+     *  a considered one, and it may change; only the coherence is promised. Callers who need a
+     *  definite answer should avoid naming one resource path from two combined configs.</p>
      */
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return ConfigUtils.combine( configs ); }

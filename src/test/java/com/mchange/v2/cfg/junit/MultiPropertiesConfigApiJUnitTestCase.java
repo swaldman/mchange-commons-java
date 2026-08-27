@@ -230,6 +230,81 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
     }
 
     /**
+     *  Combine A(1), B, A(2), where A(1) and B disagree about a key that A(2) never mentions.
+     *  Two rules collide, and the library has not committed to which gives way.
+     *
+     *  <p>By array position B is later than A(1), so B should win. But resource paths collapse
+     *  to their highest-preference position, and A's merged bucket -- carrying A(1)'s value,
+     *  since A(2) is silent on the key -- sits at A(2)'s position, which is after B. Whichever
+     *  rule yields, {@code getProperty} and {@code getPropertiesByResourcePath} still have to
+     *  agree with one another, and only two pairings do:</p>
+     *
+     *  <pre>
+     *    getProperty -&gt; "a"   with   getPropertiesByResourcePath(A) -&gt; "a"
+     *    getProperty -&gt; "b"   with   getPropertiesByResourcePath(A) -&gt; absent
+     *  </pre>
+     *
+     *  <p>So this test asserts neither value. It asserts that whatever comes back is coherent:
+     *  that every value is one some config actually declared, and that {@code getProperty}
+     *  agrees with the by-path and by-prefix views. Either acceptable pairing passes; an
+     *  inconsistent one ({@code getProperty} says "b" while path A still claims "a"), or a
+     *  consistent but fabricated one (path A claiming "b", which no config naming A ever
+     *  declared), fails.</p>
+     */
+    public void testASharedPathAndADistinctOneDisagreeCoherently()
+    {
+        final String A = "/a.properties", B = "/b.properties", KEY = "spookyconflict";
+
+        MultiPropertiesConfig a1 = MultiPropertiesConfig.fromProperties( A, props( KEY, "a", "ashared", "1" ) );
+        MultiPropertiesConfig b  = MultiPropertiesConfig.fromProperties( B, props( KEY, "b" ) );
+        MultiPropertiesConfig a2 = MultiPropertiesConfig.fromProperties( A, props( "ashared", "2" ) );
+
+        MultiPropertiesConfig combined = MConfig.combine( new MultiPropertiesConfig[] { a1, b, a2 } );
+
+        // the part that IS settled: A collapses to its highest-preference position, after B
+        assertEquals( "a repeated path takes the position of its last occurrence",
+                      Arrays.asList( B, A ), Arrays.asList( combined.getPropertiesResourcePaths() ) );
+        assertEquals( "the unambiguous key still resolves to the later config", "2", combined.getProperty( "ashared" ) );
+
+        // no value may be invented: only configs naming A declared anything for KEY under A,
+        // and between them they declared only "a"
+        String underA = combined.getPropertiesByResourcePath( A ).getProperty( KEY );
+        String underB = combined.getPropertiesByResourcePath( B ).getProperty( KEY );
+        assertTrue( "path A may report the value A(1) declared, or nothing -- not something else, got: " + underA,
+                    underA == null || "a".equals( underA ) );
+        assertEquals( "path B's own view is unambiguous", "b", underB );
+
+        String top = combined.getProperty( KEY );
+        assertTrue( "getProperty must return a declared value, got: " + top,
+                    "a".equals( top ) || "b".equals( top ) );
+
+        // the coherence law: getProperty must agree with the highest-preference path that
+        // declares the key. This is what rules out ("b" at the top, "a" still under A).
+        assertEquals( "getProperty disagrees with the by-resource-path view it should follow from",
+                      lastDeclaredValue( combined, KEY ), top );
+
+        // the by-prefix index is a third view of the same data, and must not dissent either
+        assertEquals( "getPropertiesByPrefix disagrees with getProperty",
+                      top, combined.getPropertiesByPrefix( "" ).getProperty( KEY ) );
+    }
+
+    /**
+     *  The value of key at the highest-preference resource path that declares it, which is what
+     *  getProperty is supposed to return. Resource paths are reported in increasing preference,
+     *  so the last one that has the key wins.
+     */
+    private static String lastDeclaredValue( MultiPropertiesConfig mpc, String key )
+    {
+        String found = null;
+        for ( String path : mpc.getPropertiesResourcePaths() )
+        {
+            Properties p = mpc.getPropertiesByResourcePath( path );
+            if ( p.containsKey( key ) ) found = p.getProperty( key );
+        }
+        return found;
+    }
+
+    /**
      *  Properties may legally hold non-String keys and values (via put rather than
      *  setProperty). Those entries are skipped with a WARNING rather than blowing up.
      */
