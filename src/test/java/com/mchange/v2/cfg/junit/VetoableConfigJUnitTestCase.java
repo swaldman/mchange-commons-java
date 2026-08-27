@@ -35,23 +35,30 @@ public final class VetoableConfigJUnitTestCase extends TestCase
 {
     private Path   dir;
     private Path   worldRead;   // 0644, asked to be useronly -> vetoes
+    private Path   worldRead2;  // a second one, so a read can veto twice
     private Path   plain;       // ordinary, loads fine
     private String vetoing;
+    private String vetoingToo;
     private String fine;
 
     private final static String[] NONE = new String[0];
 
+    /** The sentence appended only to the veto that is actually going to be thrown. */
+    private final static String PROMISE = "An Exception will be thrown.";
+
     protected void setUp() throws Exception
     {
-        dir       = Files.createTempDirectory( "mchange-cfg-veto-" );
-        worldRead = write( "worldread.properties", "secret.key=from-worldread\n", "rw-r--r--" );
-        plain     = write( "plain.properties",     "plain.key=from-plain\n",      "rw-------" );
-        vetoing   = worldRead.toUri().toString() + "?permissions=useronly";
-        fine      = plain.toUri().toString();
+        dir        = Files.createTempDirectory( "mchange-cfg-veto-" );
+        worldRead  = write( "worldread.properties",  "secret.key=from-worldread\n",  "rw-r--r--" );
+        worldRead2 = write( "worldread2.properties", "secret.key=from-worldread2\n", "rw-r--r--" );
+        plain      = write( "plain.properties",      "plain.key=from-plain\n",       "rw-------" );
+        vetoing    = worldRead.toUri().toString()  + "?permissions=useronly";
+        vetoingToo = worldRead2.toUri().toString() + "?permissions=useronly";
+        fine       = plain.toUri().toString();
     }
 
     protected void tearDown() throws Exception
-    { deleteQuietly( worldRead ); deleteQuietly( plain ); deleteQuietly( dir ); }
+    { deleteQuietly( worldRead ); deleteQuietly( worldRead2 ); deleteQuietly( plain ); deleteQuietly( dir ); }
 
     private Path write( String name, String contents, String mode ) throws IOException
     {
@@ -86,6 +93,138 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         for ( DelayedLogItem item : items )
             sb.append( "\n    [" ).append( item.getLevel() ).append( "] " ).append( item.getText() );
         return sb.toString();
+    }
+
+    // ------------------------------------------- helpers for a read that THREW
+
+    // A read that vetoes returns no config, so its report has to be read off the list the
+    // caller passed in rather than off a MultiPropertiesConfig.
+
+    private static List<String> vetoReportsIn( List items )
+    {
+        List<String> out = new ArrayList<String>();
+        for ( Object o : items )
+        {
+            DelayedLogItem item = (DelayedLogItem) o;
+            if ( DelayedLogItem.Level.WARNING.equals( item.getLevel() )
+                 && item.getText() != null && item.getText().contains( "has vetoed config" ) )
+                out.add( item.getText() );
+        }
+        return out;
+    }
+
+    private static String describe( List<String> reports )
+    {
+        StringBuilder sb = new StringBuilder();
+        for ( String r : reports ) sb.append( "\n    " ).append( r );
+        return sb.length() == 0 ? "(no veto reports)" : sb.toString();
+    }
+
+    /** Reads two vetoing identifiers in the given order and returns the veto that escaped. */
+    private ConfigVetoedException readBothExpectingAVeto( String firstPath, String secondPath, List itemsOut )
+    {
+        try
+        {
+            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
+                NONE, new String[] { firstPath, secondPath }, itemsOut );
+            fail( "expected a ConfigVetoedException from a read with two vetoing identifiers" );
+            return null; // unreachable
+        }
+        catch ( ConfigVetoedException expected )
+        { return expected; }
+    }
+
+    // =========================================== which veto, when there are several
+
+    /**
+     *  The FIRST veto encountered is the one thrown.
+     *
+     *  <p>Resource paths are ordered earliest-precedence first, so the first veto is the earliest
+     *  failure in the read -- which is what a fail-fast reader reports and what someone reading
+     *  the stack trace will expect. The loop used to keep overwriting and throw the last one.</p>
+     *
+     *  <p>Asserted in both orders with two interchangeable vetoing sources, so it pins the
+     *  position rather than something incidental about either file.</p>
+     */
+    public void testTheFirstVetoEncounteredIsTheOneThrown()
+    {
+        if ( !posixSupported() ) return;
+
+        ConfigVetoedException e1 = readBothExpectingAVeto( vetoing, vetoingToo, new ArrayList() );
+        assertEquals( "the veto from the first identifier should have been thrown",
+                      vetoing, e1.getIdentifier() );
+
+        ConfigVetoedException e2 = readBothExpectingAVeto( vetoingToo, vetoing, new ArrayList() );
+        assertEquals( "...and with the order reversed, the other one",
+                      vetoingToo, e2.getIdentifier() );
+    }
+
+    /**
+     *  Throwing one veto must not stop the others being reported. Only one exception can escape,
+     *  so the log is the only place the remaining vetoes are ever mentioned -- and breaking out
+     *  of the loop at the first one would silently lose them.
+     */
+    public void testEveryVetoIsReportedNotJustTheThrownOne()
+    {
+        if ( !posixSupported() ) return;
+
+        List items = new ArrayList();
+        readBothExpectingAVeto( vetoing, vetoingToo, items );
+
+        List<String> reports = vetoReportsIn( items );
+        assertEquals( "both vetoes should be reported, got:" + describe( reports ), 2, reports.size() );
+
+        boolean sawFirst = false, sawSecond = false;
+        for ( String r : reports )
+        {
+            if ( r.contains( vetoing ) )    sawFirst  = true;
+            if ( r.contains( vetoingToo ) ) sawSecond = true;
+        }
+        assertTrue( "the thrown veto should be named, got:"     + describe( reports ), sawFirst );
+        assertTrue( "the un-thrown veto should be named too, got:" + describe( reports ), sawSecond );
+    }
+
+    /**
+     *  Only the thrown veto says an exception is coming. Every veto used to carry that sentence,
+     *  so a read with several of them promised several exceptions and delivered one.
+     */
+    public void testOnlyTheThrownVetoPromisesAnException()
+    {
+        if ( !posixSupported() ) return;
+
+        List items = new ArrayList();
+        readBothExpectingAVeto( vetoing, vetoingToo, items );
+
+        List<String> reports = vetoReportsIn( items );
+        String promising = null;
+        int    count     = 0;
+        for ( String r : reports )
+            if ( r.contains( PROMISE ) ) { ++count; promising = r; }
+
+        assertEquals( "exactly one veto report should promise the exception, got:" + describe( reports ),
+                      1, count );
+        assertTrue( "the promise belongs on the veto that is actually thrown, got:\n    " + promising,
+                    promising.contains( vetoing ) );
+    }
+
+    /** With a single veto the report is unchanged: it is the first, so it still promises the throw. */
+    public void testASingleVetoStillPromisesTheException()
+    {
+        if ( !posixSupported() ) return;
+
+        List items = new ArrayList();
+        try
+        {
+            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, items );
+            fail( "expected a ConfigVetoedException" );
+        }
+        catch ( ConfigVetoedException expected )
+        { /* expected */ }
+
+        List<String> reports = vetoReportsIn( items );
+        assertEquals( "one identifier, one veto report, got:" + describe( reports ), 1, reports.size() );
+        assertTrue( "a lone veto is the first veto, so it promises the throw, got:" + describe( reports ),
+                    reports.get( 0 ).contains( PROMISE ) );
     }
 
     // ==================================================== AsProvidedVetoable
