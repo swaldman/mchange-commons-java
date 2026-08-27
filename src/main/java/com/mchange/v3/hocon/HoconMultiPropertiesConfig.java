@@ -13,6 +13,7 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     String quasiResourcePath;
     Properties props;
     List<DelayedLogItem> delayedLogItems = new LinkedList<DelayedLogItem>();
+    Set<String> qrpSet;
 
     //MT: Protected by this' lock
     Map<String,Properties> propsByPrefix = new HashMap<String,Properties>();
@@ -23,8 +24,12 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
             throw new IllegalArgumentException("quasiResourcePath must not be null.");
 	this.quasiResourcePath = quasiResourcePath;
 	this.props = propsForConfig( config );
+
+        HashSet<String> _qrpSet = new HashSet<String>();
+        _qrpSet.add( quasiResourcePath );
+        this.qrpSet = Collections.unmodifiableSet(_qrpSet);
     }
-    
+
     private Properties propsForConfig( Config config )
     {
 	Properties out = new Properties();
@@ -127,5 +132,14 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     @Override
     public List getDelayedLogItems()
     { return delayedLogItems; }
+
+    public boolean wasRead(String resourcePath)      { return qrpSet.contains(resourcePath); }
+    public boolean wasVetoed(String resourcePath)    { return false; }
+    public boolean wasNotFound(String resourcePath)  { return false; }
+    public boolean wasFault(String resourcePath)     { return false; }
+    public Set getAllRead()                          { return qrpSet; }
+    public Set getAllVetoed()                        { return Collections.emptySet(); }
+    public Set getAllNotFound()                      { return Collections.emptySet(); }
+    public Set getAllFaults()                        { return Collections.emptySet(); }
 }
 

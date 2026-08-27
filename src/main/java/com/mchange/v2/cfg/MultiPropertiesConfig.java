@@ -2,6 +2,7 @@ package com.mchange.v2.cfg;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * MultiPropertiesConfig allows applications to accept configuration data
@@ -92,4 +93,13 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public abstract String getProperty( String key );
 
     public abstract List getDelayedLogItems();
+
+    public abstract boolean wasRead(String resourcePath);
+    public abstract boolean wasVetoed(String resourcePath);
+    public abstract boolean wasNotFound(String resourcePath);
+    public abstract boolean wasFault(String resourcePath);
+    public abstract Set getAllRead();
+    public abstract Set getAllVetoed();
+    public abstract Set getAllNotFound();
+    public abstract Set getAllFaults();
 }

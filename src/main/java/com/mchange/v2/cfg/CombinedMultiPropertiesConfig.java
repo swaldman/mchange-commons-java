@@ -9,6 +9,11 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
     List parseMessages;
 
+    Set allRead;
+    Set allVetoed;
+    Set allNotFound;
+    Set allFaults;
+
     CombinedMultiPropertiesConfig( MultiPropertiesConfig[] configs )
     { 
 	this.configs = configs; 
@@ -31,6 +36,30 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    pms.addAll( configs[i].getDelayedLogItems() );
 	this.parseMessages = Collections.unmodifiableList( pms );
+
+        this.allRead = Collections.unmodifiableSet(new HashSet(Arrays.asList(resourcePaths)));
+
+        Set af = new HashSet();
+	for ( int i = 0, len = configs.length; i < len; ++i )
+	    af.addAll( configs[i].getAllFaults() );
+        af.removeAll(allRead);
+
+        Set anf = new HashSet();
+	for ( int i = 0, len = configs.length; i < len; ++i )
+	    anf.addAll( configs[i].getAllNotFound() );
+        anf.removeAll(allRead);
+        anf.removeAll(af);
+
+        Set av = new HashSet();
+	for ( int i = 0, len = configs.length; i < len; ++i )
+	    av.addAll( configs[i].getAllVetoed() );
+        av.removeAll(allRead);
+        av.removeAll(af);
+        av.removeAll(anf);
+
+        this.allFaults   = Collections.unmodifiableSet(af);
+        this.allNotFound = Collections.unmodifiableSet(anf);
+        this.allVetoed   = Collections.unmodifiableSet(av);
     }
 
     private Map getPropsByResourcePaths()
@@ -51,7 +80,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	Map      pbrm = getPropsByResourcePaths();
 	List     pms  = getDelayedLogItems();
 
-	return new BasicMultiPropertiesConfig( rps, pbrm, pms );
+	return new BasicMultiPropertiesConfig( rps, pbrm, pms, allVetoed, allNotFound, allFaults );
     }
 
     public String[] getPropertiesResourcePaths()
@@ -113,5 +142,29 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
     public List getDelayedLogItems()
     { return parseMessages; }
+
+    public boolean wasRead(String resourcePath)
+    { return allRead.contains(resourcePath); }
+
+    public boolean wasVetoed(String resourcePath)
+    { return allVetoed.contains(resourcePath); }
+
+    public boolean wasNotFound(String resourcePath)
+    { return allNotFound.contains(resourcePath); }
+
+    public boolean wasFault(String resourcePath)
+    { return allFaults.contains(resourcePath); }
+
+    public Set getAllRead()
+    { return allRead; }
+
+    public Set getAllVetoed()
+    { return allVetoed; }
+
+    public Set getAllNotFound()
+    { return allNotFound; }
+
+    public Set getAllFaults()
+    { return allFaults; }
 }
 

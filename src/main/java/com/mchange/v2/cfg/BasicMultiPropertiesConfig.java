@@ -21,30 +21,14 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     Properties propsByKey;
 
+    Set<String> historyVetoed;
+    Set<String> historyNotFound;
+    Set<String> historyOtherFailure;
+
     static class VetoThrowing {
         static VetoThrowing INSTANCE = new VetoThrowing();
         private VetoThrowing() {}
     }
-
-    public BasicMultiPropertiesConfig withClassLoaderSafeParseMessages() // strips Throwables that might pin ClassLoaders
-    {
-        BasicMultiPropertiesConfig out = new BasicMultiPropertiesConfig(this);
-        out.parseMessages = Collections.unmodifiableList(ConfigUtils.stripThrowables(this.parseMessages));
-        return out;
-    }
-
-    private BasicMultiPropertiesConfig(BasicMultiPropertiesConfig copyMe)
-    {
-        this.rps = (String[]) copyMe.rps.clone();
-        this.propsByResourcePaths = Collections.unmodifiableMap(new HashMap(copyMe.propsByResourcePaths));
-        this.propsByPrefixes = Collections.unmodifiableMap(new HashMap(copyMe.propsByPrefixes));
-        this.parseMessages = Collections.unmodifiableList(new ArrayList(copyMe.parseMessages));
-        this.propsByKey = new Properties();
-        propsByKey.putAll( copyMe.propsByKey );
-    }
-
-    public BasicMultiPropertiesConfig(String[] resourcePaths)
-    { this( MConfig.Kind.Traditional, resourcePaths, null ); } // mimics the traditional behavior of the library as closely as we now make available
 
     // VetoThrowing implies MConfig.Kind.AsProvidedVetoable
     BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
@@ -84,6 +68,42 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         }
     }
 
+    public BasicMultiPropertiesConfig(String[] resourcePaths)
+    { this( MConfig.Kind.Traditional, resourcePaths, null ); } // mimics the traditional behavior of the library as closely as we now make available
+
+    private BasicMultiPropertiesConfig(BasicMultiPropertiesConfig copyMe)
+    {
+        this.rps = (String[]) copyMe.rps.clone();
+        this.propsByResourcePaths = Collections.unmodifiableMap(new HashMap(copyMe.propsByResourcePaths));
+        this.propsByPrefixes = Collections.unmodifiableMap(new HashMap(copyMe.propsByPrefixes));
+        this.parseMessages = Collections.unmodifiableList(new ArrayList(copyMe.parseMessages));
+        this.propsByKey = new Properties();
+        propsByKey.putAll( copyMe.propsByKey );
+
+        this.historyVetoed = copyMe.historyVetoed;             // unmodifiable list
+        this.historyNotFound = copyMe.historyNotFound;         // unmodifiable list
+        this.historyOtherFailure = copyMe.historyOtherFailure; // unmodifiable list
+    }
+
+    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages, Set<String> historyVetoed, Set<String> historyNotFound, Set<String> historyOtherFailures)
+    {
+	this.rps                  = (String[]) rps.clone();
+	this.propsByResourcePaths = new HashMap(propsByResourcePaths);
+
+	List dlis = new ArrayList();
+	dlis.addAll( parseMessages );
+	finishInit( dlis );
+
+        this.historyVetoed       = new HashSet(historyVetoed);
+        this.historyNotFound     = new HashSet(historyNotFound);
+        this.historyOtherFailure = new HashSet(historyOtherFailures);
+
+	this.parseMessages = Collections.unmodifiableList(dlis);
+    }
+
+    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
+    { this( rps, propsByResourcePaths, parseMessages, Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.<String>emptySet()); }
+    
     public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
     {
         this(
@@ -91,6 +111,27 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
              resourcePathToPropertiesMap( notionalResourcePath, props ),
              Collections.emptyList()
         );
+    }
+
+    // EMPTY
+    private BasicMultiPropertiesConfig()
+    {
+	this.rps                  = new String[0];
+	this.propsByResourcePaths = Collections.emptyMap();
+	this.propsByPrefixes      = Collections.emptyMap();
+	this.parseMessages        = Collections.emptyList();
+	this.propsByKey           = new Properties();
+
+        this.historyVetoed =       Collections.emptySet();
+        this.historyNotFound =      Collections.emptySet();
+        this.historyOtherFailure = Collections.emptySet();
+    }
+
+    public BasicMultiPropertiesConfig withClassLoaderSafeParseMessages() // strips Throwables that might pin ClassLoaders
+    {
+        BasicMultiPropertiesConfig out = new BasicMultiPropertiesConfig(this);
+        out.parseMessages = Collections.unmodifiableList(ConfigUtils.stripThrowables(this.parseMessages));
+        return out;
     }
 
     private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
@@ -104,32 +145,6 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     private static String[] badNotionalResourcePath()
     { throw new IllegalArgumentException("notionalResourcePath must not be null"); }
-
-    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
-    {
-	this.rps                  = rps;
-	this.propsByResourcePaths = propsByResourcePaths;
-
-	List dlis = new ArrayList();
-	dlis.addAll( parseMessages );
-	finishInit( dlis );
-
-	this.parseMessages = Collections.unmodifiableList(dlis);
-    }
-
-    // EMPTY
-    private BasicMultiPropertiesConfig()
-    {
-	// NOTE: every assignment below must target a field. These were once local
-	// declarations that merely shadowed the fields, leaving the EMPTY singleton
-	// with null propsByPrefixes, parseMessages, and propsByKey -- so getProperty,
-	// getPropertiesByPrefix, and getDelayedLogItems all threw NullPointerException.
-	this.rps                  = new String[0];
-	this.propsByResourcePaths = Collections.emptyMap();
-	this.propsByPrefixes      = Collections.emptyMap();
-	this.parseMessages        = Collections.emptyList();
-	this.propsByKey           = new Properties();
-    }
 
     private void firstInitNotVetoThrowing( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems )
     {
@@ -172,6 +187,10 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         Map  pbrp = new HashMap();
         List goodPaths = new ArrayList();
 
+        Set<String> _historyVetoed       = new HashSet<>();
+        Set<String> _historyNotFound      = new HashSet<>();
+        Set<String> _historyOtherFailure = new HashSet<>();
+
         List<ConfigVetoedException> cves = new ArrayList<>();
 
         for( int i = 0, len = resourcePaths.length; i < len; ++i )
@@ -193,23 +212,43 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
             }
             catch (ConfigVetoedException cve)
             {
+                _historyVetoed.add(rp);
                 cves.add(cve);
                 delayedLogItems.addAll( cve.getDelayedLogItems() );
             }
             catch (OwnLogCarryingMissingFileException lcmfe)
-            { delayedLogItems.addAll( lcmfe.getDelayedLogItems() ); } // its own report, in place of the generic one
+            {
+                _historyNotFound.add(rp);
+                delayedLogItems.addAll( lcmfe.getDelayedLogItems() ); // its own report, in place of the generic one
+            } 
             catch (ConfigParseException cpe) // catch-all
-            { delayedLogItems.addAll( cpe.getDelayedLogItems() ); }
+            {
+                _historyOtherFailure.add(rp);
+                delayedLogItems.addAll( cpe.getDelayedLogItems() );
+            }
             catch ( NoSuchFileException nsfe )
-            { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,nsfe) ); }
+            {
+                _historyNotFound.add(rp);
+                delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,nsfe) );
+            }
             catch ( FileNotFoundException fnfe )
-            { delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,fnfe) ); }
+            {
+                _historyNotFound.add(rp);
+                delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(rp,fnfe) );
+            }
             catch ( Exception e )
-            { delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) ); }
+            {
+                _historyOtherFailure.add(rp);
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("An Exception occurred while trying to read configuration data at resource identifier '%s'.", rp), e) );
+            }
         }
 
         this.rps = (String[]) goodPaths.toArray( new String[ goodPaths.size() ] );
         this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
+
+        this.historyVetoed       = Collections.unmodifiableSet(_historyVetoed);
+        this.historyNotFound      = Collections.unmodifiableSet(_historyNotFound);
+        this.historyOtherFailure = Collections.unmodifiableSet(_historyOtherFailure);
 
         if (cves.size() != 0)
         {
@@ -243,6 +282,30 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     public List getDelayedLogItems()
     { return parseMessages; }
+
+    public boolean wasRead(String resourcePath)
+    { return propsByResourcePaths.keySet().contains(resourcePath); }
+
+    public boolean wasVetoed(String resourcePath)
+    { return historyVetoed.contains(resourcePath); }
+
+    public boolean wasNotFound(String resourcePath)
+    { return historyNotFound.contains(resourcePath); }
+
+    public boolean wasFault(String resourcePath)
+    { return historyOtherFailure.contains(resourcePath); }
+
+    public Set getAllRead()
+    { return Collections.unmodifiableSet( propsByResourcePaths.keySet() ); }
+
+    public Set getAllVetoed()
+    { return historyVetoed; }
+
+    public Set getAllNotFound()
+    { return historyNotFound; }
+
+    public Set getAllFaults()
+    { return historyOtherFailure; }
 
     private static void dumpToSysErr( List delayedLogMessages )
     {
