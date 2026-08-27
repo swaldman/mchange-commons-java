@@ -133,6 +133,102 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
                       MConfig.combine( new MultiPropertiesConfig[] { second, first } ).getProperty( "shared" ) );
     }
 
+    // ------------------------------------------- combining configs that share a resource path
+
+    private final static String SHARED = "/shared-path.properties";
+
+    /** Two configs, both naming SHARED, differing on "shared" and each with a key of its own. */
+    private static MultiPropertiesConfig sharedFirst()
+    { return MultiPropertiesConfig.fromProperties( SHARED, props( "shared", "from-first",  "only.first",  "yes", "grp.a", "first-a", "grp.b", "first-b" ) ); }
+
+    private static MultiPropertiesConfig sharedSecond()
+    { return MultiPropertiesConfig.fromProperties( SHARED, props( "shared", "from-second", "only.second", "yes", "grp.b", "second-b" ) ); }
+
+    /**
+     *  Configs that name the SAME resource path merge rather than shadow.
+     *
+     *  <p>The existing combine tests use distinct paths, where nothing has to be reconciled
+     *  under one name. When two configs claim one path, the union of their keys must survive
+     *  and only genuine conflicts get resolved -- otherwise the later config would silently
+     *  take the path over and everything unique to the earlier one would vanish.</p>
+     *
+     *  <p>The path itself is reported once, not once per contributing config.</p>
+     */
+    public void testCombineMergesConfigsSharingAResourcePath()
+    {
+        MultiPropertiesConfig combined =
+            MConfig.combine( new MultiPropertiesConfig[] { sharedFirst(), sharedSecond() } );
+
+        assertEquals( "the conflict resolves in favor of the later config", "from-second", combined.getProperty( "shared" ) );
+        assertEquals( "a key only the earlier config had must survive",     "yes",         combined.getProperty( "only.first" ) );
+        assertEquals( "and one only the later config had",                  "yes",         combined.getProperty( "only.second" ) );
+
+        assertEquals( "the shared path should be listed once",
+                      Arrays.asList( SHARED ), Arrays.asList( combined.getPropertiesResourcePaths() ) );
+
+        // the same reconciliation, seen through the other two indices
+        Properties byPath = combined.getPropertiesByResourcePath( SHARED );
+        assertEquals( "from-second", byPath.getProperty( "shared" ) );
+        assertEquals( "yes",         byPath.getProperty( "only.first" ) );
+        assertEquals( "yes",         byPath.getProperty( "only.second" ) );
+
+        Properties byPrefix = combined.getPropertiesByPrefix( "grp" );
+        assertEquals( "untouched by the later config", "first-a",  byPrefix.getProperty( "grp.a" ) );
+        assertEquals( "overridden by the later config", "second-b", byPrefix.getProperty( "grp.b" ) );
+    }
+
+    /** Reversing the array reverses the winner here too, for every index. */
+    public void testCombineOfASharedPathIsOrderSensitive()
+    {
+        MultiPropertiesConfig combined =
+            MConfig.combine( new MultiPropertiesConfig[] { sharedSecond(), sharedFirst() } );
+
+        assertEquals( "from-first", combined.getProperty( "shared" ) );
+        assertEquals( "yes", combined.getProperty( "only.first" ) );
+        assertEquals( "yes", combined.getProperty( "only.second" ) );
+        assertEquals( "from-first", combined.getPropertiesByResourcePath( SHARED ).getProperty( "shared" ) );
+        assertEquals( "first-b",    combined.getPropertiesByPrefix( "grp" ).getProperty( "grp.b" ) );
+    }
+
+    /** Three configs on one path: the last one still wins, and earlier contributions still stand. */
+    public void testCombineMergesMoreThanTwoOnOnePath()
+    {
+        MultiPropertiesConfig third = MultiPropertiesConfig.fromProperties( SHARED, props( "shared", "from-third" ) );
+
+        MultiPropertiesConfig combined =
+            MConfig.combine( new MultiPropertiesConfig[] { sharedFirst(), sharedSecond(), third } );
+
+        assertEquals( "from-third", combined.getProperty( "shared" ) );
+        assertEquals( "yes",        combined.getProperty( "only.first" ) );
+        assertEquals( "yes",        combined.getProperty( "only.second" ) );
+        assertEquals( "second-b",   combined.getPropertiesByPrefix( "grp" ).getProperty( "grp.b" ) );
+    }
+
+    /**
+     *  A shared path interleaved with a distinct one still resolves by array position.
+     *
+     *  <p>Deduplicating the path list means a repeated path can only sit in one place, so the
+     *  place has to be the one that preserves precedence -- its LAST occurrence. Were it pinned
+     *  at its first appearance instead, a config named after it in the array would be
+     *  overridden by one named before it.</p>
+     */
+    public void testASharedPathIsOrderedByItsLastOccurrence()
+    {
+        MultiPropertiesConfig other = MultiPropertiesConfig.fromProperties( "/other", props( "shared", "from-other" ) );
+
+        MultiPropertiesConfig sharedLast =
+            MConfig.combine( new MultiPropertiesConfig[] { sharedFirst(), other, sharedSecond() } );
+        assertEquals( "the last-named config wins, though its path appeared earlier too",
+                      "from-second", sharedLast.getProperty( "shared" ) );
+
+        MultiPropertiesConfig otherLast =
+            MConfig.combine( new MultiPropertiesConfig[] { sharedFirst(), sharedSecond(), other } );
+        assertEquals( "and with the distinct path last, it wins instead",
+                      "from-other", otherLast.getProperty( "shared" ) );
+
+        assertEquals( "both paths are listed, each once", 2, otherLast.getPropertiesResourcePaths().length );
+    }
+
     /**
      *  Properties may legally hold non-String keys and values (via put rather than
      *  setProperty). Those entries are skipped with a WARNING rather than blowing up.
