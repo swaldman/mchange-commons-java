@@ -12,6 +12,10 @@ public final class BasicMultiPropertiesConfigInternalJUnitTestCase extends TestC
      *  The EMPTY singleton's constructor once assigned to local variables that shadowed
      *  the fields, leaving propsByPrefixes, parseMessages, and propsByKey null -- so every
      *  accessor on it threw NullPointerException. It must be fully usable.
+     *
+     *  <p>Every accessor is exercised because the failure mode is per-field: the constructor
+     *  has to assign each one by hand, and the history sets brought the count to eight. A field
+     *  left out here does not fail at construction, only later, on whichever call touches it.</p>
      */
     public void testEmptySingletonIsFullyInitialized()
     {
@@ -24,6 +28,21 @@ public final class BasicMultiPropertiesConfigInternalJUnitTestCase extends TestC
         assertEquals( 0, empty.getPropertiesByResourcePath( "/anything" ).size() );
         assertNotNull( empty.getDelayedLogItems() );
         assertEquals( 0, empty.getDelayedLogItems().size() );
+
+        assertNotNull( empty.getAllRead() );
+        assertNotNull( empty.getAllVetoed() );
+        assertNotNull( empty.getAllNotFound() );
+        assertNotNull( empty.getAllFaults() );
+        assertEquals( 0, empty.getAllRead().size() );
+        assertEquals( 0, empty.getAllVetoed().size() );
+        assertEquals( 0, empty.getAllNotFound().size() );
+        assertEquals( 0, empty.getAllFaults().size() );
+
+        assertFalse( empty.wasEncountered( "/anything" ) );
+        assertFalse( empty.wasRead( "/anything" ) );
+        assertFalse( empty.wasVetoed( "/anything" ) );
+        assertFalse( empty.wasNotFound( "/anything" ) );
+        assertFalse( empty.wasFault( "/anything" ) );
     }
 
     /**
