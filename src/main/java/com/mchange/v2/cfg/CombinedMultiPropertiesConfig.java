@@ -39,23 +39,23 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 
         this.allRead = Collections.unmodifiableSet(new HashSet(Arrays.asList(resourcePaths)));
 
+        Set av = new HashSet();
+	for ( int i = 0, len = configs.length; i < len; ++i )
+	    av.addAll( configs[i].getAllVetoed() );
+        av.removeAll(allRead);
+
         Set af = new HashSet();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    af.addAll( configs[i].getAllFaults() );
         af.removeAll(allRead);
+        af.removeAll(av);
 
         Set anf = new HashSet();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    anf.addAll( configs[i].getAllNotFound() );
         anf.removeAll(allRead);
+        anf.removeAll(av);
         anf.removeAll(af);
-
-        Set av = new HashSet();
-	for ( int i = 0, len = configs.length; i < len; ++i )
-	    av.addAll( configs[i].getAllVetoed() );
-        av.removeAll(allRead);
-        av.removeAll(af);
-        av.removeAll(anf);
 
         this.allFaults   = Collections.unmodifiableSet(af);
         this.allNotFound = Collections.unmodifiableSet(anf);

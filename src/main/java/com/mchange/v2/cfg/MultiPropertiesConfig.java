@@ -102,4 +102,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public abstract Set getAllVetoed();
     public abstract Set getAllNotFound();
     public abstract Set getAllFaults();
+
+    public boolean wasEncountered(String resourcePath)
+    { return wasRead(resourcePath) || wasVetoed(resourcePath) || wasNotFound(resourcePath) || wasFault(resourcePath); }
 }

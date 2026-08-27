@@ -80,9 +80,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         this.propsByKey = new Properties();
         propsByKey.putAll( copyMe.propsByKey );
 
-        this.historyVetoed = copyMe.historyVetoed;             // unmodifiable list
-        this.historyNotFound = copyMe.historyNotFound;         // unmodifiable list
-        this.historyOtherFailure = copyMe.historyOtherFailure; // unmodifiable list
+        this.historyVetoed = copyMe.historyVetoed;             // unmodifiable set
+        this.historyNotFound = copyMe.historyNotFound;         // unmodifiable set
+        this.historyOtherFailure = copyMe.historyOtherFailure; // unmodifiable set
     }
 
     BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages, Set<String> historyVetoed, Set<String> historyNotFound, Set<String> historyOtherFailures)
@@ -94,9 +94,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	dlis.addAll( parseMessages );
 	finishInit( dlis );
 
-        this.historyVetoed       = new HashSet(historyVetoed);
-        this.historyNotFound     = new HashSet(historyNotFound);
-        this.historyOtherFailure = new HashSet(historyOtherFailures);
+        this.historyVetoed       = Collections.unmodifiableSet(new HashSet(historyVetoed));
+        this.historyNotFound     = Collections.unmodifiableSet(new HashSet(historyNotFound));
+        this.historyOtherFailure = Collections.unmodifiableSet(new HashSet(historyOtherFailures));
 
 	this.parseMessages = Collections.unmodifiableList(dlis);
     }
@@ -247,7 +247,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         this.propsByResourcePaths = Collections.unmodifiableMap( pbrp );
 
         this.historyVetoed       = Collections.unmodifiableSet(_historyVetoed);
-        this.historyNotFound      = Collections.unmodifiableSet(_historyNotFound);
+        this.historyNotFound     = Collections.unmodifiableSet(_historyNotFound);
         this.historyOtherFailure = Collections.unmodifiableSet(_historyOtherFailure);
 
         if (cves.size() != 0)
