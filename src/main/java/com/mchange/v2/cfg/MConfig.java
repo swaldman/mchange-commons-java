@@ -58,7 +58,20 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    <li><p>Paths beginning {@code file:} are file URLs naming properties files at absolute
  *    filesystem locations. This is for configuration you deliberately do <i>not</i> want on the
  *    CLASSPATH, such as credentials. A file that is not found is ignored and forgotten, exactly
- *    as a missing classloader resource is.</p>
+ *    as a missing classloader resource is, unless it is marked {@code required=true} or {@code permissions=useronly}.
+ *    If it is marked {@code required=true}, an {@code InsecureConfigurationException} will be thrown, which
+ *    will yield a warning under the {@code MConfig.WithTraditionalDefaultSources} API
+ *    and abort config load entirely under the {@code MConfig.AsProvidedVetoable} API.
+ *    If it is marked {@code permissions=useronly} it will be skipped and warn under {@code MConfig.AsProvidedVetoable},
+ *    unless {@code required=true} is also set, in which case a {@code InsecureConfigurationException} will be thrown. (The non-vetoable
+ *    {@code MConfig.AsProvided} will throw an {@code IllegalArgumentException} if file URLs
+ *    are provided.) Similarly, if a file is marked {@code permissions=useronly} (see below) but grants permissions
+ *    to groups or others, it will not be read under any circumstance, it will throw an
+ *    {@code InsecureConfigurationException} under {@code AsProvidedVetoable}, and it will
+ *    warn in the logs under {@link MConfig.WithTraditionalDefaultSources}. Files that
+ *    have no security restrictions, or that adhere to them, will be read under both
+ *    {@code MConfig.AsProvidedVetoable} and {@link MConfig.WithTraditionalDefaultSources}.
+ *    Under no circumstances can file URL targets be read under simple {@code MConfig.AsProvided}.</p>
  *
  *    <p>A {@code ?} in a file-url path begins a web-url-style query string carrying options.
  *    (Filenames that embed a {@code ?} directly are therefore not supported.) Option <b>keys are
@@ -120,10 +133,9 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    <a href="https://github.com/lightbend/config/blob/main/HOCON.md">HOCON</a> conventions when
  *    HOCON / lightbend config libraries
  *    are available on the CLASSPATH. When those libraries are absent, such a path contributes no
- *    configuration: it is skipped with a FINE-level log item naming the path as written, and the
- *    remaining sources are read normally. (One exception: if a resource happens to exist at the
- *    path you get by chopping {@code hocon:} off the identifier, the skip is escalated to a WARNING
- *    carrying an exception, rather than a quiet FINE.)</p>
+ *    configuration: you'll see warnings in the logs, and the
+ *    remaining sources are read normally. (If a resource happens to exist at the
+ *    path you get by chopping {@code hocon:} off the identifier, you'll see a WARNING about that.)</p>
  *
  *    <p>So the specification {@code hocon:/reference,/application,/} would expand to include all of
  *    {@code reference.properties},
@@ -189,10 +201,9 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *
  *  <ul>
  *    <li><p>{@link MConfig.AsProvidedVetoable} accepts vetoable identifiers, and its methods
- *    declare {@code throws ConfigVetoedException}. This is the only way to read a {@code file:}
- *    URL. Use it when you want to hear about a refusal &mdash; if you asked for a security
- *    property, you generally want to know it could not be honored rather than proceed without
- *    the configuration it guarded.</p></li>
+ *    declare {@code throws ConfigVetoedException}. Use it when you want to hear about a
+ *    refusal &mdash; if you asked for a security property, you generally want to know it
+ *    could not be honored rather than proceed without the configuration it guarded.</p></li>
  *
  *    <li><p>{@link MConfig.AsProvided} refuses vetoable identifiers up front, with an
  *    IllegalArgumentException naming them and pointing at {@code AsProvidedVetoable}. Every path
@@ -202,7 +213,7 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    all, since nothing about it could then provoke a veto. That is the price of being able to
  *    decide the question without reading anything.</p></li>
  *
- *    <li><p>{@link MConfig.WithTraditionalDefaultSources} ignores vetoes. The vetoing source is
+ *    <li><p>{@link MConfig.WithTraditionalDefaultSources} tolerates vetoes. The vetoing source is
  *    dropped with a WARNING and every other source still loads. Its resource paths can come from
  *    text files the application does not control, so a veto there is an end user's choice and
  *    must degrade rather than abort.</p></li>
@@ -298,7 +309,7 @@ public final class MConfig
 
         /**
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
-         * you'll se the logged items twice.
+         * you may see the logged items twice (on cache misses).
          */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
@@ -365,7 +376,7 @@ public final class MConfig
 
         /**
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
-         * you'll se the logged items twice.
+         * you may see the logged items twice (on cache misses).
          */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
         {
@@ -436,7 +447,7 @@ public final class MConfig
 
         /**
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
-         * you'll se the logged items twice.
+         * you'll sometimes see the logged items twice (on a cache miss).
          */
         static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
         {
