@@ -151,11 +151,11 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, longAssMessage, cve ) );
     }
 
-    private void logCveForAsProvidedVetoable(ConfigVetoedException cve, List delayedLogItems)
+    private void logCveForAsProvidedVetoable(boolean willBeFirst, ConfigVetoedException cve, List delayedLogItems)
     {
         String identifier = cve.getIdentifier();
         String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
-        String msg = "A PropertiesConfigSource (" + cve.getSource() + ") has vetoed config in a BasicMultiPropertiesConfig" + identifierPart + " An Exception will be thrown.";
+        String msg = "A PropertiesConfigSource (" + cve.getSource() + ") has vetoed config in a BasicMultiPropertiesConfig" + identifierPart + (willBeFirst ? " An Exception will be thrown." : "");
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
     }
 
@@ -218,13 +218,13 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
                     logCveForAsProvided(cve, delayedLogItems);
             else if (kind == MConfig.Kind.AsProvidedVetoable)
             {
-                ConfigVetoedException last = null;
+                ConfigVetoedException first = null;
                 for (ConfigVetoedException cve : cves)
                 {
-                    last = cve;
-                    logCveForAsProvidedVetoable(cve, delayedLogItems);
+                    logCveForAsProvidedVetoable(first == null, cve, delayedLogItems);
+                    if (first == null) first = cve;
                 }
-                throw last;
+                throw first;
             }
             else if (kind == MConfig.Kind.Traditional)
                 for (ConfigVetoedException cve : cves)
