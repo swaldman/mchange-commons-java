@@ -1,0 +1,238 @@
+package build
+
+//
+// A Mill translation of build.sbt. This lives alongside build.sbt; it does not
+// (yet) replace it. Rough task-name map, sbt -> mill:
+//
+//   compile              -> compile
+//   test                 -> test
+//   package              -> jar
+//   packageSrc           -> sourceJar
+//   doc                  -> javadocGenerated  (packageDoc -> docJar)
+//   makePom              -> pom
+//   publishLocal         -> publishLocal      (ivy) / publishM2Local (maven)
+//   publishSigned        -> publishSonatypeCentral
+//   updateSite           -> updateSite
+//
+// Run it with the ./mill launcher in this directory.
+//
+
+import mill.*
+import mill.javalib.*
+import mill.javalib.publish.*
+import mill.util.Jvm
+
+object `package` extends MavenModule, SonatypeCentralPublishModule {
+
+  // sbt: organization / name / version
+  val orgName = "com.mchange"
+  val projectName = "mchange-commons-java"
+
+  def artifactName    = projectName
+  def publishVersion  = "0.7.0-SNAPSHOT"
+  def pomPackagingType = PackagingType.Jar
+
+  //
+  // This is a pure Java library. Mill's JavaModule never adds a Scala library
+  // nor a _<scala-version> suffix, so sbt's `autoScalaLibrary := false` and
+  // `crossPaths := false` have no counterpart here -- they are the default.
+  //
+
+  //
+  // We compile with -source/-target 1.7, which javac has refused to accept
+  // since JDK 20. Rather than depend on whatever JDK happens to be on PATH
+  // (the sbt build implicitly does), ask Mill/coursier for a JDK 11, the
+  // newest JDK that still emits 1.7 bytecode.
+  //
+  def jvmId = "zulu:11"
+
+  def javacOptions   = Seq("-source", "1.7", "-target", "1.7", "-Xlint:deprecation" /*, "-Xlint:unchecked"*/)
+  def javadocOptions = Seq("-source", "1.7", "-Xdoclint:none")
+
+  //
+  // sbt marks these "compile,optional": on our compile classpath (and, because
+  // Test extends Compile, on the test classpath too), and present in the
+  // published POM as <optional>true</optional>, so that downstream users pull in
+  // only the logging libraries they actually use.
+  //
+  // Mill offers Dep.optional(), but a dep so marked is dropped from all
+  // downstream resolution -- including this project's own test classpath, which
+  // needs com.typesafe.config -- so instead we keep the deps ordinary and set
+  // the optional flag on the POM side only, in publishXmlDeps below.
+  //
+  val optionalDeps = Seq(
+    mvn"com.typesafe:config:1.3.0",
+    mvn"log4j:log4j:1.2.14",                    // sbt asks for "1.2.14+", which resolves to 1.2.14
+    mvn"org.apache.logging.log4j:log4j-api:2.17.1",
+    mvn"org.apache.logging.log4j:log4j-core:2.17.1",
+    mvn"org.slf4j:slf4j-api:1.7.5"
+  )
+
+  def mvnDeps = optionalDeps
+
+  private lazy val optionalArtifacts = optionalDeps.map(d => Artifact.fromDepJava(d).artifact).toSet
+
+  override def publishXmlDeps = Task.Anon {
+    super.publishXmlDeps().map(d => if (optionalArtifacts(d.artifact)) d.copy(optional = true) else d)
+  }
+
+  // sbt: Compile / packageBin / packageOptions += Package.ManifestAttributes(...)
+  def manifest = Task {
+    super.manifest().add("Automatic-Module-Name" -> "com.mchange.mchangecommonsjava")
+  }
+
+  //
+  // Some users want license files in the source jar, go figure.
+  // See https://github.com/swaldman/mchange-commons-java/issues/11
+  //
+  def licenseFiles = Task.Sources("LICENSE", "LICENSE-LGPL", "LICENSE-EPL")
+
+  override def sourceJar = Task {
+    val extras = Task.dest / "extras"
+    os.makeDir.all(extras)
+    licenseFiles().foreach(pr => os.copy.into(pr.path, extras))
+    PathRef(
+      Jvm.createJar(
+        Task.dest / "out.jar",
+        (allSources() ++ resources() ++ compileResources()).map(_.path).filter(os.exists) :+ extras,
+        manifest(),
+        // sbt's packageSrc takes *.java and the resources; Mill jars up whatever
+        // is in the source folders, so drop the emacs backups .gitignore hides.
+        fileFilter = (_, relPath) => !relPath.last.endsWith("~")
+      )
+    )
+  }
+
+  // sbt: pomExtra
+  def pomSettings = PomSettings(
+    description = projectName,
+    organization = orgName,
+    url = s"https://github.com/swaldman/$projectName",
+    licenses = Seq(
+      License(
+        id = "LGPL-2.1",
+        name = "GNU Lesser General Public License, Version 2.1",
+        url = "http://www.gnu.org/licenses/lgpl-2.1.html",
+        isOsiApproved = true,
+        isFsfLibre = true,
+        distribution = "repo"
+      ),
+      License(
+        id = "EPL-1.0",
+        name = "Eclipse Public License, Version 1.0",
+        url = "http://www.eclipse.org/org/documents/epl-v10.html",
+        isOsiApproved = true,
+        isFsfLibre = true,
+        distribution = "repo"
+      )
+    ),
+    versionControl = VersionControl(
+      browsableRepository = Some(s"git@github.com:swaldman/$projectName.git"),
+      connection          = Some(s"scm:git:git@github.com:swaldman/$projectName")
+    ),
+    developers = Seq(
+      Developer(
+        id = "swaldman",
+        name = "Steve Waldman",
+        url = "https://github.com/swaldman",
+        email = "swaldman@mchange.com"
+      )
+    )
+  )
+
+  //
+  // sbt: publishTo -- snapshots to central-snapshots, releases via localStaging.
+  // SonatypeCentralPublishModule already routes -SNAPSHOT versions to
+  // https://central.sonatype.com/repository/maven-snapshots/ and bundles
+  // releases for the Central Portal, so no explicit publishTo is needed:
+  //
+  //   ./mill publishSonatypeCentral        # snapshot or release, as version dictates
+  //
+  // Credentials come from MILL_SONATYPE_USERNAME / MILL_SONATYPE_PASSWORD
+  // (or ~/.mill/credentials), signing key from MILL_PGP_SECRET_BASE64 /
+  // MILL_PGP_PASSPHRASE.
+  //
+
+  object test extends MavenTests, TestModule.Junit4 {
+
+    // sbt applies the 1.7 source/target settings to Compile / compile only.
+    def javacOptions = Seq.empty[String]
+
+    def mvnDeps = Seq(
+      mvn"junit:junit:4.11",                 // sbt asks for "4.1+", which resolves to 4.11
+      mvn"ch.qos.logback:logback-classic:1.1.2",
+      mvn"com.novocode:junit-interface:0.11"
+    )
+
+    //
+    // Arguments passed to the JUnit test runner (junit-interface).
+    //
+    //   -a  On a test failure, show the full stack trace and exception class for AssertionErrors.
+    //       Without this, an assertion failure is reported only as its message, with no trace
+    //       pointing at the failing line.
+    //   -v  Verbose: log per-test "started"/"finished" events (rather than only a final summary),
+    //       so you can see exactly which test classes and methods ran and in what order.
+    //
+    // See https://github.com/sbt/junit-interface
+    //
+    def testArgsDefault = Seq("-a", "-v")
+
+    //
+    // Run test classes serially, not in parallel.
+    //
+    // Several of the security-related tests (notably the com.mchange.v2.naming.junit
+    // ReferenceIndirector / ReferenceableUtils / JavaBeanReferenceable cases) configure
+    // behavior by mutating global System properties (e.g. OBJECT_FACTORY_WHITELIST,
+    // allowIndirectSerializationViaReference) and rely on the absence of values they did
+    // not set. Mill would otherwise spread test classes over several JVMs, which is
+    // in fact safer than sbt's in-JVM parallelism, but one serial JVM is what the sbt
+    // build gives these tests, so that is what we reproduce here.
+    //
+    def testParallelism = false
+
+    //
+    // Unlike sbt, Mill always forks the test JVM, so the java options the sbt build
+    // asks you to supply by hand --
+    //   export _JAVA_OPTIONS="-ea -Djava.util.logging.config.file=./src/test/resources/logging.properties"
+    // -- can just be set here.
+    //
+    def forkArgs = Task {
+      Seq(
+        "-ea",
+        s"-Djava.util.logging.config.file=${moduleDir / "src" / "test" / "resources" / "logging.properties"}"
+      )
+    }
+  }
+
+  //
+  // sbt: val updateSite = taskKey[Unit]("Updates the project website on tickle")
+  //
+  // Mill has no paradox plugin, so only the javadoc half of the site is
+  // published here. The paradox source (a single page, src/main/paradox/index.md)
+  // still needs `sbt paradox` -- see the note at the end of this file.
+  //
+  def updateSite() = Task.Command {
+    val apidocs = javadocGenerated().path
+    val remote =
+      s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${artifactName()}-versions/${publishVersion()}/apidocs"
+    val local = os.list(apidocs).map(_.toString)
+    Task.log.info(s"rsync -avz <${local.length} paths> $remote")
+    os.proc("rsync", "-avz", local, remote).call(stdout = os.Inherit, stderr = os.Inherit)
+    ()
+  }
+}
+
+//
+// Not translated:
+//
+//   * enablePlugins(ParadoxPlugin) and the paradox half of updateSite. Mill has
+//     no paradox support; src/main/paradox/index.md is one short page whose only
+//     real content is a link to the javadocs, so the options are to keep sbt
+//     around for `sbt paradox`, or to hand-write the page and rsync it.
+//
+//   * Test / logLevel := Level.Debug. Mill controls verbosity per-invocation
+//     (./mill --debug test), not per-task.
+//
+//   * sbt publishes test-scoped dependencies into the POM; Mill's PublishModule
+//     omits them. This affects only the generated POM, not any build behavior.
+//
