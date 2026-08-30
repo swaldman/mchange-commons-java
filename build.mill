@@ -93,7 +93,7 @@ object `package` extends JavaModule, SonatypeCentralPublishModule {
   }
 
   def pomSettings = PomSettings(
-    description = projectName,
+    description = "a library of arguably useful Java utilities.",
     organization = orgName,
     url = s"https://github.com/swaldman/$projectName",
     licenses = Seq(
