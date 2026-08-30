@@ -33,7 +33,7 @@ object `package` extends JavaModule, SonatypeCentralPublishModule {
   // than depend on whatever JDK happens to be on PATH, ask coursier for a
   // JDK 11, the newest JDK that still accepts -source/-target 1.7.
   //
-  def jvmId = "zulu:11"
+  def jvmVersion = "zulu:11"
 
   def javacOptions   = Seq("-source", "1.7", "-target", "1.7", "-Xlint:deprecation" /*, "-Xlint:unchecked"*/)
   def javadocOptions = Seq("-source", "1.7", "-Xdoclint:none")
