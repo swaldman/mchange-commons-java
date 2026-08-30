@@ -36,7 +36,7 @@ import java.util.Properties;
  *  "HOCON libraries not available" branch even though config is present on the
  *  ordinary test classpath as a compile-optional dependency.
  *
- *  Scenario directories live under src/test/resources/cfgscenarios/<name>/ and are
+ *  Scenario directories live under test/resources/cfgscenarios/<name>/ and are
  *  copied onto the test classpath by the ordinary build; no build configuration is
  *  required. Each contains a marker file, which both locates the directory at
  *  runtime and keeps otherwise-empty scenarios tracked by git.
@@ -78,7 +78,7 @@ public final class CfgScenario implements Closeable
     /**
      *  Like open(..), but prepends caller-created directories to the scenario classpath.
      *
-     *  Scenario directories under src/test/resources are fixed at build time, which is fine until
+     *  Scenario directories under test/resources are fixed at build time, which is fine until
      *  a scenario's content must name something only known at runtime -- a resource-path text file
      *  pointing at a temp file, say. Such a directory is built by the test and passed here; being
      *  first on the classpath, it also shadows the named scenario.
@@ -133,7 +133,7 @@ public final class CfgScenario implements Closeable
         if ( markerUrl == null )
             throw new IllegalArgumentException(
                 String.format( "No cfg scenario named '%s': expected a marker resource at '%s'. " +
-                               "Scenario directories live under src/test/resources/cfgscenarios/.",
+                               "Scenario directories live under test/resources/cfgscenarios/.",
                                scenarioName, markerPath ) );
 
         String s = markerUrl.toExternalForm();

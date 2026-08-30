@@ -6,7 +6,7 @@ import junit.framework.TestCase;
 import org.slf4j.*;
 
 /*
- *  Note that the loggers required by these tests are configured in src/test/resources/logback.xml
+ *  Note that the loggers required by these tests are configured in test/resources/logback.xml
  */
 public final class Slf4jMLogJUnitTestCase extends TestCase 
 {

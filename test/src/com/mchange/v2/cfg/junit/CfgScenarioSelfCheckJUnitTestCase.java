@@ -46,7 +46,7 @@ public final class CfgScenarioSelfCheckJUnitTestCase extends TestCase
     /**
      *  Resources on the ordinary test classpath but NOT in the scenario must be invisible.
      *  This is the property the whole design rests on: without it, scenarios would be
-     *  contaminated by src/test/resources (which contains /mchange-commons.properties,
+     *  contaminated by test/resources (which contains /mchange-commons.properties,
      *  one of the hardcoded default paths).
      */
     public void testTestClasspathResourcesAreNotVisible()
