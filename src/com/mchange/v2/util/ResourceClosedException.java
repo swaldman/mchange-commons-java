@@ -38,7 +38,7 @@ public class ResourceClosedException extends RuntimeException
     private void setRootCause( Throwable t )
     {
 	this.rootCause = t;
-	if ( VersionUtils.isAtLeastJavaVersion14() )
+	if ( VersionUtils.isAtLeastJavaVersion1_4() )
 	    this.initCause( t );
     }
 }

@@ -1,7 +1,6 @@
 package com.mchange.v1.db.sql.schemarep;
 
 import java.util.Arrays;
-import com.mchange.lang.ArrayUtils;
 
 public class ColumnRepImpl implements ColumnRep
 {
@@ -73,7 +72,7 @@ public class ColumnRepImpl implements ColumnRep
 	if (! accepts_nulls) out = ~out;
 
 	if (colSize != null)
-	    out ^= ArrayUtils.hashAll(colSize);
+	    out ^= Arrays.hashCode(colSize);
 
 	if (defaultValue != null)
 	    out ^=defaultValue.hashCode();

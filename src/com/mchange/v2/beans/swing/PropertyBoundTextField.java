@@ -94,7 +94,7 @@ public class PropertyBoundTextField extends JTextField
 		frame.getContentPane().add( jt2 );
 		frame.getContentPane().add( jt3 );
 		frame.pack();
-		frame.show();
+		frame.setVisible( true );
 	    }
 	catch ( Exception e )
 	    { e.printStackTrace(); }

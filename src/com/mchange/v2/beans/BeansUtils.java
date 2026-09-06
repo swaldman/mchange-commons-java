@@ -21,7 +21,7 @@ public final class BeansUtils
         {
             editorClass = pd.getPropertyEditorClass();
             if (editorClass != null)
-                out = (PropertyEditor) editorClass.newInstance();
+                out = (PropertyEditor) editorClass.getDeclaredConstructor().newInstance();
         }
         catch (Exception e)
         {

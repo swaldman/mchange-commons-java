@@ -8,14 +8,14 @@ public class LongUtils
   public static long longFromByteArray(byte[] bytes, int offset)
     {
       long out = 0;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 0])) << 56;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 1])) << 48;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 2])) << 40;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 3])) << 32;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 4])) << 24;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 5])) << 16;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 6])) <<  8;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 7])) <<  0;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 0])) << 56;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 1])) << 48;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 2])) << 40;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 3])) << 32;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 4])) << 24;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 5])) << 16;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 6])) <<  8;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 7])) <<  0;
       return out;
     }
 
@@ -41,14 +41,14 @@ public class LongUtils
   public static long longFromByteArrayLittleEndian(byte[] bytes, int offset)
     {
       long out = 0;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 7])) << 56;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 6])) << 48;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 5])) << 40;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 4])) << 32;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 3])) << 24;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 2])) << 16;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 1])) <<  8;
-      out |= ((long) ByteUtils.toUnsigned(bytes[offset + 0])) <<  0;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 7])) << 56;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 6])) << 48;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 5])) << 40;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 4])) << 32;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 3])) << 24;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 2])) << 16;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 1])) <<  8;
+      out |= ((long) ByteUtils.unsignedPromote(bytes[offset + 0])) <<  0;
       return out;
     }
 

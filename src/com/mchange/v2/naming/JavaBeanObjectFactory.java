@@ -5,6 +5,7 @@ import java.util.*;
 import javax.naming.*;
 import com.mchange.v2.log.*;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import javax.naming.spi.ObjectFactory;
 import com.mchange.v2.beans.BeansUtils;
@@ -164,7 +165,19 @@ public class JavaBeanObjectFactory implements ObjectFactory
     }
 
     protected Object createBlankInstance(Class beanClass) throws Exception
-    { return beanClass.newInstance(); }
+    {
+	try
+	    { return beanClass.getDeclaredConstructor().newInstance(); }
+	catch (InvocationTargetException e)
+	    {
+		// reflective construction wraps whatever the constructor threw, while the
+		// Class.newInstance() this replaces let it propagate. Keep propagating it.
+		Throwable t = e.getCause();
+		if (t instanceof Exception) throw (Exception) t;
+		else if (t instanceof Error) throw (Error) t;
+		else throw e;
+	    }
+    }
 
     protected Object findBean(Class beanClass, Map propertyMap, Set refProps ) throws Exception
     {

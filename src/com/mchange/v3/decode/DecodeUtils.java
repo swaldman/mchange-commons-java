@@ -26,7 +26,7 @@ public final class DecodeUtils
 	tmp.add( new JavaMapDecoderFinder() );
 	for ( int i = 0, len = finderClassNames.length; i < len; ++i )
 	    {
-		try { tmp.add( (DecoderFinder) Class.forName( finderClassNames[i] ).newInstance() ); }
+		try { tmp.add( (DecoderFinder) Class.forName( finderClassNames[i] ).getDeclaredConstructor().newInstance() ); }
 		catch( Exception e )
 		    {
 			if ( logger.isLoggable( MLevel.INFO ) )
@@ -72,7 +72,7 @@ public final class DecodeUtils
 	try 
 	    {
 		Class<?> clz = Class.forName( decoderClassFqcn );
-		Decoder decoder = (Decoder) clz.newInstance();
+		Decoder decoder = (Decoder) clz.getDeclaredConstructor().newInstance();
 		return decoder.decode( encoded );
 	    }
 	catch ( Exception e )

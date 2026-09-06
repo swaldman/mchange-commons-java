@@ -7,8 +7,8 @@ public final class CharUtils
     public static int charFromByteArray(byte[] bytes, int offset)
     {
         int out = 0;
-        out |= ((int) ByteUtils.toUnsigned(bytes[offset + 0])) <<  8;
-        out |= ((int) ByteUtils.toUnsigned(bytes[offset + 1])) <<  0;
+        out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 0])) <<  8;
+        out |= ((int) ByteUtils.unsignedPromote(bytes[offset + 1])) <<  0;
         return out;
     }
 

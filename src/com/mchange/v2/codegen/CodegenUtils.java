@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.Writer;
 import java.util.Comparator;
 import com.mchange.v1.lang.ClassUtils;
+import com.mchange.v2.io.IndentedWriter;
 
 public final class CodegenUtils
 {

@@ -1,5 +1,6 @@
 package com.mchange.v2.log;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.ArrayList;
 import com.mchange.v1.util.StringTokenizerUtils;
@@ -53,7 +54,7 @@ public abstract class MLog
         else System.err.println(message);
 
 	FallbackMLog fmlog = new FallbackMLog();
-	if (level != null) fmlog.overrideCutoffLevel( level );
+	if (level != null) fmlog.setOverrideCutoffLevel( level );
 	_mlog = fmlog;
 	_logger = _mlog.getLogger( MLog.class );
 
@@ -124,7 +125,7 @@ public abstract class MLog
 	try
 	    { 
 		if (tClassName != null)
-		    tmpt = (NameTransformer) Class.forName( tClassName ).newInstance();
+		    tmpt = (NameTransformer) Class.forName( tClassName ).getDeclaredConstructor().newInstance();
 	    }
 	catch ( Exception e )
 	    {
@@ -188,11 +189,15 @@ public abstract class MLog
 	List attempts = null;
 	for (int i = 0, len = classnames.length; i < len; ++i)
 	    {
-		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).newInstance(); }
+		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).getDeclaredConstructor().newInstance(); }
 		catch (Exception e)
 		    {
-			if ( e instanceof MLogInitializationException )
-			    System.err.println("MLog initialization issue: " + e.getMessage());
+			// unlike the Class.newInstance() this replaces, reflective construction
+			// wraps whatever the constructor threw, so unwrap before inspecting it
+			Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+
+			if ( t instanceof MLogInitializationException )
+			    System.err.println("MLog initialization issue: " + t.getMessage());
  
 			if (attempts == null)
 			    attempts = new ArrayList();
@@ -200,7 +205,7 @@ public abstract class MLog
 			if ( log_attempts_to_stderr )
 			{
 			    System.err.println("com.mchange.v2.log.MLog '" + classnames[i] + "' could not be loaded!"); 
-			    e.printStackTrace();
+			    t.printStackTrace();
 			}
 		    }
 	    }

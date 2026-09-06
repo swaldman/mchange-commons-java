@@ -139,7 +139,19 @@ public final class ReferenceableUtils
 		    }
 
 		Class fClass = Class.forName( fClassName, true, cl );
-		ObjectFactory of = (ObjectFactory) fClass.newInstance();
+		ObjectFactory of;
+		try
+		    { of = (ObjectFactory) fClass.getDeclaredConstructor().newInstance(); }
+		catch (InvocationTargetException ite)
+		    {
+			// reflective construction wraps whatever the constructor threw, while
+			// the Class.newInstance() this replaces let it propagate. Keep propagating
+			// it, so the NamingException test below still sees the original.
+			Throwable t = ite.getCause();
+			if (t instanceof Exception) throw (Exception) t;
+			else if (t instanceof Error) throw (Error) t;
+			else throw ite;
+		    }
 		return of.getObjectInstance( ref, name, nameCtx, env );
 	    }
 	catch ( Exception e )

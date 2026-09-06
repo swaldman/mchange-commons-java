@@ -1,27 +1,35 @@
 package com.mchange.v1.db.sql;
 
 import java.sql.*;
-import com.mchange.v1.util.*;
 
-import com.mchange.util.CommandLineParser;
-import com.mchange.util.impl.CommandLineParserImpl;
+import com.mchange.v2.cmdline.BadCommandLineException;
+import com.mchange.v2.cmdline.CommandLineUtils;
+import com.mchange.v2.cmdline.ParsedCommandLine;
 
 public class SchemaManager
 {
     final static String[] VALID = new String[] {"create", "drop"};
+
+    // no switch here takes an argument. CommandLineUtils.parse(...) documents null
+    // as meaning "none", but NPEs on it, so pass the empty array it really wants.
+    final static String[] NO_ARG_SWITCHES = new String[0];
 
     public static void main(String[] argv)
     {
 	Connection con = null;
 	try
 	    {
-		CommandLineParser clp = new CommandLineParserImpl(argv, VALID, null, null);
-		boolean create = clp.checkSwitch("create");
-		
-		if (!clp.checkArgv()) usage();
-		if (! (create ^ clp.checkSwitch("drop"))) usage();
-		
-		String[] unswitched = clp.findUnswitchedArgs();
+		ParsedCommandLine pcl = null;
+		try
+		    { pcl = CommandLineUtils.parse(argv, "-", VALID, null, NO_ARG_SWITCHES); }
+		catch (BadCommandLineException e)
+		    { usage(); }
+
+		boolean create = pcl.includesSwitch("create");
+
+		if (! (create ^ pcl.includesSwitch("drop"))) usage();
+
+		String[] unswitched = pcl.getUnswitchedArgs();
 
 		if (unswitched.length == 2)
 		    con = DriverManager.getConnection(unswitched[0]);
@@ -32,7 +40,7 @@ public class SchemaManager
 
 		con.setAutoCommit(false);
 
-		Schema s = (Schema) (Class.forName(unswitched[unswitched.length - 1]).newInstance());
+		Schema s = (Schema) (Class.forName(unswitched[unswitched.length - 1]).getDeclaredConstructor().newInstance());
 		if (create)
 		    {
 			s.createSchema(con);
@@ -47,7 +55,12 @@ public class SchemaManager
 	catch (Exception e)
 	    {e.printStackTrace();}
 	finally
-	    {CleanupUtils.attemptClose(con);}
+	    {
+		try
+		    { if (con != null) con.close(); }
+		catch (SQLException e)
+		    { e.printStackTrace(); }
+	    }
     }
 
     static void usage()

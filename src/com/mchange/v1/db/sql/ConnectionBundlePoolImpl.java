@@ -3,6 +3,8 @@ package com.mchange.v1.db.sql;
 import java.sql.*;
 import com.mchange.v1.util.*;
 
+/** @deprecated extends the deprecated com.mchange.v1.util.AbstractResourcePool */
+@Deprecated
 public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool implements ConnectionBundlePool
 {
     String jdbcUrl;
@@ -29,7 +31,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	catch (SQLException se)
 	    {throw se;}
 	catch (Exception e)
-	    {throw new UnexpectedException(e, "Unexpected exception while initializing ConnectionBundlePool");}
+	    {throw new UnexpectedException("Unexpected exception while initializing ConnectionBundlePool", e);}
     }
 
     public ConnectionBundle checkoutBundle() throws SQLException, BrokenObjectException, InterruptedException
@@ -43,7 +45,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	catch (SQLException se)
 	    {throw se;}
 	catch (Exception e)
-	    {throw new UnexpectedException(e, "Unexpected exception while checking out ConnectionBundle");}
+	    {throw new UnexpectedException("Unexpected exception while checking out ConnectionBundle", e);}
     }
 
     public void checkinBundle(ConnectionBundle bndl) throws BrokenObjectException
@@ -57,7 +59,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	catch (SQLException e)
 	    {throw e;}
 	catch (Exception e)
-	    {throw new UnexpectedException(e, "Unexpected exception while closing pool.");}
+	    {throw new UnexpectedException("Unexpected exception while closing pool.", e);}
     }
     
     protected Object acquireResource() throws Exception

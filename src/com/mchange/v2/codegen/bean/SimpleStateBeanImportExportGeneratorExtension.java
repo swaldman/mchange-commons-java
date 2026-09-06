@@ -72,7 +72,7 @@ public class SimpleStateBeanImportExportGeneratorExtension implements GeneratorE
 	for (int i = 0; i < num_props; ++i)
 	    {
 		masked[i] = new SimplePropertyMask( props[i] );
-		BeangenUtils.writePropertyMember( masked[i], iw );
+		BeangenUtils.writePropertyVariable( masked[i], iw );
 		iw.println();
 		BeangenUtils.writePropertyGetter( masked[i], iw );
 		iw.println();

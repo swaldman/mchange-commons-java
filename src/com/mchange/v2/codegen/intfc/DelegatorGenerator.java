@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.lang.reflect.*;
 import com.mchange.v2.codegen.*;
+import com.mchange.v2.io.IndentedWriter;
 import com.mchange.v1.lang.ClassUtils;
 
 import static com.mchange.v2.codegen.CodegenUtils.METHOD_COMPARATOR;

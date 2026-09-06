@@ -5,6 +5,7 @@ import java.net.*;
 import java.sql.*;
 import java.util.*;
 import org.xml.sax.*;
+import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.*;
 
 public class XmlSchema implements Schema
@@ -104,7 +105,7 @@ public class XmlSchema implements Schema
 
     }
 
-    class MySaxHandler extends HandlerBase
+    class MySaxHandler extends DefaultHandler
     {
 	int          state = -1;             //-1 unless we are in drop or create
 	boolean      in_statement    = false;
@@ -113,7 +114,7 @@ public class XmlSchema implements Schema
 	SqlApp       currentApp      = null; //non-null iff we are in an application
 	String       currentStmtName = null; //non-null iff we are in a named (application) stmt
 
-	public void startElement(String name, AttributeList attributes)
+	public void startElement(String uri, String localName, String name, Attributes attributes)
 	{
 	    if (name.equals("create"))
 		state = CREATE;
@@ -127,7 +128,7 @@ public class XmlSchema implements Schema
 			{
 			    for (int i = 0, len = attributes.getLength(); i < len; ++i)
 				{
-				    String attr = attributes.getName(i);
+				    String attr = attributes.getQName(i);
 				    if (attr.equals("name"))
 					{
 					    currentStmtName = attributes.getValue(i);
@@ -142,7 +143,7 @@ public class XmlSchema implements Schema
 		{
 		    for (int i = 0, len = attributes.getLength(); i < len; ++i)
 			{
-			    String attr = attributes.getName(i);
+			    String attr = attributes.getQName(i);
 			    if (attr.equals("name"))
 				{
 				    String appName = attributes.getValue(i);
@@ -168,7 +169,7 @@ public class XmlSchema implements Schema
 		}
 	}
 
-	public void endElement(String name)
+	public void endElement(String uri, String localName, String name)
 	{
 	    if (name.equals("statement"))
 		{

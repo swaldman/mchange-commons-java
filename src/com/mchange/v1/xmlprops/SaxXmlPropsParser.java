@@ -20,7 +20,7 @@ public class SaxXmlPropsParser
 		//TODO: let a system property or somesuch determine the
 		//      XMLReader class...
 		String readerClass = DEFAULT_XML_READER;
-		XMLReader reader = (XMLReader) Class.forName( readerClass ).newInstance();
+		XMLReader reader = (XMLReader) Class.forName( readerClass ).getDeclaredConstructor().newInstance();
 		InputSource is = new InputSource( istr );
 		return parseXmlProps( is, reader, null, null);
 	    }
