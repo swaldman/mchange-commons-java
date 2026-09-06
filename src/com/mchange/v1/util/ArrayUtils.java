@@ -87,6 +87,7 @@ public final class ArrayUtils
      */
     public static String stringifyContents(Object[] array)
     {
+        if (array == null) return "null";
 	StringBuffer sb = new StringBuffer();
 	sb.append("[ ");
 	for (int i = 0, len = array.length; i < len; ++i)
@@ -120,6 +121,7 @@ public final class ArrayUtils
 
     public static String toString(boolean[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -133,6 +135,7 @@ public final class ArrayUtils
 
     public static String toString(byte[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -146,6 +149,7 @@ public final class ArrayUtils
 
     public static String toString(char[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -159,6 +163,7 @@ public final class ArrayUtils
 
     public static String toString(short[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -172,6 +177,7 @@ public final class ArrayUtils
 
     public static String toString(int[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -185,6 +191,7 @@ public final class ArrayUtils
 
     public static String toString(long[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -198,6 +205,7 @@ public final class ArrayUtils
 
    public static String toString(float[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -211,6 +219,7 @@ public final class ArrayUtils
 
     public static String toString(double[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
@@ -224,6 +233,7 @@ public final class ArrayUtils
 
     public static String toString(Object[] arr)
     {
+        if (arr == null) return "null";
         String[] strings = new String[arr.length];
         int chars = 0;
         for(int i = 0, len = arr.length; i < len; ++i)
