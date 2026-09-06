@@ -225,6 +225,34 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), srcClass, srcMeth, msg, t ); 
         }
 
+        //
+        // MLogger.logrb takes the resource bundle by NAME, so these delegate to
+        // java.util.logging.Logger's name-taking logrb, which jdk 9 deprecated in
+        // favor of an overload taking a ResourceBundle instance.
+        //
+        // We keep the deprecated calls deliberately. Migrating would mean resolving
+        // the name to a bundle here, and jdk logging's own resolution is not what a
+        // straightforward rewrite produces:
+        //
+        //   - Logger resolves the name against the thread context ClassLoader.
+        //     ResourceBundle.getBundle(name) resolves against the caller's loader,
+        //     which here is whatever loaded mchange-commons-java. Where an
+        //     application's bundles live in a loader the library cannot see -- a
+        //     servlet container, say -- bundles that resolve today would stop
+        //     resolving. The one argument getBundle does not consult the context
+        //     loader even when one is set.
+        //
+        //   - A name that does not resolve is a non-event today: the record is
+        //     logged unlocalized. ResourceBundle.getBundle throws
+        //     MissingResourceException for an unknown name, and
+        //     NullPointerException for a null one, so a rewrite would let logging
+        //     throw into calling code.
+        //
+        // Reproducing the current behavior means reimplementing Logger's internal
+        // findResourceBundle, in a logging hot path, and keeping it in step with
+        // the jdk. Delegating to the deprecated method gets it right for free.
+        //
+        @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -238,6 +266,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg ); 
         }
 
+        @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object param)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -251,6 +280,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg, param ); 
         }
 
+        @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object[] params)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -264,6 +294,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg, params ); 
         }
 
+        @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Throwable t)
         { 
             if (! logger.isLoggable( level(l) )) return;
