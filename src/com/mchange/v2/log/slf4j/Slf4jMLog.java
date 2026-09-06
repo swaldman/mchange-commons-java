@@ -196,15 +196,19 @@ public final class Slf4jMLog extends MLog
 	    public void log( String msg, Throwable t )        { logger.error( msg, t ); }
 	}
 
+        @Deprecated
         public ResourceBundle getResourceBundle()
         { return null; }
 
+        @Deprecated
         public String getResourceBundleName()
         { return null; }
 
+        @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         { warning("setFilter() not supported by MLogger " + this.getClass().getName()); }
 
+        @Deprecated
         public Object getFilter()
         { return null; }
 
@@ -283,9 +287,11 @@ public final class Slf4jMLog extends MLog
         public void finest(String msg)
         { traceL.log( msg ); }
 
+        @Deprecated
         public synchronized void setLevel(MLevel l) throws SecurityException
         { myLevel = l; }
 
+        @Deprecated
         public synchronized MLevel getLevel()
         { 
             if (myLevel == null)
@@ -299,22 +305,27 @@ public final class Slf4jMLog extends MLog
         public String getName()
         { return logger.getName(); }
 
+        @Deprecated
         public void addHandler(Object h) throws SecurityException
         { 
 	    throw new UnsupportedOperationException("Handlers not supported; the 'handler' " + h + " is not compatible with MLogger " + this); 
         }
 
+        @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
 	    throw new UnsupportedOperationException("Handlers not supported; the 'handler' " + h + " is not compatible with MLogger " + this); 
         }
 
+        @Deprecated
         public Object[] getHandlers()
         { return EMPTY_OBJ_ARRAY; }
 
+        @Deprecated
         public void setUseParentHandlers(boolean uph)
         { throw new UnsupportedOperationException("Handlers not supported."); }
 
+        @Deprecated
         public boolean getUseParentHandlers()
         { throw new UnsupportedOperationException("Handlers not supported."); }
     }

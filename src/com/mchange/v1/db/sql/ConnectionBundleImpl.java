@@ -26,6 +26,7 @@ public class ConnectionBundleImpl implements ConnectionBundle
     public void close() throws SQLException
     {this.con.close();}
 
+    @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
     public void finalize() throws Exception
     {if (!con.isClosed()) this.close();}
 }

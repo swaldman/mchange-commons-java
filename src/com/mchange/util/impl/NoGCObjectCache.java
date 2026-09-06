@@ -1,9 +1,10 @@
 package com.mchange.util.impl;
 
 import java.util.Hashtable;
-import com.mchange.util.ObjectCache;
 
-public abstract class NoGCObjectCache implements ObjectCache
+/** @deprecated implements the deprecated com.mchange.util.ObjectCache */
+@Deprecated
+public abstract class NoGCObjectCache implements com.mchange.util.ObjectCache
 {
   Hashtable store = new Hashtable();
   

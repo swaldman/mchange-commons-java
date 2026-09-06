@@ -35,6 +35,7 @@ public abstract class SimpleCursor implements UIterator
 	rs = null;
     }
 
+    @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
     public void finalize() throws Exception
     {if (rs != null) this.close();}
     

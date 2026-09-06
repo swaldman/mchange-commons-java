@@ -130,6 +130,7 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 		return inner.getAsciiStream(a);
 	}
 	
+	@Deprecated
 	public synchronized BigDecimal getBigDecimal(String a, int b) throws SQLException
 	{
 		return inner.getBigDecimal(a, b);
@@ -145,6 +146,7 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 		return inner.getBigDecimal(a);
 	}
 	
+	@Deprecated
 	public synchronized BigDecimal getBigDecimal(int a, int b) throws SQLException
 	{
 		return inner.getBigDecimal(a, b);
@@ -270,11 +272,13 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 		return inner.getStatement();
 	}
 	
+	@Deprecated
 	public synchronized InputStream getUnicodeStream(int a) throws SQLException
 	{
 		return inner.getUnicodeStream(a);
 	}
 	
+	@Deprecated
 	public synchronized InputStream getUnicodeStream(String a) throws SQLException
 	{
 		return inner.getUnicodeStream(a);

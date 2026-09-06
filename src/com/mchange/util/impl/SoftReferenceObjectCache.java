@@ -4,9 +4,10 @@ import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 import java.util.Map;
-import com.mchange.util.ObjectCache;
 
-public abstract class SoftReferenceObjectCache implements ObjectCache
+/** @deprecated implements the deprecated com.mchange.util.ObjectCache */
+@Deprecated
+public abstract class SoftReferenceObjectCache implements com.mchange.util.ObjectCache
 {
   Map store = new HashMap();
   

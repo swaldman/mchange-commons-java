@@ -35,6 +35,7 @@ public class ConnectionBundlePoolBean implements ConnectionBundlePool
     protected void setConnectionOptions(Connection con) throws SQLException
     { con.setAutoCommit( false ); }
 
+    @SuppressWarnings("deprecation") // built on the deprecated ConnectionBundlePoolImpl
     class InnerPool extends ConnectionBundlePoolImpl
     {
 	InnerPool(String jdbcUrl, String username, String pwd, int start, int max, int inc)

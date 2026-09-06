@@ -261,6 +261,7 @@ public abstract class FilterPreparedStatement implements PreparedStatement
 		inner.setString(a, b);
 	}
 	
+	@Deprecated
 	public void setUnicodeStream(int a, InputStream b, int c) throws SQLException
 	{
 		inner.setUnicodeStream(a, b, c);

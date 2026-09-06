@@ -114,24 +114,28 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public ResourceBundle getResourceBundle()
         {
             return null;
         }
 
         @Override
+        @Deprecated
         public String getResourceBundleName()
         {
             return null;
         }
 
         @Override
+        @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         {
             warning("setFilter() not supported by MLogger " + this.getClass().getName());
         }
 
         @Override
+        @Deprecated
         public Object getFilter()
         {
             return null;
@@ -303,6 +307,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public synchronized void setLevel(MLevel l) throws SecurityException
         {
             LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
@@ -314,6 +319,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public synchronized MLevel getLevel()
         {
             //System.err.println( logger.getLevel() );
@@ -337,6 +343,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public void addHandler(Object h) throws SecurityException
         {
             if(!(h instanceof Appender))
@@ -350,6 +357,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
             if(!(h instanceof Appender))
@@ -362,6 +370,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public Object[] getHandlers()
         {
             List tmp = new LinkedList();
@@ -376,6 +385,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public void setUseParentHandlers(boolean uph)
         {
             LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
@@ -386,6 +396,7 @@ public final class Log4j2MLog extends MLog
         }
 
         @Override
+        @Deprecated
         public boolean getUseParentHandlers()
         {
             LoggerContext ctx = (LoggerContext) LogManager.getContext(false);

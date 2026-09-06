@@ -122,15 +122,19 @@ public final class Log4jMLog extends MLog
                 throw new IllegalArgumentException("Unknown MLevel: " + lvl);
         }
 
+        @Deprecated
         public ResourceBundle getResourceBundle()
         { return null; }
 
+        @Deprecated
         public String getResourceBundleName()
         { return null; }
 
+        @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         { warning("setFilter() not supported by MLogger " + this.getClass().getName()); }
 
+        @Deprecated
         public Object getFilter()
         { return null; }
 
@@ -212,12 +216,14 @@ public final class Log4jMLog extends MLog
         public void finest(String msg)
         { log( Level.TRACE, msg,  null); }
 
+        @Deprecated
         public synchronized void setLevel(MLevel l) throws SecurityException
         {
             logger.setLevel( level( l ) );
             myLevel = l;
         }
 
+        @Deprecated
         public synchronized MLevel getLevel()
         { 
             //System.err.println( logger.getLevel() );
@@ -237,6 +243,7 @@ public final class Log4jMLog extends MLog
         public String getName()
         { return logger.getName(); }
 
+        @Deprecated
         public void addHandler(Object h) throws SecurityException
         { 
             if (! (h instanceof Appender))
@@ -244,6 +251,7 @@ public final class Log4jMLog extends MLog
             logger.addAppender( (Appender) h ); 
         }
 
+        @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
             if (! (h instanceof Appender))
@@ -251,6 +259,7 @@ public final class Log4jMLog extends MLog
             logger.removeAppender( (Appender) h ); 
         }
 
+        @Deprecated
         public Object[] getHandlers()
         {
             List tmp = new LinkedList();
@@ -259,9 +268,11 @@ public final class Log4jMLog extends MLog
             return tmp.toArray();
         }
 
+        @Deprecated
         public void setUseParentHandlers(boolean uph)
         { logger.setAdditivity( uph ); }
 
+        @Deprecated
         public boolean getUseParentHandlers()
         { return logger.getAdditivity(); }
     }

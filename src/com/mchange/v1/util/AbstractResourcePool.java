@@ -8,7 +8,7 @@ import java.util.Iterator;
 
 
 /**
- * @deprecated use com.mchange.v1.resourcepool.AbstractResourcePool
+ * @deprecated legacy. This library offers no replacement.
  */
 public abstract class AbstractResourcePool
 {

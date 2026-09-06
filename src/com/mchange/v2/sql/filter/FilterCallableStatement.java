@@ -52,6 +52,7 @@ public abstract class FilterCallableStatement implements CallableStatement
 	public CallableStatement getInner()
 	{ return inner; }
 	
+	@Deprecated
 	public BigDecimal getBigDecimal(int a, int b) throws SQLException
 	{
 		return inner.getBigDecimal(a, b);
@@ -827,6 +828,7 @@ public abstract class FilterCallableStatement implements CallableStatement
 		inner.setString(a, b);
 	}
 	
+	@Deprecated
 	public void setUnicodeStream(int a, InputStream b, int c) throws SQLException
 	{
 		inner.setUnicodeStream(a, b, c);

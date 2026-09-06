@@ -222,18 +222,22 @@ public final class FallbackMLog extends MLog
 	    return sb.toString();
 	}
 
+	@Deprecated
 	public ResourceBundle getResourceBundle()
 	{
 	    //warn("Using logger " + this.getClass().getName() + ", which does not support ResourceBundles.");
 	    return null;
 	}
 
+	@Deprecated
 	public String getResourceBundleName()
 	{ return null; }
 
+	@Deprecated
 	public synchronized void setFilter( Object filter )
 	{ this.filter = filterFromObject( filter ); }
 	
+	@Deprecated
 	public synchronized Object getFilter()
 	{
 	    if (this.filter instanceof Jdk14FilterAdapter) return ((Jdk14FilterAdapter) this.filter).getInner();
@@ -408,9 +412,11 @@ public final class FallbackMLog extends MLog
 		format(MLevel.FINEST, null, null, msg, null, null); 
 	}
 
+	@Deprecated
 	public void setLevel(MLevel l) throws SecurityException
 	{ overrideCutoffLevel( l ); }
 					      
+	@Deprecated
 	public synchronized MLevel getLevel()
 	{ return cutoffLevel(); }
 
@@ -420,27 +426,32 @@ public final class FallbackMLog extends MLog
 	public String getName()
 	{ return "global"; }
 
+	@Deprecated
 	public void addHandler(Object h) throws SecurityException
 	{ 
 	    warning("Using FallbackMLog -- Handlers not supported."); 
 	}
 
+	@Deprecated
 	public void removeHandler(Object h) throws SecurityException
 	{
 	    warning("Using FallbackMLog -- Handlers not supported.");
 	}
 
+	@Deprecated
 	public Object[] getHandlers()
 	{ 
 	    warning("Using FallbackMLog -- Handlers not supported.");
 	    return new Object[0];
 	}
 
+	@Deprecated
 	public void setUseParentHandlers(boolean uph)
 	{ 
 	    warning("Using FallbackMLog -- Handlers not supported.");
 	}
 
+	@Deprecated
 	public boolean getUseParentHandlers()
 	{ return false;	}
     }

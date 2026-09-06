@@ -52,6 +52,7 @@ public abstract class SynchronizedFilterCallableStatement implements CallableSta
 	public synchronized CallableStatement getInner()
 	{ return inner; }
 	
+	@Deprecated
 	public synchronized BigDecimal getBigDecimal(int a, int b) throws SQLException
 	{
 		return inner.getBigDecimal(a, b);
@@ -827,6 +828,7 @@ public abstract class SynchronizedFilterCallableStatement implements CallableSta
 		inner.setString(a, b);
 	}
 	
+	@Deprecated
 	public synchronized void setUnicodeStream(int a, InputStream b, int c) throws SQLException
 	{
 		inner.setUnicodeStream(a, b, c);

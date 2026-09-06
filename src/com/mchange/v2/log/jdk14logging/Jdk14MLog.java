@@ -120,12 +120,15 @@ public final class Jdk14MLog extends MLog
         private static Level level(MLevel lvl)
         { return (Level) lvl.asJdk14Level(); }
 
+        @Deprecated
         public ResourceBundle getResourceBundle()
         { return logger.getResourceBundle(); }
 
+        @Deprecated
         public String getResourceBundleName()
         { return logger.getResourceBundleName(); }
 
+        @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         {
             if (! (java14Filter instanceof Filter))
@@ -134,6 +137,7 @@ public final class Jdk14MLog extends MLog
             logger.setFilter( (Filter) java14Filter ); 
         }
 
+        @Deprecated
         public Object getFilter()
         { return logger.getFilter(); }
 
@@ -371,9 +375,11 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.FINEST, sa[0], sa[1], msg );
         }
 
+        @Deprecated
         public void setLevel(MLevel l) throws SecurityException
         { logger.setLevel( level(l) ); }
 
+        @Deprecated
         public MLevel getLevel()
         { return MLevel.fromIntValue( logger.getLevel().intValue() ); }
 
@@ -383,6 +389,7 @@ public final class Jdk14MLog extends MLog
         public String getName()
         { return name; }
 
+        @Deprecated
         public void addHandler(Object h) throws SecurityException
         { 
             if (! (h instanceof Handler))
@@ -391,6 +398,7 @@ public final class Jdk14MLog extends MLog
             logger.addHandler( (Handler) h ); 
         }
 
+        @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
             if (! (h instanceof Handler))
@@ -399,12 +407,15 @@ public final class Jdk14MLog extends MLog
             logger.removeHandler( (Handler) h ); 
         }
 
+        @Deprecated
         public Object[] getHandlers()
         { return logger.getHandlers(); }
 
+        @Deprecated
         public void setUseParentHandlers(boolean uph)
         { logger.setUseParentHandlers( uph ); }
 
+        @Deprecated
         public boolean getUseParentHandlers()
         { return logger.getUseParentHandlers(); }
     }

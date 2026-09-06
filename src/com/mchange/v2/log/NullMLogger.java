@@ -14,6 +14,7 @@ public class NullMLogger implements MLogger
     private NullMLogger()
     {}
     
+    @Deprecated
     public void addHandler(Object h) throws SecurityException
     {}
 
@@ -44,24 +45,30 @@ public class NullMLogger implements MLogger
     public void finest(String msg)
     {}
 
+    @Deprecated
     public Object getFilter()
     { return null; }
 
+    @Deprecated
     public Object[] getHandlers()
     { return null; }
 
+    @Deprecated
     public MLevel getLevel()
     { return MLevel.OFF; }
 
     public String getName()
     { return NAME; }
 
+    @Deprecated
     public ResourceBundle getResourceBundle()
     { return null; }
 
+    @Deprecated
     public String getResourceBundleName()
     { return null; }
 
+    @Deprecated
     public boolean getUseParentHandlers()
     { return false; }
 
@@ -114,15 +121,19 @@ public class NullMLogger implements MLogger
                     String msg, Throwable t)
     {}
 
+    @Deprecated
     public void removeHandler(Object h) throws SecurityException
     {}
 
+    @Deprecated
     public void setFilter(Object java14Filter) throws SecurityException
     {}
 
+    @Deprecated
     public void setLevel(MLevel l) throws SecurityException
     {}
 
+    @Deprecated
     public void setUseParentHandlers(boolean uph)
     {}
 

@@ -1,6 +1,6 @@
 package com.mchange.util;
 
-/** @deprecated use com.mchange.v1.util.ObjectCache */
+/** @deprecated legacy. This library offers no replacement. */
 public interface ObjectCache
 {
   public Object find(Object key) throws Exception;

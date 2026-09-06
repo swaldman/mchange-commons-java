@@ -261,6 +261,7 @@ public abstract class SynchronizedFilterPreparedStatement implements PreparedSta
 		inner.setString(a, b);
 	}
 	
+	@Deprecated
 	public synchronized void setUnicodeStream(int a, InputStream b, int c) throws SQLException
 	{
 		inner.setUnicodeStream(a, b, c);

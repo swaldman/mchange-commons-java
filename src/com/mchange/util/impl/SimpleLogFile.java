@@ -48,6 +48,7 @@ public class SimpleLogFile implements MessageLogger
   public synchronized void close()
     {logWriter.close();}
 
+  @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
   public void finalize()
     {close();}
 }
