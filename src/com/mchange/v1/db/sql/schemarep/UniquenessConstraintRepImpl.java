@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
-import com.mchange.v1.util.SetUtils;
 
 public class UniquenessConstraintRepImpl implements UniquenessConstraintRep
 {
@@ -21,14 +20,13 @@ public class UniquenessConstraintRepImpl implements UniquenessConstraintRep
 	return 
 	    o != null &&
 	    this.getClass() == o.getClass() &&
-	    SetUtils.equivalentDisregardingSort( this.uniqueColNames, 
-						 ((UniquenessConstraintRepImpl) o ).uniqueColNames );
+	    this.uniqueColNames.equals( ((UniquenessConstraintRepImpl) o ).uniqueColNames );
     }
 
     public int hashCode()
     {
 	return 
 	    this.getClass().hashCode() ^ 
-	    SetUtils.hashContentsDisregardingSort( uniqueColNames );
+	    uniqueColNames.hashCode();
     }
 }

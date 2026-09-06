@@ -2,7 +2,6 @@ package com.mchange.v1.db.sql.schemarep;
 
 import java.util.*;
 import com.mchange.v1.util.ListUtils;
-import com.mchange.v1.util.SetUtils;
 
 public class TableRepImpl implements TableRep
 {
@@ -69,9 +68,9 @@ public class TableRepImpl implements TableRep
 	    this.tableName.equals( other.tableName ) &&
 	    ListUtils.equivalent( this.colNameList, other.colNameList ) &&
 	    this.namesToColReps.equals( other.namesToColReps ) &&
-	    SetUtils.equivalentDisregardingSort( this.primaryKeyColNames, other.primaryKeyColNames ) &&
-	    SetUtils.equivalentDisregardingSort( this.foreignKeyReps, other.foreignKeyReps ) &&
-	    SetUtils.equivalentDisregardingSort( this.uniqConstrReps, other.uniqConstrReps );
+	    this.primaryKeyColNames.equals( other.primaryKeyColNames ) &&
+	    this.foreignKeyReps.equals( other.foreignKeyReps ) &&
+	    this.uniqConstrReps.equals( other.uniqConstrReps );
     }
 
     public int hashCode()
@@ -80,9 +79,9 @@ public class TableRepImpl implements TableRep
 	    tableName.hashCode() ^
 	    ListUtils.hashContents( colNameList ) ^
 	    namesToColReps.hashCode() ^
-	    SetUtils.hashContentsDisregardingSort( primaryKeyColNames ) ^
-	    SetUtils.hashContentsDisregardingSort( foreignKeyReps ) ^
-	    SetUtils.hashContentsDisregardingSort( uniqConstrReps );
+	    primaryKeyColNames.hashCode() ^
+	    foreignKeyReps.hashCode() ^
+	    uniqConstrReps.hashCode();
     }
 }
 

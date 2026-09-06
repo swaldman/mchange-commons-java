@@ -33,6 +33,16 @@ public final class SetUtils
 	return out;
     }
 
+    /**
+     *  @deprecated Set.equals(Object) already compares by contents alone, independent
+     *  of iteration order: a HashSet and a TreeSet holding the same elements are equal
+     *  to one another. Use it instead.
+     *
+     *  The two part ways only for a sorted set whose Comparator is inconsistent with
+     *  equals. Relying on this method there would be unwise in any case, since such a
+     *  set's own membership tests already disagree with equals.
+     */
+    @Deprecated
     public static boolean equivalentDisregardingSort(Set a, Set b)
     {
 	return 
@@ -45,7 +55,11 @@ public final class SetUtils
      * the value of all elements, such that two sets
      * for which equivalentDisregardingSort(a, b) returns
      * true will hashContentsDisregardingSort() to the same value
+     *
+     * @deprecated Set.hashCode() is likewise defined by contents alone, independent of
+     * iteration order, and pairs with Set.equals(Object). Use it instead.
      */
+    @Deprecated
     public static int hashContentsDisregardingSort(Set s)
     {
 	int out = 0;
