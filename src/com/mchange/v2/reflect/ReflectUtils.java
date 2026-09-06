@@ -11,6 +11,22 @@ public final class ReflectUtils
 	throws NoSuchMethodException
     { return findProxyConstructor( proxyClassLoader, new Class[] { intfc } ); }
 
+    //
+    // Proxy.getProxyClass is deprecated as of jdk 9, which directs callers to
+    // Proxy.newProxyInstance instead. That is not a replacement here.
+    //
+    // newProxyInstance returns one proxy INSTANCE. This returns the Constructor, so
+    // a caller can resolve the proxy class once and then instantiate it repeatedly,
+    // each time with a different InvocationHandler. That is the entire purpose of
+    // the method, and it is public API with no callers inside this library, so it
+    // exists for downstream code that depends on exactly this signature.
+    //
+    // The deprecation is aimed at named modules, where a generated proxy class is
+    // encapsulated and Constructor.newInstance on it throws IllegalAccessException.
+    // Proxies generated for a ClassLoader land in an unnamed module, where the
+    // constructor remains accessible, which is how this library is used.
+    //
+    @SuppressWarnings("deprecation")
     public static Constructor findProxyConstructor(ClassLoader proxyClassLoader, Class[] interfaces)
 	throws NoSuchMethodException
     {

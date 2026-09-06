@@ -20,6 +20,21 @@ import com.mchange.v2.log.MLevel;
 public class MLogAppender extends AbstractAppender
 {
 
+    //
+    // This AbstractAppender constructor is deprecated in favor of an overload taking
+    // a trailing Property[]. The deprecated one delegates straight to that overload
+    // with Property.EMPTY_ARRAY, so switching would be behaviorally identical.
+    //
+    // It would not be free, though. log4j2 is an optional dependency: we compile
+    // against 2.17.1, but a user runs whatever log4j2 their application already has.
+    // Naming the Property[] constructor, and Property.EMPTY_ARRAY with it, would
+    // require a log4j2 at least as new as those additions, turning an older log4j2
+    // on the classpath into a NoSuchMethodError when this appender is constructed.
+    // The deprecated constructor is still present as of 2.26.0.
+    //
+    // So the migration would buy no behavior and cost runtime compatibility.
+    //
+    @SuppressWarnings("deprecation")
     protected MLogAppender(final String name, final Filter filter, final Layout<? extends Serializable> layout, final boolean ignoreExceptions)
     {
 	super(name, filter, layout, ignoreExceptions);
