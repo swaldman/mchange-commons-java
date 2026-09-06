@@ -85,6 +85,7 @@ public final class ArrayUtils
     /**
      * @deprecated use the various toString(T[] methods)
      */
+    @Deprecated
     public static String stringifyContents(Object[] array)
     {
         if (array == null) return "null";
@@ -119,6 +120,7 @@ public final class ArrayUtils
         return sb.toString();
     }
 
+    @Deprecated
     public static String toString(boolean[] arr)
     {
         if (arr == null) return "null";
@@ -133,6 +135,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(byte[] arr)
     {
         if (arr == null) return "null";
@@ -147,6 +150,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(char[] arr)
     {
         if (arr == null) return "null";
@@ -161,6 +165,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(short[] arr)
     {
         if (arr == null) return "null";
@@ -175,6 +180,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(int[] arr)
     {
         if (arr == null) return "null";
@@ -189,6 +195,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(long[] arr)
     {
         if (arr == null) return "null";
@@ -203,6 +210,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+   @Deprecated
    public static String toString(float[] arr)
     {
         if (arr == null) return "null";
@@ -217,7 +225,8 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
-    public static String toString(double[] arr)
+   @Deprecated
+   public static String toString(double[] arr)
     {
         if (arr == null) return "null";
         String[] strings = new String[arr.length];
@@ -231,6 +240,7 @@ public final class ArrayUtils
         return toString(strings, chars + arr.length + 1);
     }
 
+    @Deprecated
     public static String toString(Object[] arr)
     {
         if (arr == null) return "null";
