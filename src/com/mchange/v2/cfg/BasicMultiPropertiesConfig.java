@@ -14,10 +14,10 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     final static BasicMultiPropertiesConfig EMPTY = new BasicMultiPropertiesConfig();
 
     String[] rps;
-    Map  propsByResourcePaths;
-    Map  propsByPrefixes;
+    Map<String,Properties>  propsByResourcePaths;
+    Map<String,Properties>  propsByPrefixes;
 
-    List parseMessages;
+    List<DelayedLogItem> parseMessages;
 
     Properties propsByKey;
 
@@ -31,10 +31,10 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     }
 
     // VetoThrowing implies MConfig.Kind.AsProvidedVetoable
-    BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List delayedLogItems) throws ConfigVetoedException
+    BasicMultiPropertiesConfig(VetoThrowing vetoThrowing, String[] resourcePaths, List<DelayedLogItem> delayedLogItems) throws ConfigVetoedException
     {
         boolean syserr = (delayedLogItems == null);
-        List dlis = (syserr ? new ArrayList() : delayedLogItems);
+        List<DelayedLogItem> dlis = (syserr ? new ArrayList<DelayedLogItem>() : delayedLogItems);
         try
         {
             String[] safeResourcePaths = ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, dlis);
@@ -43,16 +43,16 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         }
         finally
         {
-            this.parseMessages = Collections.unmodifiableList( new ArrayList(dlis) );
+            this.parseMessages = Collections.unmodifiableList( new ArrayList<DelayedLogItem>(dlis) );
             if ( syserr ) dumpToSysErr( dlis );
         }
     }
 
     // non-VetoThrowing implies MConfig.Kind.AsProvided or MConfig.Kind.Traditional
-    BasicMultiPropertiesConfig(MConfig.Kind kind, String[] resourcePaths, List delayedLogItems)
+    BasicMultiPropertiesConfig(MConfig.Kind kind, String[] resourcePaths, List<DelayedLogItem> delayedLogItems)
     {
         boolean syserr = (delayedLogItems == null);
-        List dlis = (syserr ? new ArrayList() : delayedLogItems);
+        List<DelayedLogItem> dlis = (syserr ? new ArrayList<DelayedLogItem>() : delayedLogItems);
         try
         {
             String[] safeResourcePaths = ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, dlis);
@@ -63,7 +63,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         }
         finally
         {
-            this.parseMessages = Collections.unmodifiableList( new ArrayList(dlis) );
+            this.parseMessages = Collections.unmodifiableList( new ArrayList<DelayedLogItem>(dlis) );
             if ( syserr ) dumpToSysErr( dlis );
         }
     }
@@ -74,9 +74,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     private BasicMultiPropertiesConfig(BasicMultiPropertiesConfig copyMe)
     {
         this.rps = (String[]) copyMe.rps.clone();
-        this.propsByResourcePaths = Collections.unmodifiableMap(new HashMap(copyMe.propsByResourcePaths));
-        this.propsByPrefixes = Collections.unmodifiableMap(new HashMap(copyMe.propsByPrefixes));
-        this.parseMessages = Collections.unmodifiableList(new ArrayList(copyMe.parseMessages));
+        this.propsByResourcePaths = Collections.unmodifiableMap(new HashMap<String,Properties>(copyMe.propsByResourcePaths));
+        this.propsByPrefixes = Collections.unmodifiableMap(new HashMap<String,Properties>(copyMe.propsByPrefixes));
+        this.parseMessages = Collections.unmodifiableList(new ArrayList<DelayedLogItem>(copyMe.parseMessages));
         this.propsByKey = new Properties();
         propsByKey.putAll( copyMe.propsByKey );
 
@@ -85,23 +85,23 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         this.historyOtherFailure = copyMe.historyOtherFailure; // unmodifiable set
     }
 
-    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages, Set<String> historyVetoed, Set<String> historyNotFound, Set<String> historyOtherFailures)
+    BasicMultiPropertiesConfig(String[] rps, Map<String,Properties> propsByResourcePaths, List<DelayedLogItem> parseMessages, Set<String> historyVetoed, Set<String> historyNotFound, Set<String> historyOtherFailures)
     {
 	this.rps                  = (String[]) rps.clone();
-	this.propsByResourcePaths = new HashMap(propsByResourcePaths);
+	this.propsByResourcePaths = new HashMap<String,Properties>(propsByResourcePaths);
 
-	List dlis = new ArrayList();
+	List<DelayedLogItem> dlis = new ArrayList<DelayedLogItem>();
 	dlis.addAll( parseMessages );
 	finishInit( dlis );
 
-        this.historyVetoed       = Collections.unmodifiableSet(new HashSet(historyVetoed));
-        this.historyNotFound     = Collections.unmodifiableSet(new HashSet(historyNotFound));
-        this.historyOtherFailure = Collections.unmodifiableSet(new HashSet(historyOtherFailures));
+        this.historyVetoed       = Collections.unmodifiableSet(new HashSet<String>(historyVetoed));
+        this.historyNotFound     = Collections.unmodifiableSet(new HashSet<String>(historyNotFound));
+        this.historyOtherFailure = Collections.unmodifiableSet(new HashSet<String>(historyOtherFailures));
 
 	this.parseMessages = Collections.unmodifiableList(dlis);
     }
 
-    BasicMultiPropertiesConfig(String[] rps, Map propsByResourcePaths, List parseMessages)
+    BasicMultiPropertiesConfig(String[] rps, Map<String,Properties> propsByResourcePaths, List<DelayedLogItem> parseMessages)
     { this( rps, propsByResourcePaths, parseMessages, Collections.<String>emptySet(), Collections.<String>emptySet(), Collections.<String>emptySet()); }
     
     public BasicMultiPropertiesConfig( String notionalResourcePath, Properties props )
@@ -109,7 +109,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         this(
              (notionalResourcePath == null ? badNotionalResourcePath() : new String[] { notionalResourcePath }),
              resourcePathToPropertiesMap( notionalResourcePath, props ),
-             Collections.emptyList()
+             Collections.<DelayedLogItem>emptyList()
         );
     }
 
@@ -134,11 +134,11 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         return out;
     }
 
-    private static Map resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
+    private static Map<String,Properties> resourcePathToPropertiesMap( String notionalResourcePath, Properties props )
     {
         if (notionalResourcePath == null) throw new IllegalArgumentException("notionalResourcePath should not be null.");
         if (props == null) throw new IllegalArgumentException("props should not be null.");
-	Map out = new HashMap();
+	Map<String,Properties> out = new HashMap<String,Properties>();
 	out.put( notionalResourcePath, props );
 	return out;
     }
@@ -146,14 +146,14 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     private static String[] badNotionalResourcePath()
     { throw new IllegalArgumentException("notionalResourcePath must not be null"); }
 
-    private void firstInitNotVetoThrowing( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems )
+    private void firstInitNotVetoThrowing( MConfig.Kind kind, String[] resourcePaths, List<DelayedLogItem> delayedLogItems )
     {
         try { firstInit( kind, resourcePaths, delayedLogItems ); }
         catch (ConfigVetoedException cve)
         { throw new RuntimeException("Internal inconsistency! All ConfigVetoedExceptions should have been handled by this point: " + cve, cve); }
     }
 
-    private void logCveForAsProvided(ConfigVetoedException cve, List delayedLogItems)
+    private void logCveForAsProvided(ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
     {
         String identifier = cve.getIdentifier();
         String identifierPart = identifier == null ? "" : " The resource it was trying to read was '" + identifier + "'. Config provided by identifier will be ignored.";
@@ -166,7 +166,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, longAssMessage, cve ) );
     }
 
-    private void logCveForAsProvidedVetoable(boolean willBeFirst, ConfigVetoedException cve, List delayedLogItems)
+    private void logCveForAsProvidedVetoable(boolean willBeFirst, ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
     {
         String identifier = cve.getIdentifier();
         String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
@@ -174,7 +174,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
     }
 
-    private void logCveForTraditional(ConfigVetoedException cve, List delayedLogItems)
+    private void logCveForTraditional(ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
     {
         String identifier = cve.getIdentifier();
         String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
@@ -182,10 +182,10 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
     }
 
-    private void firstInit( MConfig.Kind kind, String[] resourcePaths, List delayedLogItems ) throws ConfigVetoedException
+    private void firstInit( MConfig.Kind kind, String[] resourcePaths, List<DelayedLogItem> delayedLogItems ) throws ConfigVetoedException
     {
         Map  pbrp = new HashMap();
-        List goodPaths = new ArrayList();
+        List<String> goodPaths = new ArrayList<String>();
 
         Set<String> _historyVetoed       = new HashSet<>();
         Set<String> _historyNotFound      = new HashSet<>();
@@ -274,14 +274,14 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     /**
      *  rps and propsByResourcePaths should be set before finishInit()
      */
-    private void finishInit( List delayedLogItems )
+    private void finishInit( List<DelayedLogItem> delayedLogItems )
     {
 	this.propsByPrefixes = Collections.unmodifiableMap( extractPrefixMapFromRsrcPathMap(rps, propsByResourcePaths, delayedLogItems ) );
 	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths, delayedLogItems );
     }
 
     @Override
-    public List getDelayedLogItems()
+    public List<DelayedLogItem> getDelayedLogItems()
     { return parseMessages; }
 
     @Override
@@ -301,19 +301,19 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     { return historyOtherFailure.contains(resourcePath); }
 
     @Override
-    public Set getAllRead()
+    public Set<String> getAllRead()
     { return Collections.unmodifiableSet( propsByResourcePaths.keySet() ); }
 
     @Override
-    public Set getAllVetoed()
+    public Set<String> getAllVetoed()
     { return historyVetoed; }
 
     @Override
-    public Set getAllNotFound()
+    public Set<String> getAllNotFound()
     { return historyNotFound; }
 
     @Override
-    public Set getAllFaults()
+    public Set<String> getAllFaults()
     { return historyOtherFailure; }
 
     private static void dumpToSysErr( List delayedLogMessages )
@@ -336,7 +336,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	    return s.substring(0, lastdot);
     }
 
-    private static Properties findProps(String rp, Map pbrp)
+    private static Properties findProps(String rp, Map<String,Properties> pbrp)
     {
 	//System.err.println("findProps( " + rp + ", ... )");
 	Properties p;
@@ -364,7 +364,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	return p;
     }
 
-    private static Properties extractPropsByKey( String[] resourcePaths, Map pbrp, List delayedLogItems )
+    private static Properties extractPropsByKey( String[] resourcePaths, Map<String,Properties> pbrp, List<DelayedLogItem> delayedLogItems )
     {
 	Properties out = new Properties();
 	for (int i = 0, len = resourcePaths.length; i < len; ++i)
@@ -436,9 +436,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	return out;
     }
 
-    private static Map extractPrefixMapFromRsrcPathMap(String[] resourcePaths, Map pbrp, List delayedLogItems )
+    private static Map<String,Properties> extractPrefixMapFromRsrcPathMap(String[] resourcePaths, Map<String,Properties> pbrp, List<DelayedLogItem> delayedLogItems )
     {
-	Map out = new HashMap();
+	Map<String,Properties> out = new HashMap<String,Properties>();
 	//for( Iterator ii = pbrp.values().iterator(); ii.hasNext(); )
 	for (int i = 0, len = resourcePaths.length; i < len; ++i)
 	    {

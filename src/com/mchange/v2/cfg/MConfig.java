@@ -267,7 +267,7 @@ public final class MConfig
     {
 	try
 	{
-	    Map<DelayedLogItem.Level,MLevel> lm = new HashMap();
+	    Map<DelayedLogItem.Level,MLevel> lm = new HashMap<DelayedLogItem.Level,MLevel>();
 	    for( DelayedLogItem.Level level : DelayedLogItem.Level.values() )
 		lm.put( level, (MLevel) (MLevel.class.getField( level.toString() ).get( null )) );
 	    levelMap = Collections.unmodifiableMap( lm );
@@ -300,7 +300,7 @@ public final class MConfig
          *
          * This variant is the only one suitable for use by MLog. The rest hit loggers.
          */
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
             try { return readForKind( Kind.Traditional, defaultResources, preemptingResources, delayedLogItemsOut).withClassLoaderSafeParseMessages(); }
             catch (ConfigVetoedException e)
@@ -311,12 +311,12 @@ public final class MConfig
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
          * you may see the logged items twice (on cache misses).
          */
-        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
             try
                 {
                     // we want to collect any delayed log items emitted by ConfigUtils.condenseResources(...)
-                    List dlioEffective = (delayedLogItemsOut == null ? new ArrayList() : delayedLogItemsOut);
+                    List<DelayedLogItem> dlioEffective = (delayedLogItemsOut == null ? new ArrayList<DelayedLogItem>() : delayedLogItemsOut);
                     String[] resourcePaths = ConfigUtils.condenseResources(true, defaultResources, preemptingResources, dlioEffective);
                     return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths, Kind.Traditional, dlioEffective ) );
                 }
@@ -363,7 +363,7 @@ public final class MConfig
          *
          * This variant is the only one suitable for use by MLog. The rest hit loggers.
          */
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
             try
             {
@@ -378,13 +378,13 @@ public final class MConfig
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
          * you may see the logged items twice (on cache misses).
          */
-        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
             requireNoVetoableConfig( defaultResources, preemptingResources, delayedLogItemsOut );
             try
                 {
                     // we want to collect any delayed log items emitted by ConfigUtils.condenseResources(...)
-                    List dlioEffective = (delayedLogItemsOut == null ? new ArrayList() : delayedLogItemsOut);
+                    List<DelayedLogItem> dlioEffective = (delayedLogItemsOut == null ? new ArrayList<DelayedLogItem>() : delayedLogItemsOut);
                     String[] resourcePaths = ConfigUtils.condenseResources(false, defaultResources, preemptingResources, dlioEffective);
                     return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths, Kind.AsProvided, dlioEffective ) );
                 }
@@ -424,7 +424,7 @@ public final class MConfig
             finally { dumpToLogger( dlis, logger() ); }
         }
 
-        private static void requireNoVetoableConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+        private static void requireNoVetoableConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
             String[] vetoableConfig = ConfigUtils.vetoableConfigFrom( defaultResources, preemptingResources, delayedLogItemsOut );
             if (vetoableConfig.length != 0)
@@ -442,19 +442,19 @@ public final class MConfig
          *
          * This variant is the only one suitable for use by MLog. The rest hit loggers.
          */
-        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        public static MultiPropertiesConfig readUncachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut) throws ConfigVetoedException
         { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
 
         /**
          * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
          * you'll sometimes see the logged items twice (on a cache miss).
          */
-        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut) throws ConfigVetoedException
+        static MultiPropertiesConfig readCachedClassloaderResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut) throws ConfigVetoedException
         {
             try
                 {
                     // we want to collect any delayed log items emitted by ConfigUtils.condenseResources(...)
-                    List dlioEffective = (delayedLogItemsOut == null ? new ArrayList() : delayedLogItemsOut);
+                    List<DelayedLogItem> dlioEffective = (delayedLogItemsOut == null ? new ArrayList<DelayedLogItem>() : delayedLogItemsOut);
                     String[] resourcePaths = ConfigUtils.condenseResources(false, defaultResources, preemptingResources, dlioEffective);
                     return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths, Kind.AsProvidedVetoable, dlioEffective ) );
                 }
@@ -571,7 +571,7 @@ public final class MConfig
     {
 	String[] paths;
         Kind     kind;
-	List     delayedLogItems;
+	List<DelayedLogItem> delayedLogItems;
 
 	@Override
 	public boolean equals(Object o)
@@ -595,7 +595,7 @@ public final class MConfig
 
         // the defensive clone is overkill for now, paths
         // is handed unshared values. but just in case things change
-        PathsKey(String[] paths, Kind kind, List delayedLogItems)
+        PathsKey(String[] paths, Kind kind, List<DelayedLogItem> delayedLogItems)
 	{
 	    this.delayedLogItems = delayedLogItems;
             this.kind  = kind;
@@ -652,7 +652,7 @@ public final class MConfig
     }
 
 
-    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] defaultResources, String[] preemptingResources, List delayedLogItems) throws ConfigVetoedException
+    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItems) throws ConfigVetoedException
     {
         if (kind == Kind.Traditional)
         {
@@ -666,7 +666,7 @@ public final class MConfig
         }
     }
 
-    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] resourcePath, List delayedLogItems) throws ConfigVetoedException
+    static BasicMultiPropertiesConfig readForKind(Kind kind, String[] resourcePath, List<DelayedLogItem> delayedLogItems) throws ConfigVetoedException
     {
         if (kind == Kind.AsProvided || kind == Kind.Traditional)
             return new BasicMultiPropertiesConfig( kind, resourcePath, delayedLogItems );

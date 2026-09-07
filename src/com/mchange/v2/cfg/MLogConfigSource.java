@@ -16,7 +16,7 @@ public final class MLogConfigSource
      * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
      */
     @Deprecated
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     { return ConfigUtils.readVmConfig( defaultResources, preemptingResources, delayedLogItemsOut); }
 
     private MLogConfigSource()

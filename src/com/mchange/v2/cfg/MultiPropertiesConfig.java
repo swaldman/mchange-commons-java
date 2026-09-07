@@ -94,16 +94,16 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     @Override
     public abstract String getProperty( String key );
 
-    public abstract List getDelayedLogItems();
+    public abstract List<DelayedLogItem> getDelayedLogItems();
 
     public abstract boolean wasRead(String resourcePath);
     public abstract boolean wasVetoed(String resourcePath);
     public abstract boolean wasNotFound(String resourcePath);
     public abstract boolean wasFault(String resourcePath);
-    public abstract Set getAllRead();
-    public abstract Set getAllVetoed();
-    public abstract Set getAllNotFound();
-    public abstract Set getAllFaults();
+    public abstract Set<String> getAllRead();
+    public abstract Set<String> getAllVetoed();
+    public abstract Set<String> getAllNotFound();
+    public abstract Set<String> getAllFaults();
 
     public boolean wasEncountered(String resourcePath)
     { return wasRead(resourcePath) || wasVetoed(resourcePath) || wasNotFound(resourcePath) || wasFault(resourcePath); }

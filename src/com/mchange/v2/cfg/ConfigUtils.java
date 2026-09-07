@@ -34,7 +34,7 @@ final class ConfigUtils
     //     we build lazily, so we can have log items
     final static Map<Class<?>,PropertiesConfigSource> pcsInstances = new HashMap<>();
 
-    synchronized static PropertiesConfigSource propertiesConfigSource(String fqcn, List delayedLogItems)
+    synchronized static PropertiesConfigSource propertiesConfigSource(String fqcn, List<DelayedLogItem> delayedLogItems)
     {
         Class<?> clz = null;
         try
@@ -60,7 +60,7 @@ final class ConfigUtils
     }
 
     // eventually this should be extensible via some public API
-    static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List delayedLogItems)
+    static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List<DelayedLogItem> delayedLogItems)
     {
         if (identifier == null) return null;
 
@@ -111,7 +111,7 @@ final class ConfigUtils
     static boolean isHoconPath( String identifier )
     { return identifier.toLowerCase().startsWith("hocon:"); }
 
-    static boolean pointsToVetoableConfig( String identifier, List delayedLogItems )
+    static boolean pointsToVetoableConfig( String identifier, List<DelayedLogItem> delayedLogItems )
     {
         // null will return false, properly
         try
@@ -124,7 +124,7 @@ final class ConfigUtils
         }
     }
 
-    static boolean containsVetoableConfig(String[] identifiers, List delayedLogItems)
+    static boolean containsVetoableConfig(String[] identifiers, List<DelayedLogItem> delayedLogItems)
     {
         if (identifiers == null) return false;
         for (int i = identifiers.length-1; i >= 0; --i)
@@ -133,7 +133,7 @@ final class ConfigUtils
         return false;
     }
 
-    private static List<String> listVetoableConfigFrom(String[] identifiers, List delayedLogItems)
+    private static List<String> listVetoableConfigFrom(String[] identifiers, List<DelayedLogItem> delayedLogItems)
     {
         List<String> out = new ArrayList<>();
         if (identifiers == null) return out; // callers may pass null; condenseResources normalizes, but it runs later
@@ -147,14 +147,14 @@ final class ConfigUtils
         return out;
     }
 
-    private static List<String> listVetoableConfigFrom(String[] defaults, String[] preempts, List delayedLogItems)
+    private static List<String> listVetoableConfigFrom(String[] defaults, String[] preempts, List<DelayedLogItem> delayedLogItems)
     {
         List<String> out = listVetoableConfigFrom(defaults,delayedLogItems);
         out.addAll( listVetoableConfigFrom(preempts,delayedLogItems) );
         return out;
     }
 
-    static String[] vetoableConfigFrom(String[] defaults, String[] preempts, List delayedLogItems)
+    static String[] vetoableConfigFrom(String[] defaults, String[] preempts, List<DelayedLogItem> delayedLogItems)
     { return listVetoableConfigFrom( defaults, preempts, delayedLogItems).toArray(EMPTY_STRING_ARRAY); }
 
     //MT: protected by class' lock
@@ -163,7 +163,7 @@ final class ConfigUtils
     //public static MultiPropertiesConfig read(String[] resourcePath, MLogger logger)
     //{ return new BasicMultiPropertiesConfig( resourcePath, logger ); }
 
-    static MultiPropertiesConfig read(String[] resourcePath, List delayedLogItems)
+    static MultiPropertiesConfig read(String[] resourcePath, List<DelayedLogItem> delayedLogItems)
     { return new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, resourcePath, delayedLogItems ); } // retain traditional behavior as closely as possible
 
     public static MultiPropertiesConfig read(String[] resourcePath)
@@ -178,18 +178,18 @@ final class ConfigUtils
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return new CombinedMultiPropertiesConfig( configs ).toBasic(); }
 
-    static MultiPropertiesConfig readUncachedClassloaderResourceConfig(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    static MultiPropertiesConfig readUncachedClassloaderResourceConfig(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     {
         String[] paths = condenseResources( withDefaults, defaultResources, preemptingResources, delayedLogItemsOut );
         return read( paths, delayedLogItemsOut );
     }
 
-    static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    static String[] condenseResources(boolean withDefaults, String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     {
 	defaultResources = ( defaultResources == null ? EMPTY_STRING_ARRAY : nullFilter(defaultResources) );
 	preemptingResources = ( preemptingResources == null ? EMPTY_STRING_ARRAY : nullFilter(preemptingResources) );
-	List pathsList;
-        List raw;
+	List<String> pathsList;
+        List<String> raw;
         if (withDefaults)
             raw = configuredOrHardcodedDefaultClassloaderResourcePathsCondensed( defaultResources, preemptingResources, delayedLogItemsOut );
         else
@@ -202,13 +202,13 @@ final class ConfigUtils
 	return (String[]) pathsList.toArray(new String[pathsList.size()]);
     }
 
-    private static List configuredOrHardcodedDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    private static List<String> configuredOrHardcodedDefaultClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     { return condensePaths( new String[][]{ defaultResources, configuredOrHardcodedDefaultClassloaderResourcePaths( delayedLogItemsOut ), preemptingResources } ); }
 
-    private static List asProvidedClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    private static List<String> asProvidedClassloaderResourcePathsCondensed(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     { return condensePaths( new String[][]{ defaultResources, preemptingResources } ); }
 
-    static String stringFromPathsList( List pathsList )
+    static String stringFromPathsList( List<String> pathsList )
     {
 	StringBuffer sb = new StringBuffer(2048);
 	for ( int i = 0, len = pathsList.size(); i < len; ++i)
@@ -219,15 +219,15 @@ final class ConfigUtils
 	return sb.toString();
     }
 
-    private static List condensePaths(String[][] pathLists)
+    private static List<String> condensePaths(String[][] pathLists)
     {
 	// we do this in reverse, so that the "first" time
 	// we encounter a path becomes the last in the resultant
 	// list. that is, we want redundantly specified paths
 	// to have their maximum specified preference
 
-	Set pathSet = new HashSet();
-	List reverseMe = new ArrayList();
+	Set<String> pathSet = new HashSet<String>();
+	List<String> reverseMe = new ArrayList<String>();
 	for ( int i = pathLists.length; --i >= 0; )
 	    for( int j = pathLists[i].length; --j >= 0; )
 	    {
@@ -242,9 +242,9 @@ final class ConfigUtils
 	 return reverseMe;
     }
 
-    private static List readResourcePathsFromResourcePathsTextFile( String resourcePathsTextFileResourcePath,  List delayedLogItemsOut )
+    private static List<String> readResourcePathsFromResourcePathsTextFile( String resourcePathsTextFileResourcePath,  List<DelayedLogItem> delayedLogItemsOut )
     {
-	List rps = new ArrayList();
+	List<String> rps = new ArrayList<String>();
 
 	BufferedReader br = null;
 	try
@@ -281,17 +281,17 @@ final class ConfigUtils
 	return rps;
     }
 
-    private static List readResourcePathsFromResourcePathsTextFiles( String[] resourcePathsTextFileResourcePaths, List delayedLogItemsOut )
+    private static List<String> readResourcePathsFromResourcePathsTextFiles( String[] resourcePathsTextFileResourcePaths, List<DelayedLogItem> delayedLogItemsOut )
     {
-	List out = new ArrayList();
+	List<String> out = new ArrayList<String>();
 	for ( int i = 0, len = resourcePathsTextFileResourcePaths.length; i < len; ++i )
 	    out.addAll( readResourcePathsFromResourcePathsTextFile(  resourcePathsTextFileResourcePaths[i], delayedLogItemsOut ) );
 	return out;
     }
 
-    private static String[] configuredOrHardcodedDefaultClassloaderResourcePaths( List delayedLogItemsOut )
+    private static String[] configuredOrHardcodedDefaultClassloaderResourcePaths( List<DelayedLogItem> delayedLogItemsOut )
     {
-	List paths = configuredOrHardcodedDefaultClassloaderResourcePathList(  delayedLogItemsOut );
+	List<String> paths = configuredOrHardcodedDefaultClassloaderResourcePathList(  delayedLogItemsOut );
 	return (String[]) paths.toArray( new String[ paths.size() ] );
     }
 
@@ -341,9 +341,9 @@ final class ConfigUtils
 
     // note that this log message is dangerous to test, because it will only be emitted the first time
     // the method is called.
-    private static List configuredOrHardcodedDefaultClassloaderResourcePathList( List delayedLogItemsOut )
+    private static List<String> configuredOrHardcodedDefaultClassloaderResourcePathList( List<DelayedLogItem> delayedLogItemsOut )
     {
-	List pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
+	List<String> pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
 	List rps;
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;
@@ -362,7 +362,7 @@ final class ConfigUtils
 	return rps;
     }
     public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig()
-    { return readVmConfig( (List) null ); }
+    { return readVmConfig( (List<DelayedLogItem>) null ); }
 
     /*
     public synchronized static MultiPropertiesConfig readVmConfig( MLogger logger )
@@ -379,11 +379,11 @@ final class ConfigUtils
     }
     */
 
-    public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig( List delayedLogItemsOut )
+    public synchronized static MultiPropertiesConfig readCanonicalDefaultConfig( List<DelayedLogItem> delayedLogItemsOut )
     {
 	if ( canonicalDefaultConfig == null )
 	    {
-		List rps = configuredOrHardcodedDefaultClassloaderResourcePathList( delayedLogItemsOut );
+		List<String> rps = configuredOrHardcodedDefaultClassloaderResourcePathList( delayedLogItemsOut );
 
                 // retain traditional behavior, capture delayedLogItemsOut
                 canonicalDefaultConfig = new BasicMultiPropertiesConfig( MConfig.Kind.Traditional, (String[]) rps.toArray( new String[ rps.size() ] ), delayedLogItemsOut ).withClassLoaderSafeParseMessages(); 
@@ -631,17 +631,17 @@ final class ConfigUtils
     { return readCanonicalDefaultConfig(); }
 
     /**
-     * @deprecated The vmConfig APIs are confusing. Use readCanonicalDefaultConfig( List delayedLogItemsOut )
+     * @deprecated The vmConfig APIs are confusing. Use readCanonicalDefaultConfig( List<DelayedLogItem> delayedLogItemsOut )
      */
     @Deprecated
-    public synchronized static MultiPropertiesConfig readVmConfig( List delayedLogItemsOut )
+    public synchronized static MultiPropertiesConfig readVmConfig( List<DelayedLogItem> delayedLogItemsOut )
     { return readCanonicalDefaultConfig( delayedLogItemsOut ); }
 
     /**
      * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
      */
     @Deprecated
-    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut)
+    public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
     { return readUncachedClassloaderResourceConfig( true, defaultResources, preemptingResources, delayedLogItemsOut); }
 
     /**

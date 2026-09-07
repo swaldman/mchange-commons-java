@@ -7,18 +7,18 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     MultiPropertiesConfig[] configs;
     String[] resourcePaths;
 
-    List parseMessages;
+    List<DelayedLogItem> parseMessages;
 
-    Set allRead;
-    Set allVetoed;
-    Set allNotFound;
-    Set allFaults;
+    Set<String> allRead;
+    Set<String> allVetoed;
+    Set<String> allNotFound;
+    Set<String> allFaults;
 
     CombinedMultiPropertiesConfig( MultiPropertiesConfig[] configs )
     { 
 	this.configs = configs; 
 
-	List allPaths = new LinkedList();
+	List<String> allPaths = new LinkedList<String>();
 
 	for (int i = configs.length - 1; i >= 0; --i)
 	    {
@@ -32,25 +32,25 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	    }
 	this.resourcePaths = (String[]) allPaths.toArray( new String[ allPaths.size() ] );
 
-	List pms = new LinkedList();
+	List<DelayedLogItem> pms = new LinkedList<DelayedLogItem>();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    pms.addAll( configs[i].getDelayedLogItems() );
 	this.parseMessages = Collections.unmodifiableList( pms );
 
-        this.allRead = Collections.unmodifiableSet(new HashSet(Arrays.asList(resourcePaths)));
+        this.allRead = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(resourcePaths)));
 
-        Set av = new HashSet();
+        Set<String> av = new HashSet<String>();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    av.addAll( configs[i].getAllVetoed() );
         av.removeAll(allRead);
 
-        Set af = new HashSet();
+        Set<String> af = new HashSet<String>();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    af.addAll( configs[i].getAllFaults() );
         af.removeAll(allRead);
         af.removeAll(av);
 
-        Set anf = new HashSet();
+        Set<String> anf = new HashSet<String>();
 	for ( int i = 0, len = configs.length; i < len; ++i )
 	    anf.addAll( configs[i].getAllNotFound() );
         anf.removeAll(allRead);
@@ -62,9 +62,9 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
         this.allVetoed   = Collections.unmodifiableSet(av);
     }
 
-    private Map getPropsByResourcePaths()
+    private Map<String,Properties> getPropsByResourcePaths()
     {
-	Map out = new HashMap();
+	Map<String,Properties> out = new HashMap<String,Properties>();
 	for ( int i = 0, len = resourcePaths.length; i < len; ++i )
 	{
 	    String rp = resourcePaths[i];
@@ -77,8 +77,8 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     public BasicMultiPropertiesConfig toBasic()
     {
 	String[] rps  = getPropertiesResourcePaths();
-	Map      pbrm = getPropsByResourcePaths();
-	List     pms  = getDelayedLogItems();
+	Map<String,Properties> pbrm = getPropsByResourcePaths();
+	List<DelayedLogItem> pms  = getDelayedLogItems();
 
 	return new BasicMultiPropertiesConfig( rps, pbrm, pms, allVetoed, allNotFound, allFaults );
     }
@@ -114,7 +114,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     @Override
     public Properties getPropertiesByPrefix(String pfx)
     {
-	List entries = new LinkedList();
+	List<Map.Entry<Object,Object>> entries = new LinkedList<Map.Entry<Object,Object>>();
 	for (int i = configs.length - 1; i >= 0; --i)
         {
             MultiPropertiesConfig config = configs[i];
@@ -145,7 +145,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     }
 
     @Override
-    public List getDelayedLogItems()
+    public List<DelayedLogItem> getDelayedLogItems()
     { return parseMessages; }
 
     @Override
@@ -165,19 +165,19 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
     { return allFaults.contains(resourcePath); }
 
     @Override
-    public Set getAllRead()
+    public Set<String> getAllRead()
     { return allRead; }
 
     @Override
-    public Set getAllVetoed()
+    public Set<String> getAllVetoed()
     { return allVetoed; }
 
     @Override
-    public Set getAllNotFound()
+    public Set<String> getAllNotFound()
     { return allNotFound; }
 
     @Override
-    public Set getAllFaults()
+    public Set<String> getAllFaults()
     { return allFaults; }
 }
 

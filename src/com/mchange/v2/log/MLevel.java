@@ -17,8 +17,8 @@ public final class MLevel
     public final static MLevel DEBUG;
     public final static MLevel TRACE;
 
-    private final static Map integersToMLevels;
-    private final static Map namesToMLevels;
+    private final static Map<Integer,MLevel> integersToMLevels;
+    private final static Map<String,MLevel>  namesToMLevels;
 
     private final static int ALL_INTVAL     = Integer.MIN_VALUE;
     private final static int CONFIG_INTVAL  = 700;
@@ -31,10 +31,10 @@ public final class MLevel
     private final static int WARNING_INTVAL = 900;
 
     public static MLevel fromIntValue(int intval)
-    { return (MLevel) integersToMLevels.get( Integer.valueOf( intval ) ); }
+    { return integersToMLevels.get( Integer.valueOf( intval ) ); }
 
     public static MLevel fromSeverity(String name)
-    { return (MLevel) namesToMLevels.get( name ); }
+    { return namesToMLevels.get( name ); }
 
     static
     {
@@ -93,31 +93,31 @@ public final class MLevel
 	DEBUG = finer;
 	TRACE = finest;
 
-	Map tmp = new HashMap();
-	tmp.put( Integer.valueOf(all.intValue()), all);
-	tmp.put( Integer.valueOf(config.intValue()), config);
-	tmp.put( Integer.valueOf(fine.intValue()), fine);
-	tmp.put( Integer.valueOf(finer.intValue()), finer);
-	tmp.put( Integer.valueOf(finest.intValue()), finest);
-	tmp.put( Integer.valueOf(info.intValue()), info);
-	tmp.put( Integer.valueOf(off.intValue()), off);
-	tmp.put( Integer.valueOf(severe.intValue()), severe);
-	tmp.put( Integer.valueOf(warning.intValue()), warning);
+	Map<Integer,MLevel> tmpIntegers = new HashMap<Integer,MLevel>();
+	tmpIntegers.put( Integer.valueOf(all.intValue()), all);
+	tmpIntegers.put( Integer.valueOf(config.intValue()), config);
+	tmpIntegers.put( Integer.valueOf(fine.intValue()), fine);
+	tmpIntegers.put( Integer.valueOf(finer.intValue()), finer);
+	tmpIntegers.put( Integer.valueOf(finest.intValue()), finest);
+	tmpIntegers.put( Integer.valueOf(info.intValue()), info);
+	tmpIntegers.put( Integer.valueOf(off.intValue()), off);
+	tmpIntegers.put( Integer.valueOf(severe.intValue()), severe);
+	tmpIntegers.put( Integer.valueOf(warning.intValue()), warning);
 
-	integersToMLevels = Collections.unmodifiableMap( tmp );
+	integersToMLevels = Collections.unmodifiableMap( tmpIntegers );
 
-	tmp = new HashMap();
-	tmp.put( all.getSeverity(), all);
-	tmp.put( config.getSeverity(), config);
-	tmp.put( fine.getSeverity(), fine);
-	tmp.put( finer.getSeverity(), finer);
-	tmp.put( finest.getSeverity(), finest);
-	tmp.put( info.getSeverity(), info);
-	tmp.put( off.getSeverity(), off);
-	tmp.put( severe.getSeverity(), severe);
-	tmp.put( warning.getSeverity(), warning);
+	Map<String,MLevel> tmpNames = new HashMap<String,MLevel>();
+	tmpNames.put( all.getSeverity(), all);
+	tmpNames.put( config.getSeverity(), config);
+	tmpNames.put( fine.getSeverity(), fine);
+	tmpNames.put( finer.getSeverity(), finer);
+	tmpNames.put( finest.getSeverity(), finest);
+	tmpNames.put( info.getSeverity(), info);
+	tmpNames.put( off.getSeverity(), off);
+	tmpNames.put( severe.getSeverity(), severe);
+	tmpNames.put( warning.getSeverity(), warning);
 
-	namesToMLevels = Collections.unmodifiableMap( tmp );
+	namesToMLevels = Collections.unmodifiableMap( tmpNames );
     }
 
     Object level;
