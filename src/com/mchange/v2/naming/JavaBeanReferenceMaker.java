@@ -26,7 +26,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
     String factoryClassName = "com.mchange.v2.naming.JavaBeanObjectFactory";
     String defaultFactoryClassLocation = null;
 
-    Set referenceProperties = new HashSet();
+    Set<String> referenceProperties = new HashSet<String>();
 
     ReferenceIndirector indirector = new ReferenceIndirector();
 
@@ -34,10 +34,10 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
     protected boolean skipUnwritableProperties = false;
 
-    public Hashtable getEnvironmentProperties()
+    public Hashtable<?,?> getEnvironmentProperties()
     { return indirector.getEnvironmentProperties(); }
 
-    public void setEnvironmentProperties( Hashtable environmentProperties )
+    public void setEnvironmentProperties( Hashtable<?,?> environmentProperties )
     { indirector.setEnvironmentProperties( environmentProperties ); }
 
     public void setReferencePropertyOverrider(JavaBeanReferencePropertyOverrider overrider)
@@ -71,10 +71,10 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 	try
 	    {
                 ReferenceableUtils.ensureWhitelistedJavaBeanClass( bean, pcfg );
-                Class beanClass = bean.getClass();
+                Class<?> beanClass = bean.getClass();
 		BeanInfo bi = Introspector.getBeanInfo( beanClass );
 		PropertyDescriptor[] pds = bi.getPropertyDescriptors();
-		List refAddrs = new ArrayList();
+		List<RefAddr> refAddrs = new ArrayList<RefAddr>();
 		String factoryClassLocation = defaultFactoryClassLocation;
 
 		boolean using_ref_props = referenceProperties.size() > 0;
@@ -101,7 +101,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 				continue;
 			    }
 
-			Class  propertyType = pd.getPropertyType();
+			Class<?>  propertyType = pd.getPropertyType();
 			Method getter = pd.getReadMethod();
 			Method setter = pd.getWriteMethod();
 			if (getter != null && setter != null) //only use properties that are both readable and writable
@@ -190,7 +190,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 
 		    }
 		Reference out = new Reference( beanClass.getName(), factoryClassName, factoryClassLocation );
-		for (Iterator ii = refAddrs.iterator(); ii.hasNext(); )
+		for (Iterator<RefAddr> ii = refAddrs.iterator(); ii.hasNext(); )
 		    out.add( (RefAddr) ii.next() );
 		return out;
 	    }

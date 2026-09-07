@@ -38,50 +38,50 @@ public class JavaBeanObjectFactory implements ObjectFactory
     { return this.cfgFinder; }
 
     @Override
-    public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable env)
+    public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable<?,?> env)
 	throws Exception
     {
 	if (refObj instanceof Reference)
 	    {
 		Reference ref = (Reference) refObj;
-		Map refAddrsMap = new HashMap();
-		for (Enumeration e = ref.getAll(); e.hasMoreElements(); )
+		Map<String,RefAddr> refAddrsMap = new HashMap<String,RefAddr>();
+		for (Enumeration<RefAddr> e = ref.getAll(); e.hasMoreElements(); )
 		    {
-			RefAddr addr = (RefAddr) e.nextElement();
+			RefAddr addr = e.nextElement();
 			refAddrsMap.put( addr.getType(), addr );
 		    }
                 String fqcn = ref.getClassName();
                 PropertiesConfig pcfg = (cfgFinder != null ? cfgFinder.findCurrentConfig() : null);
                 ReferenceableUtils.ensureWhitelistedJavaBeanClass( fqcn, pcfg );
-		Class beanClass = Class.forName( fqcn );
-		Set refProps = null;
+		Class<?> beanClass = Class.forName( fqcn );
+		Set<String> refProps = null;
 		RefAddr refPropsRefAddr = (StringRefAddr) refAddrsMap.remove( JavaBeanReferenceMaker.REF_PROPS_KEY );
 		if ( refPropsRefAddr != null )
                 {
                     String[] refPropsArray = FastCsvUtils.csvSplitLine((String) refPropsRefAddr.getContent());
-		    refProps = new HashSet();
+		    refProps = new HashSet<String>();
                     Collections.addAll(refProps, refPropsArray);
                     //System.err.println(refProps);
                 }
-		Map propMap = createPropertyMap( beanClass, refAddrsMap );
+		Map<String,Object> propMap = createPropertyMap( beanClass, refAddrsMap );
 		return findBean( beanClass, propMap, refProps );
 	    }
 	else
 	    return null;
     }
 
-    private Map createPropertyMap( Class beanClass, Map refAddrsMap ) throws Exception
+    private Map<String,Object> createPropertyMap( Class<?> beanClass, Map<String,RefAddr> refAddrsMap ) throws Exception
     {
 	BeanInfo bi = Introspector.getBeanInfo( beanClass );
 	PropertyDescriptor[] pds = bi.getPropertyDescriptors();
 
-	Map out = new HashMap();
+	Map<String,Object> out = new HashMap<String,Object>();
 	for (int i = 0, len = pds.length; i < len; ++i)
 	    {
 		PropertyDescriptor pd = pds[i];
 		String propertyName = pd.getName();
-		Class  propertyType = pd.getPropertyType();
-		RefAddr addr = (RefAddr) refAddrsMap.remove( propertyName );
+		Class<?>  propertyType = pd.getPropertyType();
+		RefAddr addr = refAddrsMap.remove( propertyName );
 		if (addr != null)
 		    {
                         Object override;
@@ -136,16 +136,16 @@ public class JavaBeanObjectFactory implements ObjectFactory
 			    }
 		    }
 	    }
-	for ( Iterator ii = refAddrsMap.keySet().iterator(); ii.hasNext(); )
+	for ( Iterator<String> ii = refAddrsMap.keySet().iterator(); ii.hasNext(); )
 	    {
-		String type = (String) ii.next();
+		String type = ii.next();
 		if (logger.isLoggable( MLevel.WARNING ))
 		    logger.warning(this.getClass().getName() + " -- RefAddr for unknown property: " + type);
 	    }
 	return out;
     }
 
-    protected void handleDeserializeBinaryRefAddressContent( String propertyName, Map out, byte[] content ) throws ClassNotFoundException, IOException
+    protected void handleDeserializeBinaryRefAddressContent( String propertyName, Map<String,Object> out, byte[] content ) throws ClassNotFoundException, IOException
     {
         if ( logger.isLoggable( MLevel.WARNING ) )
             logger.log(
@@ -160,12 +160,12 @@ public class JavaBeanObjectFactory implements ObjectFactory
             );
     }
 
-    protected void dangerousDeserializeBinaryRefAddressContent( String propertyName, Map out, byte[] content ) throws ClassNotFoundException, IOException
+    protected void dangerousDeserializeBinaryRefAddressContent( String propertyName, Map<String,Object> out, byte[] content ) throws ClassNotFoundException, IOException
     {
 	out.put( propertyName, SerializableUtils.fromByteArray( content ) ); //this will handle "indirectly serialized" objects.
     }
 
-    protected Object createBlankInstance(Class beanClass) throws Exception
+    protected Object createBlankInstance(Class<?> beanClass) throws Exception
     {
 	try
 	    { return beanClass.getDeclaredConstructor().newInstance(); }
@@ -180,7 +180,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
 	    }
     }
 
-    protected Object findBean(Class beanClass, Map propertyMap, Set refProps ) throws Exception
+    protected Object findBean(Class<?> beanClass, Map<String,Object> propertyMap, Set<String> refProps ) throws Exception
     {
 	Object bean = createBlankInstance( beanClass );
 	BeanInfo bi = Introspector.getBeanInfo( bean.getClass() );

@@ -25,9 +25,9 @@ public class ReferenceIndirector implements Indirector
 
     Name      name;
     Name      contextName;
-    Hashtable environmentProperties;
+    Hashtable<?,?> environmentProperties;
 
-    private static String envToString( Hashtable env )
+    private static String envToString( Hashtable<?,?> env )
     {
         if (env == null)
             return "null";
@@ -47,10 +47,10 @@ public class ReferenceIndirector implements Indirector
     public void setNameContextName( Name contextName )
     { this.contextName = contextName; }
 
-    public Hashtable getEnvironmentProperties()
+    public Hashtable<?,?> getEnvironmentProperties()
     { return environmentProperties; }
 
-    public void setEnvironmentProperties( Hashtable environmentProperties )
+    public void setEnvironmentProperties( Hashtable<?,?> environmentProperties )
     { this.environmentProperties = environmentProperties; }
 
     @Override
@@ -82,12 +82,12 @@ public class ReferenceIndirector implements Indirector
 	Reference   reference;
 	Name        name;
 	Name        contextName;
-	Hashtable   env;
+	Hashtable<?,?>   env;
 
 	ReferenceSerialized( Reference   reference,
 			     Name        name,
 			     Name        contextName,
-			     Hashtable   env )
+			     Hashtable<?,?>   env )
 	{
 	    this.reference = reference;
 	    this.name = name;

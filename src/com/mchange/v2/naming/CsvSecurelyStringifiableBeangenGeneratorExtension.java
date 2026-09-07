@@ -9,8 +9,8 @@ import com.mchange.v2.codegen.bean.*;
 public class CsvSecurelyStringifiableBeangenGeneratorExtension implements GeneratorExtension
 {
     boolean baseClass = false;
-    Map propNameToEncodeOverrideFunction = new HashMap();
-    Map propNameToDecodeOverrideFunction = new HashMap();
+    Map<String,String> propNameToEncodeOverrideFunction = new HashMap<String,String>();
+    Map<String,String> propNameToDecodeOverrideFunction = new HashMap<String,String>();
 
     public void setBaseClass(boolean baseClass)
     { this.baseClass = baseClass; }

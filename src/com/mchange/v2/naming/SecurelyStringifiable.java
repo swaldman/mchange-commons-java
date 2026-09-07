@@ -14,13 +14,13 @@ public final class SecurelyStringifiable
     public final static String SECURELY_STRINGIFY_METHOD_NAME = "securelyStringify";
     public final static String CONSTRUCT_SECURELY_STRINGIFIED_METHOD_NAME = "constructSecurelyStringified";
 
-    private final static Class[] CONSTRUCT_SECURELY_STRINGIFIED_METHOD_ARGS = new Class[]{String.class};
+    private final static Class<?>[] CONSTRUCT_SECURELY_STRINGIFIED_METHOD_ARGS = new Class<?>[]{String.class};
 
     private final static String SECURELY_STRINGIFIED_PFX     = "Securely Stringified: ";
     private final static int    SECURELY_STRINGIFIED_PFX_LEN = SECURELY_STRINGIFIED_PFX.length();
 
 
-    private static Method getExpectedPublicStaticMethod(Class cl, String methodName, Class[] argTypes, Class expectedReturnType)
+    private static Method getExpectedPublicStaticMethod(Class<?> cl, String methodName, Class<?>[] argTypes, Class<?> expectedReturnType)
     {
         try
         {
@@ -78,18 +78,18 @@ public final class SecurelyStringifiable
         }
     }
 
-    private static Method getGoodSecurelyStringifyMethod(Class cl)
-    { return getExpectedPublicStaticMethod( cl, SECURELY_STRINGIFY_METHOD_NAME, new Class[]{cl}, String.class ); }
+    private static Method getGoodSecurelyStringifyMethod(Class<?> cl)
+    { return getExpectedPublicStaticMethod( cl, SECURELY_STRINGIFY_METHOD_NAME, new Class<?>[]{cl}, String.class ); }
 
-    private static Method getGoodConstructSecurelyStringifiedMethod(Class cl)
+    private static Method getGoodConstructSecurelyStringifiedMethod(Class<?> cl)
     { return getExpectedPublicStaticMethod( cl, CONSTRUCT_SECURELY_STRINGIFIED_METHOD_NAME, CONSTRUCT_SECURELY_STRINGIFIED_METHOD_ARGS, cl ); }
 
-    public static boolean isSecurelyStringifiable(Class cl)
+    public static boolean isSecurelyStringifiable(Class<?> cl)
     { return getGoodSecurelyStringifyMethod(cl) != null && getGoodConstructSecurelyStringifiedMethod(cl) != null; }
 
     public static String securelyStringify(Object o) throws SecurelyStringifiableException
     {
-        Class cl = o.getClass();
+        Class<?> cl = o.getClass();
 
         // always check both!
         Method mStringify = getGoodSecurelyStringifyMethod(cl);
@@ -136,7 +136,7 @@ public final class SecurelyStringifiable
         { throw new SecurelyStringifiableException( "An Exception occurred while trying to reconstruct a SecurelyStringified object.", e ); }
     }
 
-    private static Object constructSecurelyStringifiedPostHeader( Class cl, String stringified, String stringifiedPostHeader ) throws SecurelyStringifiableException
+    private static Object constructSecurelyStringifiedPostHeader( Class<?> cl, String stringified, String stringifiedPostHeader ) throws SecurelyStringifiableException
     {
         // always check both!
         Method mStringify = getGoodSecurelyStringifyMethod(cl);

@@ -32,12 +32,12 @@ public final class ReferenceableUtils
     // but it means NO WHITELIST, any factoryClassName is accepted.
     //
     // It is and must be tested by reference identity, not semantic equality
-    public final static Set ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet());
+    public final static Set<String> ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet<String>());
 
-    private final static Set ACCEPT_ANY_WHITELIST;
+    private final static Set<String> ACCEPT_ANY_WHITELIST;
     static
     {
-        Set tmp = new HashSet();
+        Set<String> tmp = new HashSet<String>();
         tmp.add("*");
         ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp);
     }
@@ -54,14 +54,14 @@ public final class ReferenceableUtils
 	    return s;
     }
 
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env )
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable<?,?> env )
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, (PropertiesConfig) null ); }
 
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, PropertiesConfig pcfg )
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable<?,?> env, PropertiesConfig pcfg )
 	throws NamingException
     {
-        Set allowedFactoryClassNames = findMandatoryObjectFactoryWhitelist( pcfg );
+        Set<String> allowedFactoryClassNames = findMandatoryObjectFactoryWhitelist( pcfg );
         return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, pcfg );
     }
 
@@ -69,7 +69,7 @@ public final class ReferenceableUtils
      * The allowedFactoryClassNames whitelist test can be (but generally should not be) circumvented by explicitly providing ReferenceUtils.ALL_FACTORY_CLASS_NAMES
      * as the argument allowedFactoryClassNames. allowedFactoryClassNames must not be null. (A NullPointerException will be provoked if it is.)
      */
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames )
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable<?,?> env, Set<String> allowedFactoryClassNames )
 	throws NamingException
     { return referenceToObject( ref, name, nameCtx, env, allowedFactoryClassNames, null ); }
 
@@ -77,7 +77,7 @@ public final class ReferenceableUtils
      * The allowedFactoryClassNames whitelist test can be (but generally should not be) circumvented by explicitly providing ReferenceUtils.ALL_FACTORY_CLASS_NAMES
      * as the argument allowedFactoryClassNames. allowedFactoryClassNames must not be null. (A NullPointerException will be provoked if it is.)
      */
-    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable env, Set allowedFactoryClassNames, PropertiesConfig pcfg )
+    public static Object referenceToObject( Reference ref, Name name, Context nameCtx, Hashtable<?,?> env, Set<String> allowedFactoryClassNames, PropertiesConfig pcfg )
 	throws NamingException
     {
 	try
@@ -138,7 +138,7 @@ public final class ReferenceableUtils
                         }
 		    }
 
-		Class fClass = Class.forName( fClassName, true, cl );
+		Class<?> fClass = Class.forName( fClassName, true, cl );
 		ObjectFactory of;
 		try
 		    { of = (ObjectFactory) fClass.getDeclaredConstructor().newInstance(); }
@@ -179,17 +179,17 @@ public final class ReferenceableUtils
     // there should be very few values looked up, so soft-reference-ing seems like overkill
     //
     // MT: Synchronized on own lock
-    private final static Map nameGuardClassNameToConstructor = new HashMap();
+    private final static Map<String,Constructor<?>> nameGuardClassNameToConstructor = new HashMap<String,Constructor<?>>();
 
     private final static NameGuard nameGuardForClassName(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
     {
         synchronized (nameGuardClassNameToConstructor)
         {
-            Constructor ctor = (Constructor) nameGuardClassNameToConstructor.get(fqcn);
+            Constructor<?> ctor = nameGuardClassNameToConstructor.get(fqcn);
             if (ctor == null)
             {
-                Class cl = Class.forName(fqcn);
+                Class<?> cl = Class.forName(fqcn);
                 ctor = cl.getDeclaredConstructor();
                 nameGuardClassNameToConstructor.put(fqcn,ctor);
             }
@@ -377,13 +377,13 @@ public final class ReferenceableUtils
 	    }
     }
 
-    private static Set commaSeparatedStringListToModifiableSet( String csList )
+    private static Set<String> commaSeparatedStringListToModifiableSet( String csList )
     {
         String[] items = csList.split("\\s*,\\s*");
-        return new HashSet(Arrays.asList(items));
+        return new HashSet<String>(Arrays.asList(items));
     }
 
-    private static Set commaSeparatedStringListToSet( String csList )
+    private static Set<String> commaSeparatedStringListToSet( String csList )
     { return Collections.unmodifiableSet(commaSeparatedStringListToModifiableSet(csList)); }
 
     /* intentionally package-scope, accessed by JavaBeanReferenceMaker */
@@ -391,7 +391,7 @@ public final class ReferenceableUtils
     static void ensureWhitelistedJavaBeanClass( Object bean, PropertiesConfig pcfg ) throws NamingException
     { ensureWhitelistedJavaBeanClass( bean.getClass().getName(), pcfg ); }
 
-    private static boolean whitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg, String whitelistKey)
+    private static boolean whitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg, String whitelistKey)
     {
         if (!ACCEPT_ANY_WHITELIST.equals(whitelisted))
             return false;
@@ -412,17 +412,17 @@ public final class ReferenceableUtils
         }
     }
 
-    private static boolean objectFactoryWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    private static boolean objectFactoryWhitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg)
     { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.OBJECT_FACTORY_WHITELIST); }
 
-    private static boolean javaBeanWhitelistIsDisabled(Set whitelisted, PropertiesConfig pcfg)
+    private static boolean javaBeanWhitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg)
     { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST); }
 
     /* intentionally package-scope, accessed by JavaBeanObjectFactory */
     /* pcfg can be null */
     static void ensureWhitelistedJavaBeanClass( String fqcn, PropertiesConfig pcfg ) throws NamingException
     {
-        Set whitelisted = referenceableJavaBeanClassWhiteList( pcfg );
+        Set<String> whitelisted = referenceableJavaBeanClassWhiteList( pcfg );
         if (whitelisted != null)
         {
             if (!javaBeanWhitelistIsDisabled(whitelisted, pcfg) && !whitelisted.contains(fqcn))
@@ -458,17 +458,17 @@ public final class ReferenceableUtils
         }
     }
 
-    private static Set referenceableJavaBeanClassWhiteList( PropertiesConfig pcfg )
+    private static Set<String> referenceableJavaBeanClassWhiteList( PropertiesConfig pcfg )
     {
-        Set out = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg );
+        Set<String> out = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg );
         if (out != null && out.size() == 0) return null;
         else return out;
     }
 
     // pcfg can be null
-    private static Set findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
+    private static Set<String> findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
     {
-        Set narrowest = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg );
+        Set<String> narrowest = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg );
         if (narrowest == null)
             throw new NamingException(
                 "No ObjectFactory whitelist found. " +
@@ -483,7 +483,7 @@ public final class ReferenceableUtils
     }
 
     // pcfg can be null
-    private static Set narrowestStringListPropertiesConfigSystemProperties( String propStyleKey, PropertiesConfig pcfg )
+    private static Set<String> narrowestStringListPropertiesConfigSystemProperties( String propStyleKey, PropertiesConfig pcfg )
     {
         String rawSysProp = System.getProperty( propStyleKey );
         String rawPropsConfigProp = pcfg == null ? null : pcfg.getProperty( propStyleKey );
@@ -496,15 +496,15 @@ public final class ReferenceableUtils
             return commaSeparatedStringListToSet( rawPropsConfigProp );
         else
         {
-            Set sysPropSet = commaSeparatedStringListToModifiableSet( rawSysProp );
-            Set propsConfigSet = commaSeparatedStringListToModifiableSet( rawPropsConfigProp );
+            Set<String> sysPropSet = commaSeparatedStringListToModifiableSet( rawSysProp );
+            Set<String> propsConfigSet = commaSeparatedStringListToModifiableSet( rawPropsConfigProp );
 
             if (sysPropSet.equals(propsConfigSet))
                 return Collections.unmodifiableSet(sysPropSet);
             else
             {
                 sysPropSet.retainAll(propsConfigSet);
-                Set out = Collections.unmodifiableSet(sysPropSet);
+                Set<String> out = Collections.unmodifiableSet(sysPropSet);
 
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
