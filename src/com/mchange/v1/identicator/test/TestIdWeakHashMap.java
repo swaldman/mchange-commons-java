@@ -17,7 +17,7 @@ public class TestIdWeakHashMap
 	{ return ((String) o).charAt(0); }
     };
 
-    final static Map weak = new IdWeakHashMap( id );
+    final static Map<String,String> weak = new IdWeakHashMap<String,String>( id );
 
     public static void main(String[] argv)
     {
@@ -33,7 +33,7 @@ public class TestIdWeakHashMap
     {
 	String bye = new String("bye");
 	weak.put(bye, "");
-	Set ks = weak.keySet();
+	Set<String> ks = weak.keySet();
 	ks.remove("hi");
 	show();
     }
@@ -56,7 +56,7 @@ public class TestIdWeakHashMap
     static void show()
     {
 	System.out.println("elements:");
-	for (Iterator ii = weak.keySet().iterator(); ii.hasNext(); )
+	for (Iterator<String> ii = weak.keySet().iterator(); ii.hasNext(); )
 	    System.out.println( "\t" + ii.next() );
 
 	System.out.println("size: " + weak.size() );

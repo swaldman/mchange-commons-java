@@ -9,7 +9,7 @@ final class WeakIdHashKey extends IdHashKey
     Ref keyRef;
     int hash;
 
-    public WeakIdHashKey(Object keyObj, Identicator id, ReferenceQueue rq)
+    public WeakIdHashKey(Object keyObj, Identicator id, ReferenceQueue<Object> rq)
     {
 	super( id );
 
@@ -54,9 +54,9 @@ final class WeakIdHashKey extends IdHashKey
     public int hashCode()
     { return hash; }
 
-    class Ref extends WeakReference
+    class Ref extends WeakReference<Object>
     {
-	public Ref( Object referant, ReferenceQueue rq )
+	public Ref( Object referant, ReferenceQueue<Object> rq )
 	{ super( referant, rq ); }
 	
 	WeakIdHashKey getKey()

@@ -22,7 +22,7 @@ public class TestIdHashSet
   		{ return ((String) o).charAt(0); }
   	    };
 
-  	Set s = new IdHashSet(id);
+  	Set<String> s = new IdHashSet<String>(id);
   	System.out.println(s.add("hello"));
   	System.out.println(s.add("world"));
   	System.out.println(s.add("hi"));

@@ -3,33 +3,38 @@ package com.mchange.v1.identicator;
 import java.util.*;
 import com.mchange.v1.util.WrapperIterator;
 
-public class IdHashSet extends AbstractSet implements Set
+public class IdHashSet<T> extends AbstractSet<T> implements Set<T>
 {
-    HashSet     inner;
+    HashSet<IdHashKey> inner;
     Identicator id;
 
-    private IdHashSet(HashSet inner, Identicator id)
+    /** See IdList.unwrap: IdHashKey is untyped plumbing, and only a T is ever wrapped. */
+    @SuppressWarnings("unchecked")
+    private T unwrap( IdHashKey ik )
+    { return ik == null ? null : (T) ik.getKeyObj(); }
+
+    private IdHashSet(HashSet<IdHashKey> inner, Identicator id)
     {
 	this.inner = inner;
 	this.id = id;
     }
 
     public IdHashSet(Identicator id)
-    { this( new HashSet(), id ); }
+    { this( new HashSet<IdHashKey>(), id ); }
 
-    public IdHashSet(Collection c, Identicator id) 
-    { this( new HashSet(2 * c.size()), id ); } 
+    public IdHashSet(Collection<? extends T> c, Identicator id) 
+    { this( new HashSet<IdHashKey>(2 * c.size()), id ); } 
 
     public IdHashSet(int initialCapacity, float loadFactor, Identicator id) 
-    { this( new HashSet( initialCapacity, loadFactor ), id ); }
+    { this( new HashSet<IdHashKey>( initialCapacity, loadFactor ), id ); }
 
     public IdHashSet(int initialCapacity, Identicator id) 
-    { this(new HashSet( initialCapacity, 0.75f ), id); }
+    { this(new HashSet<IdHashKey>( initialCapacity, 0.75f ), id); }
 
     @Override
-    public Iterator iterator()
+    public Iterator<T> iterator()
     {
-	return new WrapperIterator(inner.iterator(), true)
+	return new WrapperIterator<T>(inner.iterator(), true)
 	    {
 		@Override
 		protected Object transformObject(Object o)
@@ -49,7 +54,7 @@ public class IdHashSet extends AbstractSet implements Set
     { return inner.contains( createKey( o ) ); }
 
     @Override
-    public boolean add(Object o)
+    public boolean add(T o)
     { return inner.add( createKey( o ) ); }
 
     @Override

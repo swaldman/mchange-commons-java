@@ -7,14 +7,14 @@ import com.mchange.v1.util.WrapperIterator;
 /**
  * IdWeakHashMap is NOT null-accepting!
  */
-public final class IdWeakHashMap extends IdMap implements Map
+public final class IdWeakHashMap<K,V> extends IdMap<K,V> implements Map<K,V>
 {
-    ReferenceQueue rq;
+    ReferenceQueue<Object> rq;
 
     public IdWeakHashMap(Identicator id)
     { 
-	super ( new HashMap(), id ); 
-	this.rq = new ReferenceQueue();
+	super ( new HashMap<IdHashKey,V>(), id ); 
+	this.rq = new ReferenceQueue<Object>();
     }
 
     //all methods from Map interface
@@ -58,7 +58,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public Object get(Object o)
+    public V get(Object o)
     {
 	try
 	    { return super.get( o ); }
@@ -67,7 +67,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public Object put(Object k, Object v)
+    public V put(K k, V v)
     {
 	try
 	    { return super.put( k , v ); }
@@ -76,7 +76,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public Object remove(Object o)
+    public V remove(Object o)
     {
 	try
 	    { return super.remove( o ); }
@@ -85,7 +85,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public void putAll(Map m)
+    public void putAll(Map<? extends K,? extends V> m)
     {
 	try
 	    { super.putAll( m ); }
@@ -103,7 +103,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public Set keySet()
+    public Set<K> keySet()
     {
 	try
 	    { return super.keySet(); }
@@ -112,7 +112,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     @Override
-    public Collection values()
+    public Collection<V> values()
     {
 	try
 	    { return super.values(); }
@@ -126,7 +126,7 @@ public final class IdWeakHashMap extends IdMap implements Map
      * follow.
      */
     @Override
-    public Set entrySet()
+    public Set<Entry<K,V>> entrySet()
     {
 	try
 	    { return new WeakUserEntrySet(); }
@@ -164,26 +164,27 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    this.removeIdHashKey( ref.getKey() );
     }
 
-    private final class WeakUserEntrySet extends AbstractSet
+    private final class WeakUserEntrySet extends AbstractSet<Entry<K,V>>
     {
-	Set innerEntries = internalEntrySet();
+	Set<Entry<IdHashKey,V>> innerEntries = internalEntrySet();
 	
 	@Override
-	public Iterator iterator()
+	public Iterator<Entry<K,V>> iterator()
 	{
 	    try
 		{
-		    return new WrapperIterator(innerEntries.iterator(), true)
+		    return new WrapperIterator<Entry<K,V>>(innerEntries.iterator(), true)
 			{
 			    @Override
+			    @SuppressWarnings("unchecked")
 			    protected Object transformObject(Object o)
 			    {
-				Entry innerEntry = (Entry) o;
-				final Object userKey = ((IdHashKey) innerEntry.getKey()).getKeyObj();
+				Entry<IdHashKey,V> innerEntry = (Entry<IdHashKey,V>) o;
+				final Object userKey = innerEntry.getKey().getKeyObj();
 				if (userKey == null)
 				    return WrapperIterator.SKIP_TOKEN;
 				else
-				    return new UserEntry( innerEntry ) 
+				    return new UserEntry<K,V>( innerEntry ) 
 					{ Object preventRefClear = userKey; };
 			    }
 			};
@@ -211,7 +212,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 		{
 		    if (o instanceof Entry)
 			{
-			    Entry entry = (Entry) o;
+			    Entry<?,? extends V> entry = castEntry( o );
 			    return innerEntries.contains( createIdEntry( entry ) ); 
 			}
 		    else
@@ -228,7 +229,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 		{
 		    if (o instanceof Entry)
 			{
-			    Entry entry = (Entry) o;
+			    Entry<?,? extends V> entry = castEntry( o );
 			    return innerEntries.remove( createIdEntry( entry ) ); 
 			}
 		    else

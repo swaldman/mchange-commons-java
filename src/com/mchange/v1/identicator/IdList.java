@@ -3,12 +3,22 @@ package com.mchange.v1.identicator;
 import java.util.*;
 import com.mchange.v1.util.*;
 
-public class IdList implements List
+public class IdList<T> implements List<T>
 {
     Identicator id;
-    List inner;
+    List<IdHashKey> inner;
 
-    public IdList(Identicator id, List inner)
+    /**
+     *  IdHashKey and its subclasses are package-private plumbing, and getKeyObj() is
+     *  typed Object, so unwrapping one is the single place this class cannot be checked.
+     *  Nothing but a T is ever wrapped, by add, set and addAll; confining the cast here
+     *  keeps the suppression to one method.
+     */
+    @SuppressWarnings("unchecked")
+    private T unwrap( IdHashKey ik )
+    { return ik == null ? null : (T) ik.getKeyObj(); }
+
+    public IdList(Identicator id, List<IdHashKey> inner)
     {
 	this.id = id;
 	this.inner = inner;
@@ -30,9 +40,9 @@ public class IdList implements List
     }
 
     @Override
-    public Iterator iterator()
+    public Iterator<T> iterator()
     {
-	return new WrapperIterator( inner.iterator(), true )
+	return new WrapperIterator<T>( inner.iterator(), true )
 	    {
 		@Override
 		protected Object transformObject(Object o)
@@ -53,11 +63,12 @@ public class IdList implements List
     { return this.toArray( new Object[ this.size() ] ); }
 
     @Override
-    public Object[] toArray(Object[] space)
-    { return IteratorUtils.toArray( this.iterator(), this.size(), space ); }
+    @SuppressWarnings("unchecked") // IteratorUtils.toArray returns Object[]; the array handed back is the caller's own E[] when it fits
+    public <E> E[] toArray(E[] space)
+    { return (E[]) IteratorUtils.toArray( this.iterator(), this.size(), space ); }
 
     @Override
-    public boolean add(Object o)
+    public boolean add(T o)
     { return inner.add( new StrongIdHashKey( o, id ) ); }
 
     @Override
@@ -65,9 +76,9 @@ public class IdList implements List
     { return inner.remove( new StrongIdHashKey( o, id ) ); }
 
     @Override
-    public boolean containsAll(Collection c)
+    public boolean containsAll(Collection<?> c)
     {
-	Iterator ii = c.iterator();
+	Iterator<?> ii = c.iterator();
 	while (ii.hasNext())
 	    {
 		IdHashKey test = new StrongIdHashKey( ii.next(), id );
@@ -78,9 +89,9 @@ public class IdList implements List
     }
 
     @Override
-    public boolean addAll(Collection c)
+    public boolean addAll(Collection<? extends T> c)
     {
-	Iterator ii = c.iterator();
+	Iterator<?> ii = c.iterator();
 	boolean changed = false;
 	while (ii.hasNext())
 	    {
@@ -91,9 +102,9 @@ public class IdList implements List
     }
 
     @Override
-    public boolean addAll(int i, Collection c)
+    public boolean addAll(int i, Collection<? extends T> c)
     {
-	Iterator ii = c.iterator();
+	Iterator<?> ii = c.iterator();
 	while (ii.hasNext())
 	    {
 		IdHashKey ik = new StrongIdHashKey( ii.next(), id );
@@ -104,9 +115,9 @@ public class IdList implements List
     }
 
     @Override
-    public boolean removeAll(Collection c)
+    public boolean removeAll(Collection<?> c)
     {
-	Iterator ii = c.iterator();
+	Iterator<?> ii = c.iterator();
 	boolean changed = false;
 	while (ii.hasNext())
 	    {
@@ -117,9 +128,9 @@ public class IdList implements List
     }
 
     @Override
-    public boolean retainAll(Collection c)
+    public boolean retainAll(Collection<?> c)
     {
-	Iterator ii = inner.iterator();
+	Iterator<?> ii = inner.iterator();
 	boolean changed = false;
 	while (ii.hasNext())
 	    {
@@ -142,7 +153,7 @@ public class IdList implements List
     public boolean equals(Object o)
     { 
 	if (o instanceof List)
-	    return ListUtils.equivalent( this, (List) o );
+	    return ListUtils.equivalent( this, (List<?>) o );
 	else
 	    return false;
     }
@@ -152,28 +163,22 @@ public class IdList implements List
     { return ListUtils.hashContents( this ); }
 
     @Override
-    public Object get(int i)
-    { return ((IdHashKey) inner.get(i)).getKeyObj(); }
+    public T get(int i)
+    { return unwrap( inner.get(i) ); }
 
     @Override
-    public Object set(int i, Object o)
-    {
-	IdHashKey ik = (IdHashKey) inner.set(  i, new StrongIdHashKey( o, id ) );
-	return ik.getKeyObj();
-    }
+    public T set(int i, T o)
+    { return unwrap( inner.set( i, new StrongIdHashKey( o, id ) ) ); }
 
     @Override
-    public void add(int i, Object o)
+    public void add(int i, T o)
     {
 	inner.add(  i, new StrongIdHashKey( o, id ) );
     }
 
     @Override
-    public Object remove(int i)
-    {
-	IdHashKey ik = (IdHashKey) inner.remove(i);
-	return (ik == null ? null : ik.getKeyObj());
-    }
+    public T remove(int i)
+    { return unwrap( inner.remove(i) ); }
 
     @Override
     public int indexOf(Object o)
@@ -185,16 +190,16 @@ public class IdList implements List
 
     //TODO: make a more efficient implementation...
     @Override
-    public ListIterator listIterator()
-    { return new LinkedList(this).listIterator(); }
+    public ListIterator<T> listIterator()
+    { return new LinkedList<T>(this).listIterator(); }
 
     //TODO: make a more efficient implementation...
     @Override
-    public ListIterator listIterator(int i)
-    { return new LinkedList(this).listIterator(i); }
+    public ListIterator<T> listIterator(int i)
+    { return new LinkedList<T>(this).listIterator(i); }
 
     @Override
-    public List subList(int a, int b)
-    { return new IdList(id, inner.subList(a, b)); }
+    public List<T> subList(int a, int b)
+    { return new IdList<T>(id, inner.subList(a, b)); }
 
 }
