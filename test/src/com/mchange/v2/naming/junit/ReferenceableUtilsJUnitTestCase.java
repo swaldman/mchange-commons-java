@@ -22,6 +22,7 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
 
     public static final class AlphaObjectFactory implements ObjectFactory
     {
+        @Override
         public Object getObjectInstance( Object obj, Name name, Context nameCtx, Hashtable environment )
             throws Exception
         { return "ALPHA"; }
@@ -29,6 +30,7 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
 
     public static final class BetaObjectFactory implements ObjectFactory
     {
+        @Override
         public Object getObjectInstance( Object obj, Name name, Context nameCtx, Hashtable environment )
             throws Exception
         { return "BETA"; }

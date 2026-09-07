@@ -70,14 +70,17 @@ public class SaxXmlPropsParser
 	String name;
 	StringBuffer valueBuf;
 
+	@Override
 	public void setDocumentLocator(Locator locator)
 	{ this.locator = locator; }
 
+	@Override
 	public void startDocument() throws SAXException
 	{ 
 	    props  = new Properties();
 	}
 
+	@Override
 	public void startElement(String namespaceURI, String localName, String qName, Attributes atts)
 	{
 	    System.err.println("--> startElement( " + namespaceURI + ", " + localName + ", "  + atts + ")");
@@ -91,18 +94,21 @@ public class SaxXmlPropsParser
 		}
 	}
 
+	@Override
 	public void characters(char[] ch, int start, int length) throws SAXException
 	{
 	    if (valueBuf != null)
 		valueBuf.append(ch, start, length); 
 	}
 
+	@Override
 	public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException
 	{ 
 	    if (valueBuf != null)
 		valueBuf.append(ch, start, length); 
 	}
 
+	@Override
 	public void endElement(String namespaceURI, String localName, String qName) throws SAXException
 	{
 	    if (!namespaceURI.equals("") && !namespaceURI.equals( XMLPROPS_NAMESPACE_URI ))
@@ -116,20 +122,25 @@ public class SaxXmlPropsParser
 		}
 	}
 
+	@Override
 	public void endDocument() throws SAXException
 	{}
 
+	@Override
 	public void startPrefixMapping(String prefix, String uri) throws SAXException
 	{}
 
 
 
+	@Override
 	public void endPrefixMapping(String prefix) throws SAXException
 	{}
 
+	@Override
 	public void processingInstruction(String target, String data) throws SAXException
 	{}
 
+	@Override
 	public void skippedEntity(String name) throws SAXException
 	{}
 

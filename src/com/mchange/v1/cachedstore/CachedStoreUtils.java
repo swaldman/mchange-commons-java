@@ -13,9 +13,11 @@ public final class CachedStoreUtils
     {
         return new CachedStore()
         {
+		@Override
 		public synchronized Object find(Object key) throws CachedStoreException
 		{ return orig.find( key ); }
 
+		@Override
 		public synchronized void reset() throws CachedStoreException
 		{ orig.reset(); }
         };
@@ -29,21 +31,27 @@ public final class CachedStoreUtils
     {
         return new TweakableCachedStore()
         {
+            @Override
             public synchronized Object find(Object key) throws CachedStoreException
             { return orig.find( key ); }
 
+            @Override
             public synchronized void reset() throws CachedStoreException
             { orig.reset(); }
 
+            @Override
             public synchronized Object getCachedValue(Object key) throws CachedStoreException
             { return orig.getCachedValue(key); }
 
+            @Override
             public synchronized void removeFromCache(Object key) throws CachedStoreException
             { orig.removeFromCache(key); }
 
+            @Override
             public synchronized void setCachedValue(Object key, Object value) throws CachedStoreException
             { orig.setCachedValue(key, value); }
 
+            @Override
             public synchronized Iterator cachedKeys() throws CachedStoreException
             {
                 ArrayList al = new ArrayList();
@@ -52,8 +60,11 @@ public final class CachedStoreUtils
                 final Iterator inner = al.iterator();
                 return new Iterator()
                 {
+                    @Override
                     public boolean hasNext() { return inner.hasNext(); }
+                    @Override
                     public Object  next()    { return inner.next(); }
+                    @Override
                     public void remove()
                     { throw new UnsupportedOperationException("Remove not supported by this Iterator."); }
                 };
@@ -65,27 +76,35 @@ public final class CachedStoreUtils
     {
         return new WritableCachedStore()
         {
+            @Override
             public synchronized Object find(Object key) throws CachedStoreException
             { return orig.find( key ); }
 
+            @Override
             public synchronized void reset() throws CachedStoreException
             { orig.reset(); }
 
+            @Override
             public synchronized void write(Object key, Object value) throws CachedStoreException
             { orig.write(key, value); }
 
+            @Override
             public synchronized void remove(Object key) throws CachedStoreException
             { orig.remove(key); }
 
+            @Override
             public synchronized void flushWrites() throws CacheFlushException
             { orig.flushWrites(); }
 
+            @Override
             public synchronized Set  getFailedWrites() throws CachedStoreException
             { return orig.getFailedWrites(); }
 
+            @Override
             public synchronized void clearPendingWrites() throws CachedStoreException
             { orig.clearPendingWrites(); }
 
+            @Override
             public synchronized void sync() throws CachedStoreException
             { orig.sync(); }
         };
@@ -95,9 +114,11 @@ public final class CachedStoreUtils
     {
 	return new CachedStore()
 	    {
+		@Override
 		public Object find(Object key) throws CachedStoreException
 		{ return orig.find( key ); }
 
+		@Override
 		public void reset() throws CachedStoreException
 		{ orig.reset(); }
 	    };

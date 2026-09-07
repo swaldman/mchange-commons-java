@@ -190,6 +190,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 	      true ); 
     }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     {
         try
@@ -212,9 +213,11 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
         }
     }
 
+    @Override
     public synchronized int getThreadCount()
     { return managed.size(); }
 
+    @Override
     public void close( boolean skip_remaining_tasks )
     {
         synchronized ( this )
@@ -248,18 +251,23 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
         }
     }
 
+    @Override
     public void close()
     { close( true ); }
 
+    @Override
     public synchronized int getActiveCount()
     { return managed.size() - available.size(); }
 
+    @Override
     public synchronized int getIdleCount()
     { return available.size(); }
 
+    @Override
     public synchronized int getPendingTaskCount()
     { return pendingTasks.size(); }
 
+    @Override
     public synchronized String getStatus()
     { 
         /*
@@ -274,6 +282,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
     }
 
     // done reflectively for jdk 1.3/1.4 compatability
+    @Override
     public synchronized String getStackTraces()
     { return getStackTraces(0); }
 
@@ -632,6 +641,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 		logger.log(MLevel.FINER, this.getClass().getName() + " -- PURGING TIMER");
 	}
 
+        @Override
         public void run()
         {
 	    long checkForPurge = rnd.nextLong();
@@ -730,6 +740,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
         LinkedList last = null;
         LinkedList current = null;
 
+        @Override
         public void run()
         {
 
@@ -833,6 +844,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             this.fixedTaskStr = fixedTaskStr;
         }
 
+        @Override
         public void run() 
         { 
             String taskStr;
@@ -872,6 +884,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 
     class ReplacedThreadInterruptor extends TimerTask
     {
+        @Override
         public void run()
         {
             synchronized (ThreadPoolAsynchronousRunner.this)

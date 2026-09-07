@@ -33,6 +33,7 @@ public final class Synchronizer
     {
 	InvocationHandler handler = new InvocationHandler()
 	    {
+		@Override
 		public Object invoke(Object proxy, Method m, Object[] args) 
 		    throws Throwable
 		{

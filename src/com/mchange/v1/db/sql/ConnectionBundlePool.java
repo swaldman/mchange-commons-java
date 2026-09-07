@@ -7,5 +7,6 @@ public interface ConnectionBundlePool extends ClosableResource
 {
     public ConnectionBundle checkoutBundle() throws SQLException, InterruptedException, BrokenObjectException;
     public void checkinBundle(ConnectionBundle bndl) throws SQLException, BrokenObjectException;
+    @Override
     public void close() throws SQLException;
 }

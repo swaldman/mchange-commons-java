@@ -32,6 +32,7 @@ public class ResourceClosedException extends RuntimeException
     public ResourceClosedException()
     { super(); }
 
+    @Override
     public Throwable getCause()
     { return rootCause; }
 

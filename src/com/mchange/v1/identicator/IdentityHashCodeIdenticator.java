@@ -7,9 +7,11 @@ public class IdentityHashCodeIdenticator implements Identicator
 {
     public static IdentityHashCodeIdenticator INSTANCE = new IdentityHashCodeIdenticator();
 
+    @Override
     public boolean identical(Object a, Object b)
     { return System.identityHashCode(a) == System.identityHashCode(b); }
 
+    @Override
     public int hash(Object o)
     { return System.identityHashCode( o ); }
 }

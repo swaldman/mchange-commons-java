@@ -103,6 +103,7 @@ class PropertyComponentBindingUtility
 
 	PropertyChangeListener pcl = new PropertyChangeListener()
 	    {
+		@Override
 		public void propertyChange( PropertyChangeEvent evt )
 		{
 		    String chkPropName = evt.getPropertyName();
@@ -155,6 +156,7 @@ class PropertyComponentBindingUtility
 		final Object reversionValue = propGetter.invoke( bean, EMPTY_ARGS );
 		Runnable task = new Runnable()
 		    {
+			@Override
 			public void run()
 			{
 			    if (alert_error) 

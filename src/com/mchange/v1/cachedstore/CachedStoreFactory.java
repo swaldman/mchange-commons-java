@@ -27,36 +27,42 @@ public final class CachedStoreFactory
 	final ManualCleanupSoftKeyCachedStore inner = new ManualCleanupSoftKeyCachedStore( manager );
         return new TweakableCachedStore()
         {
+            @Override
             public Object find(Object key) throws CachedStoreException
             {
                 inner.vacuum();
                 return inner.find( key );
             }
 
+            @Override
             public void reset() throws CachedStoreException
             {
                 inner.vacuum();
                 inner.reset();
             }
 
+            @Override
             public Object getCachedValue(Object key) throws CachedStoreException
             {
                 inner.vacuum();
                 return inner.getCachedValue(key);
             }
 
+            @Override
             public void removeFromCache(Object key) throws CachedStoreException
             {
                 inner.vacuum();
                 inner.removeFromCache(key);
             }
 
+            @Override
             public void setCachedValue(Object key, Object value) throws CachedStoreException
             {
                 inner.vacuum();
                 inner.setCachedValue(key, value);
             }
 
+            @Override
             public Iterator cachedKeys() throws CachedStoreException
             {
                 inner.vacuum();

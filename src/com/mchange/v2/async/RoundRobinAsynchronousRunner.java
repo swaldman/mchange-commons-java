@@ -29,6 +29,7 @@ public class RoundRobinAsynchronousRunner implements AsynchronousRunner, Queuabl
 	    rqs[i] = new CarefulRunnableQueue( daemon, false );
     }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     { 
 	try
@@ -62,6 +63,7 @@ public class RoundRobinAsynchronousRunner implements AsynchronousRunner, Queuabl
 	    }
     }
 
+    @Override
     public synchronized RunnableQueue asRunnableQueue()
     { 
 	try
@@ -89,6 +91,7 @@ public class RoundRobinAsynchronousRunner implements AsynchronousRunner, Queuabl
 	    }
     }
 
+    @Override
     public synchronized void close( boolean skip_remaining_tasks )
     {
 	for (int i = 0, len = rqs.length; i < len; ++i)
@@ -98,6 +101,7 @@ public class RoundRobinAsynchronousRunner implements AsynchronousRunner, Queuabl
 	    }
     }
 
+    @Override
     public void close()
     { close( true ); }
 
@@ -119,12 +123,15 @@ public class RoundRobinAsynchronousRunner implements AsynchronousRunner, Queuabl
 	RunnableQueueView( int rq_num )
 	{ this.rq_num = rq_num; }
 
+	@Override
 	public void postRunnable(Runnable r)
 	{ rqs[ rq_num ].postRunnable( r ); }
 	
+	@Override
 	public void close( boolean skip_remaining_tasks )
 	{ }
 	
+	@Override
 	public void close()
 	{ /* ignore */ }
     }

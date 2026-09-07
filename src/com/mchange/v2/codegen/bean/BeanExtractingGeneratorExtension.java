@@ -23,9 +23,11 @@ public class BeanExtractingGeneratorExtension implements GeneratorExtension
     public int getExtractMethodModifiers()
     { return method_modifiers; }
 
+    @Override
     public Collection extraGeneralImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraSpecificImports()
     {
 	Set set = new HashSet();
@@ -37,9 +39,11 @@ public class BeanExtractingGeneratorExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public Collection extraInterfaceNames()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

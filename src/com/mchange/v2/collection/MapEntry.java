@@ -14,15 +14,19 @@ public class MapEntry implements Map.Entry
 	this.value = value;
     }
 
+    @Override
     public Object getKey()
     { return key; }
 
+    @Override
     public Object getValue()
     { return value;  }
 
+    @Override
     public Object setValue(Object o)
     { throw new UnsupportedOperationException(); }
 
+    @Override
     public boolean equals(Object o)
     {
 	if (o instanceof Map.Entry)
@@ -40,6 +44,7 @@ public class MapEntry implements Map.Entry
     /*
      * Conforms to required contract for Map.Entry hashCode()
      */
+    @Override
     public int hashCode()
     {
 	return 

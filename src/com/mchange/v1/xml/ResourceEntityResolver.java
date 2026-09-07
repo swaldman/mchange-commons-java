@@ -21,6 +21,7 @@ public class ResourceEntityResolver implements EntityResolver
     public ResourceEntityResolver(Class loadSibling)
     { this(loadSibling.getClassLoader(), classToPrefix(loadSibling)); }
 
+    @Override
     public InputSource resolveEntity(String publicId, String systemId)
 	throws SAXException, IOException
     {

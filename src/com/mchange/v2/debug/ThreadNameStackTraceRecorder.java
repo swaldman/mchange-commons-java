@@ -90,6 +90,7 @@ public class ThreadNameStackTraceRecorder
 	    this.stackTrace = new Exception( sth );
 	}
 
+	@Override
 	public int compareTo( Object o )
 	{
 	    Record oo = (Record) o;

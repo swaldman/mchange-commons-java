@@ -133,6 +133,7 @@ public final class MLevel
     public String getSeverity()
     { return lvlstring; }
 
+    @Override
     public String toString()
     { return this.getClass().getName() + this.getLineHeader(); }
 

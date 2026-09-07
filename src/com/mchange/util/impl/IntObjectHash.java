@@ -22,6 +22,7 @@ public class IntObjectHash implements IntObjectMap
   public IntObjectHash()
     {this(101, 0.75f);} //defaults from java.util.Hashtable
 
+  @Override
   public synchronized Object get(int num)
     {
       int index  = getIndex(num);
@@ -31,6 +32,7 @@ public class IntObjectHash implements IntObjectMap
       return out;
     }
   
+  @Override
   public synchronized void put(int num, Object obj)
     {
       if (obj == null)
@@ -43,6 +45,7 @@ public class IntObjectHash implements IntObjectMap
       if (size > threshold) rehash();
     }
 
+  @Override
   public synchronized boolean putNoReplace(int num, Object obj)
     {
       if (obj == null)
@@ -61,9 +64,11 @@ public class IntObjectHash implements IntObjectMap
 	}
     }
 
+  @Override
   public int getSize()
     {return size;}
 
+  @Override
   public synchronized boolean containsInt(int num)
     {
       int index = getIndex(num);
@@ -73,6 +78,7 @@ public class IntObjectHash implements IntObjectMap
   private int getIndex(int num)
     {return Math.abs(num % records.length);}
 
+  @Override
   public synchronized Object remove(int num)
     {
       IOHRecord rec = records[getIndex(num)];
@@ -81,6 +87,7 @@ public class IntObjectHash implements IntObjectMap
       return out;
     }
 
+  @Override
   public synchronized void clear()
     {
       this.records       = new IOHRecord[init_capacity];
@@ -88,6 +95,7 @@ public class IntObjectHash implements IntObjectMap
       this.size          = 0;
     }
 
+  @Override
   public synchronized IntEnumeration ints()
     {
       return new IntEnumerationHelperBase()
@@ -100,9 +108,11 @@ public class IntObjectHash implements IntObjectMap
 	    nextIndex();
 	  }
 
+	  @Override
 	  public boolean hasMoreInts()
 	    {return index < records.length;}
 
+	  @Override
 	  public int nextInt()
 	    {
 	      try 

@@ -10,15 +10,19 @@ public class CompleteConstructorGeneratorExtension implements GeneratorExtension
 {
     int ctor_modifiers = Modifier.PUBLIC;
 
+    @Override
     public Collection extraGeneralImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraSpecificImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraInterfaceNames()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

@@ -23,6 +23,7 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
 
     public static final class SimpleObjectFactory implements ObjectFactory
     {
+        @Override
         public Object getObjectInstance( Object obj, Name name, Context nameCtx, Hashtable environment )
             throws Exception
         { return "SIMPLE"; }
@@ -33,6 +34,7 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
     /** A minimal Referenceable backed by SimpleObjectFactory. */
     public static final class TestReferenceable implements Referenceable
     {
+        @Override
         public Reference getReference() throws NamingException
         { return new Reference( TestReferenceable.class.getName(), SIMPLE_FACTORY, null ); }
     }
@@ -81,12 +83,14 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
 
     private String savedAllowSysprop;
 
+    @Override
     protected void setUp()
     {
         savedAllowSysprop = System.getProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
         System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true" );
     }
 
+    @Override
     protected void tearDown()
     { restoreSystemProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, savedAllowSysprop ); }
 

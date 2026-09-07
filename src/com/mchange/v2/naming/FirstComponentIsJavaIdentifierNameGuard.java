@@ -5,11 +5,13 @@ import javax.lang.model.SourceVersion;
 
 public class FirstComponentIsJavaIdentifierNameGuard implements NameGuard
 {
+    @Override
     public boolean nameIsAcceptable( Name name )   { return !name.isEmpty() && SourceVersion.isName(name.get(0)); }
 
     // note that we don't bother checking for escaped slashes, we just
     // leave the backslash in the String, which will cause it to fail
     // the Java identifier tes, which is what we want.
+    @Override
     public boolean nameIsAcceptable( String name )
     {
         String firstComponent;
@@ -21,6 +23,7 @@ public class FirstComponentIsJavaIdentifierNameGuard implements NameGuard
         return SourceVersion.isName(firstComponent);
     }
 
+    @Override
     public String onlyAcceptableWhen()
     { return "their first component would be a valid Java identifier (e.g. jdbc or jms)"; }
 }

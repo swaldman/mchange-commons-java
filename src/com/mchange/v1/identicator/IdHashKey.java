@@ -12,7 +12,9 @@ abstract class IdHashKey
     public Identicator getIdenticator()
     { return id; }
 
+    @Override
     public abstract boolean equals(Object o);
 
+    @Override
     public abstract int hashCode();
 }

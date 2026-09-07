@@ -8,6 +8,7 @@ public abstract class NoGCObjectCache implements com.mchange.util.ObjectCache
 {
   Hashtable store = new Hashtable();
   
+  @Override
   public Object find(Object key) throws Exception
     {
       Object out = store.get(key);

@@ -30,6 +30,7 @@ public class InterruptTaskThread
 
     static class Interrupter extends Thread
     {
+	@Override
 	public void run()
 	{
 	    try
@@ -62,6 +63,7 @@ public class InterruptTaskThread
 
 	static synchronized int number() { return count++; }
 
+	@Override
 	public void run()
 	{
 	    try

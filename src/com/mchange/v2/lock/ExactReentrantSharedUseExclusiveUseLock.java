@@ -48,6 +48,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	System.err.println( );
     }
 
+    @Override
     public synchronized void acquireShared() throws InterruptedException
     {
 	Thread t = Thread.currentThread();
@@ -70,6 +71,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	//status("acquireShared()");
     }
 
+    @Override
     public synchronized void relinquishShared()
     { 
 	Thread t = Thread.currentThread();
@@ -93,6 +95,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	//status("relinquishShared()");
     }
 
+    @Override
     public synchronized void acquireExclusive() throws InterruptedException
     {
 	Thread t = Thread.currentThread();
@@ -115,6 +118,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	//status("acquireExclusive()");
     }
 
+    @Override
     public synchronized void relinquishExclusive()
     {
 	Thread t = Thread.currentThread();
@@ -154,6 +158,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	    }
     }
 
+    @Override
     public String toString()
     { return super.toString() + " [name=" + name + ']'; }
 }

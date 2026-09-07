@@ -7,9 +7,11 @@ public class SynchronizedFloatHolder implements ThreadSafeFloatHolder, Serializa
 {
     transient float value;
 
+    @Override
     public synchronized float getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(float value)
     { this.value = value; }
 

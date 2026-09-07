@@ -4,9 +4,12 @@ import javax.naming.Name;
 
 public class ApparentlyLocalNameGuard implements NameGuard
 {
+    @Override
     public boolean nameIsAcceptable( Name name )   { return !name.isEmpty() && name.get(0).startsWith("java:"); }
+    @Override
     public boolean nameIsAcceptable( String name ) { return name.startsWith("java:"); }
 
+    @Override
     public String onlyAcceptableWhen()
     {
         return

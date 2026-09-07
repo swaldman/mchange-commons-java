@@ -36,6 +36,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 		interruptAndDeadlockTimer = new Timer( true );
 		TimerTask deadlockChecker = new TimerTask()
 		    {
+			@Override
 			public void run()
 			{ checkForDeadlock(); }
 		    };
@@ -49,6 +50,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
     private boolean hasIdTimer()
     { return (interrupt_task_delay > 0); }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     {
 	if ( still_open )
@@ -61,9 +63,11 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 
     }
 
+    @Override
     public void close()
     { close( true ); }
 
+    @Override
     public synchronized void close( boolean skip_remaining_tasks )
     {
 	if ( still_open )
@@ -163,6 +167,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 	DispatchThread()
 	{ super( "Dispatch-Thread-for-" + ThreadPerTaskAsynchronousRunner.this ); }
 
+	@Override
 	public void run()
 	{
 	    synchronized (ThreadPerTaskAsynchronousRunner.this)
@@ -216,6 +221,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 	synchronized boolean isCompleted()
 	{ return completed; }
 
+	@Override
 	public void run()
 	{
 	    try
@@ -224,6 +230,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 			{
 			    TimerTask interruptTask = new TimerTask()
 				{
+				    @Override
 				    public void run()
 				    { TaskThread.this.interrupt(); }
 				};

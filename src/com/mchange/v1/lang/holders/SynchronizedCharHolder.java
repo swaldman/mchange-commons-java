@@ -7,9 +7,11 @@ public class SynchronizedCharHolder implements ThreadSafeCharHolder
 {
 	 char value;
 
+	 @Override
 	 public synchronized char getValue()
 	 { return value; }
 
+	 @Override
 	 public synchronized void setValue(char value)
 	 { this.value = value; }
 }

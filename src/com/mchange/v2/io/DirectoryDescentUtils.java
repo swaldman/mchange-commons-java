@@ -66,15 +66,19 @@ public final class DirectoryDescentUtils
 	IteratorFileIterator(Iterator ii)
 	{ this.ii = ii; }
 
+	@Override
 	public File nextFile() throws IOException
 	{ return (File) next(); }
 
+	@Override
 	public boolean hasNext() throws IOException
 	{ return ii.hasNext(); }
 
+	@Override
 	public Object next() throws IOException
 	{ return (last = ii.next()); }
 
+	@Override
 	public void remove() throws IOException
 	{
 	    if (last != null)
@@ -86,6 +90,7 @@ public final class DirectoryDescentUtils
 		throw new IllegalStateException();
 	}
 
+	@Override
 	public void close() throws IOException
 	{}
     }

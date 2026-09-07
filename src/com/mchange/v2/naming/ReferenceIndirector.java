@@ -53,10 +53,12 @@ public class ReferenceIndirector implements Indirector
     public void setEnvironmentProperties( Hashtable environmentProperties )
     { this.environmentProperties = environmentProperties; }
 
+    @Override
     public IndirectlySerialized indirectForm( Object orig ) throws Exception
     { return indirectForm( orig, null ); }
 
 
+    @Override
     public IndirectlySerialized indirectForm( Object orig, PropertiesConfig pcfg ) throws Exception
     {
         if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
@@ -93,6 +95,7 @@ public class ReferenceIndirector implements Indirector
 	    this.env = env;
 	}
 
+        @Override
         public String toString()
         {
             StringBuilder sb = new StringBuilder();
@@ -109,9 +112,11 @@ public class ReferenceIndirector implements Indirector
             return sb.toString();
         }
 
+	@Override
 	public Object getObject() throws ClassNotFoundException, IOException
         { return getObject(null); }
 
+	@Override
 	public Object getObject(PropertiesConfig pcfg) throws ClassNotFoundException, IOException
 	{
             if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))

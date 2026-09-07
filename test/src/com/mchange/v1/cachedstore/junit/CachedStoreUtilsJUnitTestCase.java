@@ -229,6 +229,7 @@ public class CachedStoreUtilsJUnitTestCase extends TestCase
 	final AtomicBoolean completed = new AtomicBoolean( false );
 	Thread t = new Thread( new Runnable()
 	    {
+		@Override
 		public void run()
 		{
 		    try { store.find("alpha"); completed.set( true ); }
@@ -261,6 +262,7 @@ public class CachedStoreUtilsJUnitTestCase extends TestCase
 
 	Runnable mutator = new Runnable()
 	    {
+		@Override
 		public void run()
 		{
 		    try
@@ -279,6 +281,7 @@ public class CachedStoreUtilsJUnitTestCase extends TestCase
 
 	Runnable reader = new Runnable()
 	    {
+		@Override
 		public void run()
 		{
 		    try

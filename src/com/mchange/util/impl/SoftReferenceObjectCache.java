@@ -11,6 +11,7 @@ public abstract class SoftReferenceObjectCache implements com.mchange.util.Objec
 {
   Map store = new HashMap();
   
+  @Override
   public synchronized Object find(Object key) throws Exception
     {
       Reference ref = (Reference) store.get(key);

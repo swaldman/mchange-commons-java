@@ -11,9 +11,11 @@ public class PropertyMapConstructorGeneratorExtension implements GeneratorExtens
 {
     int ctor_modifiers = Modifier.PUBLIC;
 
+    @Override
     public Collection extraGeneralImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraSpecificImports()
     {
 	Set set = new HashSet();
@@ -21,9 +23,11 @@ public class PropertyMapConstructorGeneratorExtension implements GeneratorExtens
 	return set;
     }
 
+    @Override
     public Collection extraInterfaceNames()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

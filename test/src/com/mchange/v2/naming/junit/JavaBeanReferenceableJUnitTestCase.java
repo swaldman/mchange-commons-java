@@ -74,6 +74,7 @@ public final class JavaBeanReferenceableJUnitTestCase extends TestCase
     {
         return new CurrentConfigFinder()
         {
+            @Override
             public PropertiesConfig findCurrentConfig() { return pcfg; }
         };
     }
@@ -91,12 +92,14 @@ public final class JavaBeanReferenceableJUnitTestCase extends TestCase
 
     private String savedWhitelistSysprop;
 
+    @Override
     protected void setUp()
     {
         savedWhitelistSysprop = System.getProperty( WL_KEY );
         System.clearProperty( WL_KEY );
     }
 
+    @Override
     protected void tearDown()
     { restoreSystemProperty( WL_KEY, savedWhitelistSysprop ); }
 

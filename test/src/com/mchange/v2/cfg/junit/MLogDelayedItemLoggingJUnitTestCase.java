@@ -291,6 +291,7 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
 
             Object logger = Proxy.newProxyInstance( cl, new Class[] { mloggerClass }, new InvocationHandler()
             {
+                @Override
                 public Object invoke( Object proxy, Method method, Object[] args )
                 {
                     String name = method.getName();

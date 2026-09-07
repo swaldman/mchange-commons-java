@@ -103,12 +103,14 @@ public final class FloatUtils
 
     static class J12FParser implements FParser
     {
+	@Override
 	public float parseFloat(String fStr) throws NumberFormatException
 	{return Float.parseFloat(fStr);}
     }
 
     static class J11FParser implements FParser
     {
+	@Override
 	public float parseFloat(String fStr) throws NumberFormatException
 	{return Float.valueOf(fStr).floatValue();}
     }	

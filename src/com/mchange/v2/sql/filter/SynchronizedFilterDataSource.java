@@ -35,46 +35,55 @@ public abstract class SynchronizedFilterDataSource implements DataSource
 	public synchronized DataSource getInner()
 	{ return inner; }
 	
+	@Override
 	public synchronized Connection getConnection() throws SQLException
 	{
 		return inner.getConnection();
 	}
 	
+	@Override
 	public synchronized Connection getConnection(String a, String b) throws SQLException
 	{
 		return inner.getConnection(a, b);
 	}
 	
+	@Override
 	public synchronized PrintWriter getLogWriter() throws SQLException
 	{
 		return inner.getLogWriter();
 	}
 	
+	@Override
 	public synchronized int getLoginTimeout() throws SQLException
 	{
 		return inner.getLoginTimeout();
 	}
 	
+	@Override
 	public synchronized Logger getParentLogger() throws SQLFeatureNotSupportedException
 	{
 		return inner.getParentLogger();
 	}
 	
+	@Override
 	public synchronized void setLogWriter(PrintWriter a) throws SQLException
 	{
 		inner.setLogWriter(a);
 	}
 	
+	@Override
 	public synchronized void setLoginTimeout(int a) throws SQLException
 	{
 		inner.setLoginTimeout(a);
 	}
 	
+	@Override
 	public synchronized boolean isWrapperFor(Class a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
+	@Override
 	public synchronized Object unwrap(Class a) throws SQLException
 	{
 		return inner.unwrap(a);

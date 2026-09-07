@@ -9,21 +9,27 @@ public class HashIntChecklist implements IntChecklist
 
   IntObjectHash ioh = new IntObjectHash();
 
+  @Override
   public void check(int num)
     {ioh.put(num, DUMMY);}
 
+  @Override
   public void uncheck(int num)
     {ioh.remove(num);}
 
+  @Override
   public boolean isChecked(int num)
     {return ioh.containsInt(num);}
 
+  @Override
   public void clear()
     {ioh.clear();}
 
+  @Override
   public int countChecked()
     {return ioh.getSize();}
 
+  @Override
   public int[] getChecked()
     {
       synchronized (ioh)
@@ -35,6 +41,7 @@ public class HashIntChecklist implements IntChecklist
 	}
     }
 
+  @Override
   public IntEnumeration checked()
     {return ioh.ints();}
 

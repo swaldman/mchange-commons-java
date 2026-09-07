@@ -103,9 +103,11 @@ public final class DomParseUtils
 		nodes.add(child);
 	return new NodeList()
 	    {
+		@Override
 		public int getLength()
 		{ return nodes.size(); }
 
+		@Override
 		public Node item( int i )
 		{ return (Node) nodes.get( i ); }
 	    };

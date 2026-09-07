@@ -23,9 +23,11 @@ public class PotentiallySecondaryRuntimeException extends RuntimeException imple
     public PotentiallySecondaryRuntimeException()
     {this("", null);}
 
+    @Override
     public Throwable getNestedThrowable()
     {return nested;}
 
+    @Override
     public void printStackTrace(PrintWriter pw)
     {
 	super.printStackTrace(pw);
@@ -36,6 +38,7 @@ public class PotentiallySecondaryRuntimeException extends RuntimeException imple
 	    }
     }
 
+    @Override
     public void printStackTrace(PrintStream ps)
     {
 	super.printStackTrace(ps);
@@ -46,6 +49,7 @@ public class PotentiallySecondaryRuntimeException extends RuntimeException imple
 	    }
     }
 
+    @Override
     public void printStackTrace()
     {printStackTrace(System.err);}
 }

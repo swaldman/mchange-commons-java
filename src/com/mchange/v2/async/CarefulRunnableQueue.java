@@ -28,9 +28,11 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
 	t.start();
     }
 
+    @Override
     public RunnableQueue asRunnableQueue()
     { return this; }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     {
 	try
@@ -59,6 +61,7 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
 	    }
     }
 
+    @Override
     public synchronized void close( boolean skip_remaining_tasks )
     {
 	if (skip_remaining_tasks)
@@ -70,9 +73,11 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
 	    gentle_close_requested = true;
     }
 
+    @Override
     public synchronized void close()
     { this.close( true ); }
 
+    @Override
     public synchronized List getStrandedTasks()
     {
 	try
@@ -130,6 +135,7 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
 	private synchronized boolean shouldStop()
 	{ return should_stop; }
 
+	@Override
 	public void run()
 	{
 	    try

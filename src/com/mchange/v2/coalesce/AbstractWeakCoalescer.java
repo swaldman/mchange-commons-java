@@ -10,6 +10,7 @@ class AbstractWeakCoalescer implements Coalescer
     AbstractWeakCoalescer( Map wcoalesced )
     { this.wcoalesced = wcoalesced; }
 
+    @Override
     public Object coalesce( Object o )
     {
 	//System.err.println("AbstractWeakCoalescer.coalesce( " + o + " )");
@@ -27,9 +28,11 @@ class AbstractWeakCoalescer implements Coalescer
 	return out;
     }
 
+    @Override
     public int countCoalesced()
     { return wcoalesced.size(); }
 
+    @Override
     public Iterator iterator()
     { return new CoalescerIterator( wcoalesced.keySet().iterator() ); }
 }

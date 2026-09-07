@@ -17,9 +17,11 @@ public final class ChangeNotifyingSynchronizedIntHolder implements ThreadSafeInt
     public ChangeNotifyingSynchronizedIntHolder()
     { this(0, true); }
 
+    @Override
     public synchronized int getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(int value)
     {
 	if (value != this.value)

@@ -16,9 +16,11 @@ public class LazyReadOnlyMemoryFileImpl implements ReadOnlyMemoryFile
   public LazyReadOnlyMemoryFileImpl(String fname)
     {this(new File(fname));}
 
+  @Override
   public File getFile()
     {return file;}
 
+  @Override
   public synchronized byte[] getBytes() throws IOException
     {
       update();

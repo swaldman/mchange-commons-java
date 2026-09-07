@@ -17,6 +17,7 @@ public final class ReflectiveDelegationPolicy
 	this.delegateClass = dc; 
     }
 
+    @Override
     public String toString()
     {
 	if (this == USE_MAIN_DELEGATE_INTERFACE)

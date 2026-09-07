@@ -22,6 +22,7 @@ public final class PatternReplacementMap
     {
 	return new WrapperIterator( mappings.iterator(), true )
 	    {
+		@Override
 		protected Object transformObject(Object o)
 		{
 		    Mapping m = (Mapping) o;

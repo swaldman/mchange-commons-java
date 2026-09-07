@@ -13,6 +13,7 @@ class AbstractEncounterCounter implements EncounterCounter
     /**
      *  @return how many times have I seen this object before?
      */
+    @Override
     public long encounter(Object o)
     {
 	Long oldLong = (Long) m.get(o);
@@ -32,6 +33,7 @@ class AbstractEncounterCounter implements EncounterCounter
 	return out;
     }
 
+    @Override
     public long reset(Object o)
     {
 	long out = encounter(o);
@@ -39,6 +41,7 @@ class AbstractEncounterCounter implements EncounterCounter
 	return out;
     }
 
+    @Override
     public void resetAll()
     { m.clear(); }
 }

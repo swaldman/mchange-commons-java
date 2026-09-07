@@ -35,9 +35,11 @@ public class DirectoryDescendingFileFinderImpl implements IOEnumeration, FileEnu
     public DirectoryDescendingFileFinderImpl(File root) throws IOException
     {this(root, null, false);}
 
+    @Override
     public boolean hasMoreFiles()
     {return !files.empty();}
 
+    @Override
     public File nextFile() throws IOException
     {
 	if (files.empty()) throw new NoSuchElementException();
@@ -47,9 +49,11 @@ public class DirectoryDescendingFileFinderImpl implements IOEnumeration, FileEnu
 	return out;
     }
 
+    @Override
     public boolean hasMoreElements()
     {return hasMoreFiles();}
 
+    @Override
     public Object nextElement() throws IOException
     {return nextFile();}
 

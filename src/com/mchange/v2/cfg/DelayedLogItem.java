@@ -28,6 +28,7 @@ public final class DelayedLogItem
     public DelayedLogItem(Level level, String text)
     { this( level, text, null ); }
 
+    @Override
     public boolean equals( Object o )
     {
 	if (o instanceof DelayedLogItem)
@@ -42,6 +43,7 @@ public final class DelayedLogItem
 	    return false;
     }
 
+    @Override
     public int hashCode()
     {
 	return
@@ -50,6 +52,7 @@ public final class DelayedLogItem
 	    ObjectUtils.hashOrZero( this.exception );
     }
 
+    @Override
     public String toString()
     {
 	StringBuffer sb = new StringBuffer();

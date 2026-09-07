@@ -27,6 +27,7 @@ public abstract class WrapperUIterator implements UIterator
     public WrapperUIterator(UIterator inner)
     { this( inner, false ); }
 
+    @Override
     public boolean hasNext() throws Exception
     {
 	findNext();
@@ -42,6 +43,7 @@ public abstract class WrapperUIterator implements UIterator
 	    }
     }
 
+    @Override
     public Object next() throws NoSuchElementException, Exception
     {
 	findNext();
@@ -62,6 +64,7 @@ public abstract class WrapperUIterator implements UIterator
 	return lastOut;
     }
     
+    @Override
     public void remove() throws Exception
     { 
 	if (supports_remove)
@@ -79,6 +82,7 @@ public abstract class WrapperUIterator implements UIterator
 	    throw new UnsupportedOperationException(); 
     }
 
+    @Override
     public void close() throws Exception
     { inner.close(); }
 

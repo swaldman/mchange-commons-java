@@ -18,21 +18,26 @@ abstract class IdMap extends AbstractMap implements Map
 	this.id = id;
     }
     
+    @Override
     public Object put(Object key, Object value) 
     { return inner.put( createIdKey( key ), value ); }
 
+    @Override
     public boolean containsKey(Object key)
     { return inner.containsKey( createIdKey( key ) ); }
 
+    @Override
     public Object get(Object key)
     { return inner.get( createIdKey( key ) ); }
 
+    @Override
     public Object remove(Object key)
     { return inner.remove( createIdKey( key ) ); }
 
     protected Object removeIdHashKey( IdHashKey idhk )
     { return inner.remove( idhk ); }
 
+    @Override
     public Set entrySet()
     { return new UserEntrySet(); }
 
@@ -51,18 +56,22 @@ abstract class IdMap extends AbstractMap implements Map
     {
 	Set innerEntries = inner.entrySet();
 	
+	@Override
 	public Iterator iterator()
 	{
 	    return new WrapperIterator(innerEntries.iterator(), true)
 		{
+		    @Override
 		    protected Object transformObject(Object o)
 		    { return new UserEntry( (Entry) o ); }
 		};
 	}
 	
+	@Override
 	public int size()
 	{ return innerEntries.size(); }
 	
+	@Override
 	public boolean contains(Object o)
 	{ 
 	    if (o instanceof Entry)
@@ -74,6 +83,7 @@ abstract class IdMap extends AbstractMap implements Map
 		return false;
 	}
 	
+	@Override
 	public boolean remove(Object o)
 	{
 	    if (o instanceof Entry)
@@ -85,6 +95,7 @@ abstract class IdMap extends AbstractMap implements Map
 		return false;
 	}
 
+	@Override
 	public void clear()
 	{ inner.clear(); }
     }
@@ -96,12 +107,15 @@ abstract class IdMap extends AbstractMap implements Map
 	UserEntry(Entry innerEntry)
 	{ this.innerEntry = innerEntry; }
 
+	@Override
 	public final Object getKey()
 	{ return ((IdHashKey) innerEntry.getKey()).getKeyObj(); }
 
+	@Override
 	public final Object getValue()
 	{ return innerEntry.getValue(); }
 
+	@Override
 	public final Object setValue(Object value)
 	{ return innerEntry.setValue( value ); }
     }

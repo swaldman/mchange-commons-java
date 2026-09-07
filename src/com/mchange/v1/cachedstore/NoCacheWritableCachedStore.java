@@ -9,6 +9,7 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
     NoCacheWritableCachedStore(WritableCachedStore.Manager mgr)
     { this.mgr = mgr; }
 
+    @Override
     public Object find(Object key) throws CachedStoreException
     { 
 	try {return mgr.recreateFromKey( key ); }
@@ -19,9 +20,11 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
 	    }
     }
 
+    @Override
     public void reset()
     {}
 
+    @Override
     public void write(Object key, Object value) throws CachedStoreException
     { 
 	try { mgr.writeToStorage( key , value ); }
@@ -32,6 +35,7 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
 	    }
     }
 
+    @Override
     public void remove(Object key) throws CachedStoreException
     { 
 	try { mgr.removeFromStorage( key ); }
@@ -42,15 +46,19 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
 	    }
     }
 
+    @Override
     public void flushWrites() throws CacheFlushException
     {}
 
+    @Override
     public Set  getFailedWrites() throws CachedStoreException
     { return null; }
 
+    @Override
     public void clearPendingWrites() throws CachedStoreException
     {}
 
+    @Override
     public void sync() throws CachedStoreException
     {}
 }

@@ -17,6 +17,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
 
   /* we presume accesses to inner are already thread-safe */
   /* and do not synchronize.                              */
+  @Override
   public void log(String message)
     {
       try {inner.log(message);}
@@ -24,6 +25,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
 	{addFailure(e);}
     }
 
+  @Override
   public void log(Throwable t, String message)
     {
       try {inner.log(t, message);}
@@ -31,6 +33,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
 	{addFailure(e);}
     }
 
+  @Override
   public synchronized Iterator getFailures()
     {
       if (inner instanceof FailSuppressedMessageLogger)
@@ -38,6 +41,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
       else return (failures != null ? failures.iterator() : null);
     }
 
+  @Override
   public synchronized void clearFailures()
     {
       if (inner instanceof FailSuppressedMessageLogger)

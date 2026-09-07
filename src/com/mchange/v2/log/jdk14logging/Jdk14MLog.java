@@ -41,6 +41,7 @@ public final class Jdk14MLog extends MLog
     public Jdk14MLog() throws ClassNotFoundException
     { Class.forName( CHECK_CLASS ); }
 
+    @Override
     public synchronized MLogger getMLogger(String name)
     {
         name = name.intern();
@@ -55,6 +56,7 @@ public final class Jdk14MLog extends MLog
         return out;
     }
 
+    @Override
     public synchronized MLogger getMLogger()
     {
         if (global == null)
@@ -99,6 +101,7 @@ public final class Jdk14MLog extends MLog
 			{
 			    String[] fakedClassAndMethod = new String[]{ name, "" };
 
+			    @Override
 			    public String[] find() { return fakedClassAndMethod; }
 			};
 		}
@@ -106,6 +109,7 @@ public final class Jdk14MLog extends MLog
 		{
 		    this.cmFinder = new ClassAndMethodFinder()
 			{
+			    @Override
 			    public String[] find() { return findCallingClassAndMethod(); }
 			};
 		}
@@ -120,14 +124,17 @@ public final class Jdk14MLog extends MLog
         private static Level level(MLevel lvl)
         { return (Level) lvl.asJdk14Level(); }
 
+        @Override
         @Deprecated
         public ResourceBundle getResourceBundle()
         { return logger.getResourceBundle(); }
 
+        @Override
         @Deprecated
         public String getResourceBundleName()
         { return logger.getResourceBundleName(); }
 
+        @Override
         @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         {
@@ -137,10 +144,12 @@ public final class Jdk14MLog extends MLog
             logger.setFilter( (Filter) java14Filter ); 
         }
 
+        @Override
         @Deprecated
         public Object getFilter()
         { return logger.getFilter(); }
 
+        @Override
         public void log(MLevel l, String msg)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -149,6 +158,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), sa[0], sa[1], msg );
         }
 
+        @Override
         public void log(MLevel l, String msg, Object param)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -157,6 +167,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), sa[0], sa[1], msg, param );
         }
 
+        @Override
         public void log(MLevel l,String msg, Object[] params)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -165,6 +176,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), sa[0], sa[1], msg, params );
         }
 
+        @Override
         public void log(MLevel l, String msg, Throwable t)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -173,6 +185,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), sa[0], sa[1], msg, t );
         }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg)
         {
             if (! logger.isLoggable( level(l) )) return;
@@ -186,6 +199,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), srcClass, srcMeth, msg ); 
         }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object param)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -199,6 +213,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), srcClass, srcMeth, msg, param ); 
         }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object[] params)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -212,6 +227,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( level(l), srcClass, srcMeth, msg, params ); 
         }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Throwable t)
         { 
             if (! logger.isLoggable( level(l) )) return;
@@ -252,6 +268,7 @@ public final class Jdk14MLog extends MLog
         // findResourceBundle, in a logging hot path, and keeping it in step with
         // the jdk. Delegating to the deprecated method gets it right for free.
         //
+        @Override
         @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg)
         { 
@@ -266,6 +283,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg ); 
         }
 
+        @Override
         @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object param)
         { 
@@ -280,6 +298,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg, param ); 
         }
 
+        @Override
         @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object[] params)
         { 
@@ -294,6 +313,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg, params ); 
         }
 
+        @Override
         @SuppressWarnings("deprecation")
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Throwable t)
         { 
@@ -308,6 +328,7 @@ public final class Jdk14MLog extends MLog
             logger.logrb( level(l), srcClass, srcMeth, rb, msg, t ); 
         }
 
+        @Override
         public void entering(String srcClass, String srcMeth)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -315,6 +336,7 @@ public final class Jdk14MLog extends MLog
             logger.entering( srcClass, srcMeth ); 
         }
 
+        @Override
         public void entering(String srcClass, String srcMeth, Object param)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -322,6 +344,7 @@ public final class Jdk14MLog extends MLog
             logger.entering( srcClass, srcMeth, param ); 
         }
 
+        @Override
         public void entering(String srcClass, String srcMeth, Object params[])
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -329,6 +352,7 @@ public final class Jdk14MLog extends MLog
             logger.entering( srcClass, srcMeth, params ); 
         }
 
+        @Override
         public void exiting(String srcClass, String srcMeth)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -336,6 +360,7 @@ public final class Jdk14MLog extends MLog
             logger.exiting( srcClass, srcMeth ); 
         }
 
+        @Override
         public void exiting(String srcClass, String srcMeth, Object result)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -343,6 +368,7 @@ public final class Jdk14MLog extends MLog
             logger.exiting( srcClass, srcMeth, result ); 
         }
 
+        @Override
         public void throwing(String srcClass, String srcMeth, Throwable t)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -350,6 +376,7 @@ public final class Jdk14MLog extends MLog
             logger.throwing( srcClass, srcMeth, t ); 
         }
 
+        @Override
         public void severe(String msg)
         { 
             if (! logger.isLoggable( Level.SEVERE )) return;
@@ -358,6 +385,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.SEVERE, sa[0], sa[1], msg );
         }
 
+        @Override
         public void warning(String msg)
         { 
             if (! logger.isLoggable( Level.WARNING )) return;
@@ -366,6 +394,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.WARNING, sa[0], sa[1], msg );
         }
 
+        @Override
         public void info(String msg)
         { 
             if (! logger.isLoggable( Level.INFO )) return;
@@ -374,6 +403,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.INFO, sa[0], sa[1], msg );
         }
 
+        @Override
         public void config(String msg)
         {
             if (! logger.isLoggable( Level.CONFIG )) return;
@@ -382,6 +412,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.CONFIG, sa[0], sa[1], msg );
         }
 
+        @Override
         public void fine(String msg)
         { 
             if (! logger.isLoggable( Level.FINE )) return;
@@ -390,6 +421,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.FINE, sa[0], sa[1], msg );
         }
 
+        @Override
         public void finer(String msg)
         { 
             if (! logger.isLoggable( Level.FINER )) return;
@@ -398,6 +430,7 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.FINER, sa[0], sa[1], msg );
         }
 
+        @Override
         public void finest(String msg)
         { 
             if (! logger.isLoggable( Level.FINEST )) return;
@@ -406,20 +439,25 @@ public final class Jdk14MLog extends MLog
             logger.logp( Level.FINEST, sa[0], sa[1], msg );
         }
 
+        @Override
         @Deprecated
         public void setLevel(MLevel l) throws SecurityException
         { logger.setLevel( level(l) ); }
 
+        @Override
         @Deprecated
         public MLevel getLevel()
         { return MLevel.fromIntValue( logger.getLevel().intValue() ); }
 
+        @Override
         public boolean isLoggable(MLevel l)
         { return logger.isLoggable( level(l) ); }
 
+        @Override
         public String getName()
         { return name; }
 
+        @Override
         @Deprecated
         public void addHandler(Object h) throws SecurityException
         { 
@@ -429,6 +467,7 @@ public final class Jdk14MLog extends MLog
             logger.addHandler( (Handler) h ); 
         }
 
+        @Override
         @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
@@ -438,14 +477,17 @@ public final class Jdk14MLog extends MLog
             logger.removeHandler( (Handler) h ); 
         }
 
+        @Override
         @Deprecated
         public Object[] getHandlers()
         { return logger.getHandlers(); }
 
+        @Override
         @Deprecated
         public void setUseParentHandlers(boolean uph)
         { logger.setUseParentHandlers( uph ); }
 
+        @Override
         @Deprecated
         public boolean getUseParentHandlers()
         { return logger.getUseParentHandlers(); }

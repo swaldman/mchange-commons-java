@@ -31,9 +31,11 @@ public class SerializableExtension implements GeneratorExtension
     { this ( Collections.EMPTY_SET, null ); }
 
 
+    @Override
     public Collection extraGeneralImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraSpecificImports()
     {
 	Set set = new HashSet();
@@ -44,6 +46,7 @@ public class SerializableExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public Collection extraInterfaceNames()
     {
 	Set set = new HashSet();
@@ -51,6 +54,7 @@ public class SerializableExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

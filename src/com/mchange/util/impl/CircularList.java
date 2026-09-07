@@ -156,6 +156,7 @@ public class CircularList extends Object implements Cloneable
    * Returns a <B><I>shallow</I></B> copy. The list is
    * cloned, but not the elements within it.
    */
+  @Override
   public Object clone()
     {
       //this could be much more effeicient...
@@ -199,9 +200,11 @@ class CircularListEnumeration extends Object implements Enumeration
       }
   }
 
+  @Override
   public boolean hasMoreElements()
   {return !done;}
 
+  @Override
   public Object nextElement()
   {
     if (done)

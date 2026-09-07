@@ -14,22 +14,27 @@ public class IdList implements List
 	this.inner = inner;
     }
 
+    @Override
     public int size()
     { return inner.size(); }
 
+    @Override
     public boolean isEmpty()
     { return inner.isEmpty(); }
 
+    @Override
     public boolean contains(Object o)
     {
 	IdHashKey wrappedO = new StrongIdHashKey(o, id);
 	return inner.contains(o);
     }
 
+    @Override
     public Iterator iterator()
     {
 	return new WrapperIterator( inner.iterator(), true )
 	    {
+		@Override
 		protected Object transformObject(Object o)
 		{
 		    if (o instanceof IdHashKey)
@@ -43,18 +48,23 @@ public class IdList implements List
 	    };
     }
 
+    @Override
     public Object[] toArray()
     { return this.toArray( new Object[ this.size() ] ); }
 
+    @Override
     public Object[] toArray(Object[] space)
     { return IteratorUtils.toArray( this.iterator(), this.size(), space ); }
 
+    @Override
     public boolean add(Object o)
     { return inner.add( new StrongIdHashKey( o, id ) ); }
 
+    @Override
     public boolean remove(Object o)
     { return inner.remove( new StrongIdHashKey( o, id ) ); }
 
+    @Override
     public boolean containsAll(Collection c)
     {
 	Iterator ii = c.iterator();
@@ -67,6 +77,7 @@ public class IdList implements List
 	return true;
     }
 
+    @Override
     public boolean addAll(Collection c)
     {
 	Iterator ii = c.iterator();
@@ -79,6 +90,7 @@ public class IdList implements List
 	return changed;
     }
 
+    @Override
     public boolean addAll(int i, Collection c)
     {
 	Iterator ii = c.iterator();
@@ -91,6 +103,7 @@ public class IdList implements List
 	return (c.size() > 0);
     }
 
+    @Override
     public boolean removeAll(Collection c)
     {
 	Iterator ii = c.iterator();
@@ -103,6 +116,7 @@ public class IdList implements List
 	return changed;
     }
 
+    @Override
     public boolean retainAll(Collection c)
     {
 	Iterator ii = inner.iterator();
@@ -119,10 +133,12 @@ public class IdList implements List
 	return changed;
     }
 
+    @Override
     public void clear()
     { inner.clear(); }
 
     //TODO: should I make some version of this that pays attention to identicator?
+    @Override
     public boolean equals(Object o)
     { 
 	if (o instanceof List)
@@ -131,43 +147,53 @@ public class IdList implements List
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return ListUtils.hashContents( this ); }
 
+    @Override
     public Object get(int i)
     { return ((IdHashKey) inner.get(i)).getKeyObj(); }
 
+    @Override
     public Object set(int i, Object o)
     {
 	IdHashKey ik = (IdHashKey) inner.set(  i, new StrongIdHashKey( o, id ) );
 	return ik.getKeyObj();
     }
 
+    @Override
     public void add(int i, Object o)
     {
 	inner.add(  i, new StrongIdHashKey( o, id ) );
     }
 
+    @Override
     public Object remove(int i)
     {
 	IdHashKey ik = (IdHashKey) inner.remove(i);
 	return (ik == null ? null : ik.getKeyObj());
     }
 
+    @Override
     public int indexOf(Object o)
     { return inner.indexOf( new StrongIdHashKey( o, id ) ); }
 
+    @Override
     public int lastIndexOf(Object o)
     { return inner.lastIndexOf( new StrongIdHashKey( o, id ) ); }
 
     //TODO: make a more efficient implementation...
+    @Override
     public ListIterator listIterator()
     { return new LinkedList(this).listIterator(); }
 
     //TODO: make a more efficient implementation...
+    @Override
     public ListIterator listIterator(int i)
     { return new LinkedList(this).listIterator(i); }
 
+    @Override
     public List subList(int a, int b)
     { return new IdList(id, inner.subList(a, b)); }
 

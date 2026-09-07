@@ -13,12 +13,14 @@ public class WeakHashPSManager implements PSManager
 {
     WeakHashMap wmap = new WeakHashMap();
 
+    @Override
     public PreparedStatement getPS(Connection con, String stmt_name)
     {
 	Map nameMap = (Map) wmap.get(con);
 	return (nameMap == null ? null : (PreparedStatement) nameMap.get(stmt_name));
     }
 
+    @Override
     public void putPS(Connection con, String name, PreparedStatement stmt)
     {
 	Map nameMap = (Map) wmap.get(con);

@@ -23,6 +23,7 @@ public class SuffixFilenameFilter implements FilenameFilter
       this.accept_dirs = accept_dirs;
     }
 
+  @Override
   public boolean accept(File dir, String name)
     {
       if (accept_dirs != MATCH && new File(dir, name).isDirectory()) return (accept_dirs == ALWAYS);

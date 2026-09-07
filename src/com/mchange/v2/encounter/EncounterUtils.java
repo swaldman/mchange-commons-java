@@ -18,8 +18,11 @@ public final class EncounterUtils
     {
 	return new EncounterCounter()
 	{
+	    @Override
 	    public synchronized long encounter(Object o) { return inner.encounter(o); }
+	    @Override
 	    public synchronized long reset(Object o) { return inner.reset(o); }
+	    @Override
 	    public synchronized void resetAll() { inner.resetAll(); }
 	};
     }

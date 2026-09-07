@@ -19,6 +19,7 @@ public class LongObjectHash implements LongObjectMap
   public LongObjectHash()
     {this(101, 0.75f);} //defaults from java.util.Hashtable
 
+  @Override
   public synchronized Object get(long num)
     {
       int index  = (int) (num % records.length);
@@ -28,6 +29,7 @@ public class LongObjectHash implements LongObjectMap
       return out;
     }
   
+  @Override
   public synchronized void put(long num, Object obj)
     {
       int index = (int) (num % records.length);
@@ -38,6 +40,7 @@ public class LongObjectHash implements LongObjectMap
       if (size > threshold) rehash();
     }
 
+  @Override
   public synchronized boolean putNoReplace(long num, Object obj)
     {
       int index = (int)(num % records.length);
@@ -54,15 +57,18 @@ public class LongObjectHash implements LongObjectMap
 	}
     }
 
+  @Override
   public long getSize()
     {return size;}
 
+  @Override
   public synchronized boolean containsLong(long num)
     {
       int index = (int) (num % records.length);
       return (records[index] != null && records[index].findLong(num) != null);
     }
 
+  @Override
   public synchronized Object remove(long num)
     {
       LOHRecord rec = records[(int) (num % records.length)];

@@ -9,12 +9,15 @@ class CoalescerIterator implements Iterator
     CoalescerIterator(Iterator inner)
     { this.inner = inner; }
 
+    @Override
     public boolean hasNext()
     { return inner.hasNext(); }
     
+    @Override
     public Object next()
     { return inner.next(); }
     
+    @Override
     public void remove()
     { throw new UnsupportedOperationException("Objects cannot be removed from a coalescer!"); }
 }

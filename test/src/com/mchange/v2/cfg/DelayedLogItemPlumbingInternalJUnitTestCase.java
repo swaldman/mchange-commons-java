@@ -49,6 +49,7 @@ public final class DelayedLogItemPlumbingInternalJUnitTestCase extends TestCase
 
     private Object nonStringKey = null;
 
+    @Override
     protected void tearDown() throws Exception
     {
         if ( nonStringKey != null )

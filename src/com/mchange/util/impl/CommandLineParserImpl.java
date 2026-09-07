@@ -30,6 +30,7 @@ public class CommandLineParserImpl extends Object implements CommandLineParser
   public CommandLineParserImpl(String[] argv, String[] validSwitches, String[] reqSwitches, String[] argSwitches)
   {this(argv, validSwitches, reqSwitches, argSwitches, '-');}
 
+  @Override
   public boolean checkSwitch(String sw)
   {
     for (int i = 0; i < argv.length; ++i)
@@ -38,6 +39,7 @@ public class CommandLineParserImpl extends Object implements CommandLineParser
     return false;
   }
 
+  @Override
   public String findSwitchArg(String sw)
   {
     for (int i = 0; i < argv.length - 1; ++i)
@@ -46,6 +48,7 @@ public class CommandLineParserImpl extends Object implements CommandLineParser
     return null;
   }
 
+  @Override
   public boolean checkArgv()
     {
 //       boolean out = checkValidSwitches();
@@ -90,6 +93,7 @@ public class CommandLineParserImpl extends Object implements CommandLineParser
       return true;
     }
 
+  @Override
   public int findLastSwitched()
     {
       for (int i = argv.length; --i >= 0;)
@@ -98,6 +102,7 @@ public class CommandLineParserImpl extends Object implements CommandLineParser
       return -1;
     }
 
+  @Override
   public String[] findUnswitchedArgs()
     {
       String[] bigArray = new String[argv.length];

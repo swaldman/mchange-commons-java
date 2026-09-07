@@ -46,6 +46,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     /** The sentence appended only to the veto that is actually going to be thrown. */
     private final static String PROMISE = "An Exception will be thrown.";
 
+    @Override
     protected void setUp() throws Exception
     {
         dir        = Files.createTempDirectory( "mchange-cfg-veto-" );
@@ -57,6 +58,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         fine       = plain.toUri().toString();
     }
 
+    @Override
     protected void tearDown() throws Exception
     { deleteQuietly( worldRead ); deleteQuietly( worldRead2 ); deleteQuietly( plain ); deleteQuietly( dir ); }
 

@@ -11,6 +11,7 @@ public final class BeangenUtils
 {
     public final static Comparator PROPERTY_COMPARATOR = new Comparator()
     {
+	@Override
 	public int compare(Object a, Object b)
 	{
 	    Property aa = (Property) a;

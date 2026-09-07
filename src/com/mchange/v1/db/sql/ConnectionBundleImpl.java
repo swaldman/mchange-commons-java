@@ -14,18 +14,23 @@ public class ConnectionBundleImpl implements ConnectionBundle
     public ConnectionBundleImpl(Connection con)
     {this.con = con;}
 
+    @Override
     public Connection getConnection()
     {return con;}
 
+    @Override
     public PreparedStatement getStatement(String stmt_name)
     {return (PreparedStatement) map.get(stmt_name);}
 
+    @Override
     public void putStatement(String stmt_name, PreparedStatement stmt)
     {map.put(stmt_name, stmt);}
 
+    @Override
     public void close() throws SQLException
     {this.con.close();}
 
+    @Override
     @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
     public void finalize() throws Exception
     {if (!con.isClosed()) this.close();}

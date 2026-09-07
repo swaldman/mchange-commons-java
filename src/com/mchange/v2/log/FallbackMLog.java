@@ -60,6 +60,7 @@ public final class FallbackMLog extends MLog
 	java.util.logging.Filter getInner()
 	{ return julFilter; }
 	
+	@Override
 	public boolean isLoggable( MLevel level, String loggerName, String srcClass, String srcMeth, String msg, Object[] params, Throwable t )
 	{
 	    LogRecord lr = new LogRecord( Jdk14LoggingUtils.levelFromMLevel( level ), msg );
@@ -101,9 +102,11 @@ public final class FallbackMLog extends MLog
     private synchronized Filter _getGlobalFilter()
     { return this.globalFilter; }
 
+    @Override
     public MLogger getMLogger(String name)
     { return new FallbackMLogger(name); } 
 
+    @Override
     public MLogger getMLogger()
     { return nameless; }
 
@@ -222,6 +225,7 @@ public final class FallbackMLog extends MLog
 	    return sb.toString();
 	}
 
+	@Override
 	@Deprecated
 	public ResourceBundle getResourceBundle()
 	{
@@ -229,14 +233,17 @@ public final class FallbackMLog extends MLog
 	    return null;
 	}
 
+	@Override
 	@Deprecated
 	public String getResourceBundleName()
 	{ return null; }
 
+	@Override
 	@Deprecated
 	public synchronized void setFilter( Object filter )
 	{ this.filter = filterFromObject( filter ); }
 	
+	@Override
 	@Deprecated
 	public synchronized Object getFilter()
 	{
@@ -247,90 +254,105 @@ public final class FallbackMLog extends MLog
 	private synchronized Filter _getFilter()
 	{ return this.filter; }
 
+	@Override
 	public void log(MLevel l, String msg)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, null, null, msg, null, null ); 
 	}
 
+	@Override
 	public void log(MLevel l, String msg, Object param)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, null, null, msg, new Object[] { param }, null ); 
 	}
 
+	@Override
 	public void log(MLevel l,String msg, Object[] params)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, null, null, msg, params, null ); 
 	}
 
+	@Override
 	public void log(MLevel l, String msg, Throwable t)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, null, null, msg, null, t ); 
 	}
 
+	@Override
 	public void logp(MLevel l, String srcClass, String srcMeth, String msg)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, srcClass, srcMeth, msg, null, null ); 
 	}
 
+	@Override
 	public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object param)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, srcClass, srcMeth, msg, new Object[] { param }, null ); 
 	}
 
+	@Override
 	public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object[] params)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, srcClass, srcMeth, msg, params, null ); 
 	}
 
+	@Override
 	public void logp(MLevel l, String srcClass, String srcMeth, String msg, Throwable t)
 	{ 
 	    if ( isLoggable( l ) )
 		format( l, srcClass, srcMeth, msg, null, t ); 
 	}
 
+	@Override
 	public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg)
 	{ 
 	    if ( isLoggable( l ) )
 		formatrb( l, srcClass, srcMeth, rb, msg, null, null ); 
 	}
 
+	@Override
 	public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object param)
 	{ 
 	    if ( isLoggable( l ) )
 		formatrb( l, srcClass, srcMeth, rb, msg, new Object[] { param }, null ); 
 	}
 
+	@Override
 	public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object[] params)
 	{ 
 	    if ( isLoggable( l ) )
 		formatrb( l, srcClass, srcMeth, rb, msg, params, null ); 
 	}
 
+	@Override
 	public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Throwable t)
 	{ 
 	    if ( isLoggable( l ) )
 		formatrb( l, srcClass, srcMeth, rb, msg, null, t ); 
 	}
 
+	@Override
 	public void entering(String srcClass, String srcMeth)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
 		format(MLevel.FINER, srcClass, srcMeth, "Entering method.", null, null); 
 	}
 
+	@Override
 	public void entering(String srcClass, String srcMeth, Object param)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
 		format(MLevel.FINER, srcClass, srcMeth, "Entering method with argument " + param, null, null); 
 	}
 
+	@Override
 	public void entering(String srcClass, String srcMeth, Object[] params)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
@@ -352,92 +374,109 @@ public final class FallbackMLog extends MLog
 		}
 	}
 
+	@Override
 	public void exiting(String srcClass, String srcMeth)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
 		format(MLevel.FINER, srcClass, srcMeth, "Exiting method.", null, null); 
 	}
 
+	@Override
 	public void exiting(String srcClass, String srcMeth, Object result)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
 		format(MLevel.FINER, srcClass, srcMeth, "Exiting method with result " + result, null, null); 
 	}
 
+	@Override
 	public void throwing(String srcClass, String srcMeth, Throwable t)
 	{ 
 	    if ( isLoggable( MLevel.FINE ) )
 		format(MLevel.FINE, srcClass, srcMeth, "Throwing exception." , null, t); 
 	}
 
+	@Override
 	public void severe(String msg)
 	{ 
 	    if ( isLoggable( MLevel.SEVERE ) )
 		format(MLevel.SEVERE, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void warning(String msg)
 	{ 
 	    if ( isLoggable( MLevel.WARNING ) )
 		format(MLevel.WARNING, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void info(String msg)
 	{ 
 	    if ( isLoggable( MLevel.INFO ) )
 		format(MLevel.INFO, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void config(String msg)
 	{ 
 	    if ( isLoggable( MLevel.CONFIG ) )
 		format(MLevel.CONFIG, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void fine(String msg)
 	{ 
 	    if ( isLoggable( MLevel.FINE ) )
 		format(MLevel.FINE, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void finer(String msg)
 	{ 
 	    if ( isLoggable( MLevel.FINER ) )
 		format(MLevel.FINER, null, null, msg, null, null); 
 	}
 
+	@Override
 	public void finest(String msg)
 	{ 
 	    if ( isLoggable( MLevel.FINEST ) )
 		format(MLevel.FINEST, null, null, msg, null, null); 
 	}
 
+	@Override
 	@Deprecated
 	public void setLevel(MLevel l) throws SecurityException
 	{ overrideCutoffLevel( l ); }
 					      
+	@Override
 	@Deprecated
 	public synchronized MLevel getLevel()
 	{ return cutoffLevel(); }
 
+	@Override
 	public synchronized boolean isLoggable(MLevel l)
 	{ return (l.intValue() >= cutoffLevel().intValue()); }
 
+	@Override
 	public String getName()
 	{ return "global"; }
 
+	@Override
 	@Deprecated
 	public void addHandler(Object h) throws SecurityException
 	{ 
 	    warning("Using FallbackMLog -- Handlers not supported."); 
 	}
 
+	@Override
 	@Deprecated
 	public void removeHandler(Object h) throws SecurityException
 	{
 	    warning("Using FallbackMLog -- Handlers not supported.");
 	}
 
+	@Override
 	@Deprecated
 	public Object[] getHandlers()
 	{ 
@@ -445,12 +484,14 @@ public final class FallbackMLog extends MLog
 	    return new Object[0];
 	}
 
+	@Override
 	@Deprecated
 	public void setUseParentHandlers(boolean uph)
 	{ 
 	    warning("Using FallbackMLog -- Handlers not supported.");
 	}
 
+	@Override
 	@Deprecated
 	public boolean getUseParentHandlers()
 	{ return false;	}

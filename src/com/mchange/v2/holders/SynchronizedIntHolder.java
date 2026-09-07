@@ -13,9 +13,11 @@ public class SynchronizedIntHolder implements ThreadSafeIntHolder, Serializable
     public SynchronizedIntHolder()
     { this(0); }
 
+    @Override
     public synchronized int getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(int value)
     { this.value = value; }
 

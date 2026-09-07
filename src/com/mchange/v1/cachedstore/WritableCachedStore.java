@@ -41,6 +41,7 @@ public interface WritableCachedStore extends CachedStore
      * Clears (WITHOUT WRITING) any pending (unflushed or failed) 
      * writes  and removes, and any cached reads.
      */
+    @Override
     public void reset() throws CachedStoreException;
 
     /**

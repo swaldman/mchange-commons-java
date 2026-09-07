@@ -10,12 +10,15 @@ public class SimpleStateBeanImportExportGeneratorExtension implements GeneratorE
 {
     int ctor_modifiers = Modifier.PUBLIC;
 
+    @Override
     public Collection extraGeneralImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraSpecificImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraInterfaceNames()
     { return Collections.EMPTY_SET; }
 
@@ -26,37 +29,48 @@ public class SimpleStateBeanImportExportGeneratorExtension implements GeneratorE
 	SimplePropertyMask(Property p)
 	{ this.p = p; }
 
+	@Override
 	public int getVariableModifiers()
 	{ return Modifier.PRIVATE; }
 
+	@Override
 	public String  getName()
 	{ return p.getName(); }
 
+	@Override
 	public String  getSimpleTypeName()
 	{ return p.getSimpleTypeName(); }
 
+	@Override
 	public String getDefensiveCopyExpression()
 	{ return null; }
 
+	@Override
 	public String getDefaultValueExpression()
 	{ return null; }
 
+	@Override
 	public int getGetterModifiers()
 	{ return Modifier.PUBLIC; }
 
+	@Override
 	public int getSetterModifiers()
 	{ return Modifier.PUBLIC; }
 
+	@Override
 	public boolean isReadOnly()
 	{ return false; }
 
+	@Override
 	public boolean isBound()
 	{ return false; }
 
+	@Override
 	public boolean isConstrained()
 	{ return false; }
     }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

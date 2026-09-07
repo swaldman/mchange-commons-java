@@ -12,9 +12,11 @@ public class UniquenessConstraintRepImpl implements UniquenessConstraintRep
     public UniquenessConstraintRepImpl(Collection colNames)
     { uniqueColNames = Collections.unmodifiableSet( new HashSet( colNames ) ); }
 	
+    @Override
     public Set getUniqueColumnNames()
     { return uniqueColNames; }
 
+    @Override
     public boolean equals( Object o )
     {
 	return 
@@ -23,6 +25,7 @@ public class UniquenessConstraintRepImpl implements UniquenessConstraintRep
 	    this.uniqueColNames.equals( ((UniquenessConstraintRepImpl) o ).uniqueColNames );
     }
 
+    @Override
     public int hashCode()
     {
 	return 

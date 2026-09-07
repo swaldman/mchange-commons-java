@@ -479,6 +479,7 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 
 	JavaFileManager fileManager = new ForwardingJavaFileManager( standardFileManager )
 	{
+	    @Override
 	    public JavaFileObject getJavaFileForOutput( Location location, final String className, JavaFileObject.Kind kind, FileObject sibling )
 		throws IOException
 	    {
@@ -487,6 +488,7 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 		URI uri = URI.create( "byte:///" + className.replace( '.', '/' ) + kind.extension );
 		return new SimpleJavaFileObject( uri, kind )
 		{
+		    @Override
 		    public OutputStream openOutputStream()
 		    { return baos; }
 		};
@@ -496,6 +498,7 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 	URI sourceUri = URI.create( "string:///" + fqClassName.replace( '.', '/' ) + JavaFileObject.Kind.SOURCE.extension );
 	JavaFileObject sourceObject = new SimpleJavaFileObject( sourceUri, JavaFileObject.Kind.SOURCE )
 	{
+	    @Override
 	    public CharSequence getCharContent( boolean ignoreEncodingErrors )
 	    { return source; }
 	};
@@ -523,6 +526,7 @@ public class BeanInfoGenJUnitTestCase extends TestCase
 
 	ClassLoader loader = new ClassLoader( BeanInfoGenJUnitTestCase.class.getClassLoader() )
 	{
+	    @Override
 	    protected Class findClass( String name ) throws ClassNotFoundException
 	    {
 		byte[] bytes = (byte[]) classDefs.get( name );

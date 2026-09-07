@@ -70,18 +70,23 @@ class ParsedCommandLineImpl implements ParsedCommandLine
 	unswitchedArgsList.toArray( unswitchedArgs );
     }
 
+    @Override
     public String getSwitchPrefix()
     { return switchPrefix; }
 
+    @Override
     public String[] getRawArgs()
     { return (String[]) argv.clone(); }
     
+    @Override
     public boolean includesSwitch(String sw)
     { return foundSwitches.containsKey( sw ); }
 
+    @Override
     public String getSwitchArg(String sw)
     { return (String) foundSwitches.get(sw); }
 
+    @Override
     public String[] getUnswitchedArgs()
     { return (String[]) unswitchedArgs.clone(); }
 

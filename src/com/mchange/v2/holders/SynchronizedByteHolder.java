@@ -7,9 +7,11 @@ public class SynchronizedByteHolder implements ThreadSafeByteHolder, Serializabl
 {
     transient byte value;
 
+    @Override
     public synchronized byte getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(byte b)
     { this.value = b; }
 

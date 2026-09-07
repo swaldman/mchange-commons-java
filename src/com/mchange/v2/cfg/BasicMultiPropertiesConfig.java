@@ -280,30 +280,39 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	this.propsByKey = extractPropsByKey(rps, propsByResourcePaths, delayedLogItems );
     }
 
+    @Override
     public List getDelayedLogItems()
     { return parseMessages; }
 
+    @Override
     public boolean wasRead(String resourcePath)
     { return propsByResourcePaths.keySet().contains(resourcePath); }
 
+    @Override
     public boolean wasVetoed(String resourcePath)
     { return historyVetoed.contains(resourcePath); }
 
+    @Override
     public boolean wasNotFound(String resourcePath)
     { return historyNotFound.contains(resourcePath); }
 
+    @Override
     public boolean wasFault(String resourcePath)
     { return historyOtherFailure.contains(resourcePath); }
 
+    @Override
     public Set getAllRead()
     { return Collections.unmodifiableSet( propsByResourcePaths.keySet() ); }
 
+    @Override
     public Set getAllVetoed()
     { return historyVetoed; }
 
+    @Override
     public Set getAllNotFound()
     { return historyNotFound; }
 
+    @Override
     public Set getAllFaults()
     { return historyOtherFailure; }
 
@@ -489,21 +498,25 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 	return out;
     }
 
+    @Override
     public String[] getPropertiesResourcePaths()
     { return (String[]) rps.clone(); }
 
+    @Override
     public Properties getPropertiesByResourcePath(String path)
     { 
 	Properties out = ((Properties) propsByResourcePaths.get( path )); 
 	return (out == null ? new Properties() : out);
     }
 
+    @Override
     public Properties getPropertiesByPrefix(String pfx)
     {
 	Properties out = ((Properties) propsByPrefixes.get( pfx ));
 	return (out == null ? new Properties() : out);
     }
 
+    @Override
     public String getProperty( String key )
     { return propsByKey.getProperty( key ); }
 
@@ -514,6 +527,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     public String dump()
     { return String.format("[ propertiesByResourcePaths -> %s, propertiesByPrefixes -> %s ]", propsByResourcePaths, propsByPrefixes); }
 
+    @Override
     public String toString()
     { return super.toString() + " " + this.dump(); }
 }

@@ -13,6 +13,7 @@ public final class OperationKey
         this.signature = signature;
     }
     
+    @Override
     public boolean equals(Object o)
     {
         if (o instanceof OperationKey)
@@ -26,6 +27,7 @@ public final class OperationKey
             return false;
     }
     
+    @Override
     public int hashCode()
     { return name.hashCode() ^ Arrays.hashCode(signature); }
 }

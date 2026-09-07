@@ -14,6 +14,7 @@ public class SimpleSharedUseExclusiveUseLock implements SharedUseExclusiveUseLoc
     private int     waiting_writers = 0;
     private boolean writer_active   = false;
 
+    @Override
     public synchronized void acquireShared() throws InterruptedException
     {
 	try
@@ -29,12 +30,14 @@ public class SimpleSharedUseExclusiveUseLock implements SharedUseExclusiveUseLoc
 	    }
     }
 
+    @Override
     public synchronized void relinquishShared()
     { 
 	--active_readers; 
 	this.notifyAll();
     }
 
+    @Override
     public synchronized void acquireExclusive() throws InterruptedException
     {
 	try
@@ -50,6 +53,7 @@ public class SimpleSharedUseExclusiveUseLock implements SharedUseExclusiveUseLoc
 	    }
     }
 
+    @Override
     public synchronized void relinquishExclusive()
     {
 	writer_active = false;

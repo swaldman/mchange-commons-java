@@ -10,6 +10,7 @@ public final class SoftSetFactory
 	final ManualCleanupSoftSet inner = new ManualCleanupSoftSet(); 
 	InvocationHandler handler = new InvocationHandler()
 	    {
+		@Override
 		public Object invoke(Object proxy, Method m, Object[] args) 
 		    throws Throwable
 		{

@@ -7,9 +7,11 @@ public class VolatileFloatHolder implements ThreadSafeFloatHolder, Serializable
 {
     transient volatile float value;
 
+    @Override
     public float getValue()
     { return value; }
 
+    @Override
     public void setValue(float value)
     { this.value = value; }
 

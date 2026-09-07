@@ -25,12 +25,15 @@ public class RelativePathFileCacheKey implements FileCacheKey
 	this.relPath = relPath;
     }
     
+    @Override
     public URL getURL()
     { return url; }
 
+    @Override
     public String getCacheFilePath()
     { return relPath; }
 
+    @Override
     public boolean equals( Object o )
     {
 	if (o instanceof RelativePathFileCacheKey)
@@ -42,6 +45,7 @@ public class RelativePathFileCacheKey implements FileCacheKey
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return url.hashCode() ^ relPath.hashCode(); }
 }

@@ -7,9 +7,11 @@ public class VolatileCharHolder implements ThreadSafeCharHolder, Serializable
 {
     transient volatile char value;
 
+    @Override
     public char getValue()
     { return value; }
 
+    @Override
     public void setValue(char value)
     { this.value = value; }
 

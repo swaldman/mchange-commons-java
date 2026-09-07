@@ -20,6 +20,7 @@ public class SimpleRunnableQueue implements RunnableQueue
     public SimpleRunnableQueue()
     { this( true ); }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     {
 	taskList.add(r);
@@ -48,6 +49,7 @@ public class SimpleRunnableQueue implements RunnableQueue
 	TaskThread()
 	{ super("SimpleRunnableQueue.TaskThread"); }
 
+	@Override
 	public void run()
 	{
 	    try

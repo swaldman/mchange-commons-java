@@ -34,6 +34,7 @@ class TestManager implements WritableCachedStore.Manager
     int writeCount    = 0;
     int removeCount   = 0;
 
+    @Override
     public boolean isDirty(Object key, Object cached) throws Exception
     {
 	++isDirtyCount;
@@ -41,6 +42,7 @@ class TestManager implements WritableCachedStore.Manager
 	return dirtyKeys.contains( key );
     }
 
+    @Override
     public Object recreateFromKey(Object key) throws Exception
     {
 	++recreateCount;
@@ -49,6 +51,7 @@ class TestManager implements WritableCachedStore.Manager
 	return storage.get( key );
     }
 
+    @Override
     public void writeToStorage(Object key, Object value) throws Exception
     {
 	++writeCount;
@@ -57,6 +60,7 @@ class TestManager implements WritableCachedStore.Manager
 	storage.put( key, value );
     }
 
+    @Override
     public void removeFromStorage(Object key) throws Exception
     {
 	++removeCount;

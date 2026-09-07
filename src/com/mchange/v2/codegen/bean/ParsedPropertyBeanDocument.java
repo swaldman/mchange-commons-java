@@ -48,24 +48,31 @@ public class ParsedPropertyBeanDocument
     {
 	return new ClassInfo()
 	    {
+		@Override
 		public String getPackageName()
 		{ return packageName; }
 
+		@Override
 		public int getModifiers()
 		{ return class_modifiers; }
 
+		@Override
 		public String getClassName()
 		{ return className; }
 
+		@Override
 		public String getSuperclassName()
 		{ return superclassName; }
 
+		@Override
 		public String[] getInterfaceNames()
 		{ return interfaceNames; }
 
+		@Override
 		public String[] getGeneralImports()
 		{ return generalImports; }
 
+		@Override
 		public String[] getSpecificImports()
 		{ return specificImports; }
 	    };

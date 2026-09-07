@@ -7,9 +7,11 @@ public class VolatileByteHolder implements ThreadSafeByteHolder
 {
 	 volatile byte value;
 
+	 @Override
 	 public byte getValue()
 	 { return value; }
 
+	 @Override
 	 public void setValue(byte value)
 	 { this.value = value; }
 }

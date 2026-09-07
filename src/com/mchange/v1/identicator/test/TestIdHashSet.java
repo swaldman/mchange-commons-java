@@ -13,9 +13,11 @@ public class TestIdHashSet
     {
   	Identicator id = new Identicator()
   	    {
+  		@Override
   		public boolean identical(Object a, Object b)
   		{ return ((String) a).charAt(0) == ((String) b).charAt(0); }
 		
+  		@Override
   		public int hash(Object o)
   		{ return ((String) o).charAt(0); }
   	    };

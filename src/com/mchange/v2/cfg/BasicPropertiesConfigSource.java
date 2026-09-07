@@ -7,6 +7,7 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
 
 public final class BasicPropertiesConfigSource implements PropertiesConfigSource
 {
+    @Override
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     {
 	InputStream rawStream = MultiPropertiesConfig.class.getResourceAsStream( identifier );

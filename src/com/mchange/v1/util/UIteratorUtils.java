@@ -15,15 +15,19 @@ public class UIteratorUtils
     {
 	return new UIterator()
 	    {
+		@Override
 		public boolean hasNext()
 		{ return ii.hasNext(); }
 
+		@Override
 		public Object  next()
 		{ return ii.next(); }
 
+		@Override
 		public void    remove()
 		{ ii.remove(); }
 
+		@Override
 		public void close()
 		{}
 	    };

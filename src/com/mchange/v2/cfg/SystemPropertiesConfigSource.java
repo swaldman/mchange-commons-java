@@ -5,6 +5,7 @@ import java.util.Properties;
 
 final class SystemPropertiesConfigSource implements PropertiesConfigSource
 {
+    @Override
     public Parse propertiesFromSource( String identifier ) throws Exception
     {
         if ( "/".equals( identifier ) )

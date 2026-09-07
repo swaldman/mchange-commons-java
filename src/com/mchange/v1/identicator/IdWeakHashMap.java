@@ -18,6 +18,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     //all methods from Map interface
+    @Override
     public int size()
     {
 	// doing cleanCleared() afterwards, as with other methods
@@ -29,6 +30,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	return super.size();
     }
 
+    @Override
     public boolean isEmpty()
     {
 	try
@@ -37,6 +39,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public boolean containsKey(Object o)
     {
 	try
@@ -45,6 +48,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public boolean containsValue(Object o)
     {
 	try
@@ -53,6 +57,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public Object get(Object o)
     {
 	try
@@ -61,6 +66,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public Object put(Object k, Object v)
     {
 	try
@@ -69,6 +75,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public Object remove(Object o)
     {
 	try
@@ -77,6 +84,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public void putAll(Map m)
     {
 	try
@@ -85,6 +93,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public void clear()
     {
 	try
@@ -93,6 +102,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public Set keySet()
     {
 	try
@@ -101,6 +111,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public Collection values()
     {
 	try
@@ -114,6 +125,7 @@ public final class IdWeakHashMap extends IdMap implements Map
      * Collection returning methods. Get this right and the rest 
      * follow.
      */
+    @Override
     public Set entrySet()
     {
 	try
@@ -122,6 +134,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public boolean equals(Object o)
     {
 	try
@@ -130,6 +143,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
     }
 
+    @Override
     public int hashCode()
     {
 	try
@@ -139,6 +153,7 @@ public final class IdWeakHashMap extends IdMap implements Map
     }
 
     //internal methods
+    @Override
     protected IdHashKey createIdKey(Object o)
     { return new WeakIdHashKey( o, id, rq ); }
 
@@ -153,12 +168,14 @@ public final class IdWeakHashMap extends IdMap implements Map
     {
 	Set innerEntries = internalEntrySet();
 	
+	@Override
 	public Iterator iterator()
 	{
 	    try
 		{
 		    return new WrapperIterator(innerEntries.iterator(), true)
 			{
+			    @Override
 			    protected Object transformObject(Object o)
 			    {
 				Entry innerEntry = (Entry) o;
@@ -175,6 +192,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    { cleanCleared(); }
 	}
 	
+	@Override
 	public int size()
 	{ 
 	    // doing cleanCleared() afterwards, as with other methods
@@ -186,6 +204,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 	    return innerEntries.size(); 
 	}
 	
+	@Override
 	public boolean contains(Object o)
 	{ 
 	    try
@@ -202,6 +221,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 		{ cleanCleared(); }
 	}
 	
+	@Override
 	public boolean remove(Object o)
 	{
 	    try
@@ -218,6 +238,7 @@ public final class IdWeakHashMap extends IdMap implements Map
 		{ cleanCleared(); }
 	}
 
+	@Override
 	public void clear()
 	{
 	    try

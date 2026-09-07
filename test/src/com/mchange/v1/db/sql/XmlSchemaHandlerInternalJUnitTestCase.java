@@ -125,6 +125,7 @@ public class XmlSchemaHandlerInternalJUnitTestCase extends TestCase
 	    new InputSource( new StringReader( "<application name=\"myapp\"/>" ) ),
 	    new org.xml.sax.helpers.DefaultHandler()
 	    {
+		@Override
 		public void startElement(String uri, String localName, String qName,
 					 org.xml.sax.Attributes attrs)
 		{

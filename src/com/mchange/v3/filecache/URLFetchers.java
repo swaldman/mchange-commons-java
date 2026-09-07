@@ -11,12 +11,14 @@ public enum URLFetchers implements URLFetcher
 
     DEFAULT
     {
+	@Override
 	public InputStream openStream( URL u, MLogger logger ) throws IOException
 	{ return u.openStream(); }
     },
 	
     BUFFERED_WGET
     {
+	@Override
 	public InputStream openStream( URL u, MLogger logger ) throws IOException
 	{ 
 	    Process p = new ProcessBuilder("wget", "-O", "-", u.toString()).start();

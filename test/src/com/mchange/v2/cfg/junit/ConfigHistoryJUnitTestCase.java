@@ -46,6 +46,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
     private Path   worldRead;
     private String vetoing;
 
+    @Override
     protected void setUp() throws Exception
     {
         dir       = Files.createTempDirectory( "mchange-cfg-history-" );
@@ -53,6 +54,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         vetoing   = worldRead.toUri().toString() + "?permissions=useronly";
     }
 
+    @Override
     protected void tearDown() throws Exception
     { deleteQuietly( worldRead ); deleteQuietly( dir ); }
 

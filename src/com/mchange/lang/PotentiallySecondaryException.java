@@ -28,6 +28,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
     public PotentiallySecondaryException()
     {this("", null);}
 
+    @Override
     public Throwable getNestedThrowable()
     {return nested;}
 
@@ -38,6 +39,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
 	    this.initCause( t );
     }
 
+    @Override
     public void printStackTrace(PrintWriter pw)
     {
 	super.printStackTrace(pw);
@@ -48,6 +50,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
 	    }
     }
 
+    @Override
     public void printStackTrace(PrintStream ps)
     {
 	super.printStackTrace(ps);
@@ -58,6 +61,7 @@ public class PotentiallySecondaryException extends Exception implements Potentia
 	    }
     }
 
+    @Override
     public void printStackTrace()
     {
 	if ( VersionUtils.isAtLeastJavaVersion1_4() )

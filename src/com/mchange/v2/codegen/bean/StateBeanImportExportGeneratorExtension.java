@@ -10,16 +10,20 @@ public class StateBeanImportExportGeneratorExtension implements GeneratorExtensi
 {
     int ctor_modifiers = Modifier.PUBLIC;
 
+    @Override
     public Collection extraGeneralImports()
     { return Arrays.asList( new String[] {"com.mchange.v2.bean"} ); }
 
+    @Override
     public Collection extraSpecificImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraInterfaceNames()
     { return Arrays.asList( new String[] {"StateBeanExporter"} ); }
 
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

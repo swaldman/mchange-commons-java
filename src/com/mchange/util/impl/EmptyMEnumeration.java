@@ -9,6 +9,8 @@ public class EmptyMEnumeration implements MEnumeration
 
   private EmptyMEnumeration()       {}
 
+  @Override
   public Object   nextElement()     {throw new NoSuchElementException();}
+  @Override
   public boolean  hasMoreElements() {return false;}
 }

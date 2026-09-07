@@ -14,9 +14,11 @@ public class PlaintextPropertiesPasswordManager implements PasswordManager
   public PlaintextPropertiesPasswordManager(File propsFile) throws IOException
     {this.props = new SyncedProperties(propsFile, HEADER);}
 
+  @Override
   public boolean validate(String username, String password) throws IOException
     {return (password.equals(props.getProperty(PASSWORD_PROP_PFX + username)));}
 
+  @Override
   public boolean updatePassword(String username, String oldPassword, String newPassword) throws IOException
     {
       if (!validate(username, oldPassword)) return false;

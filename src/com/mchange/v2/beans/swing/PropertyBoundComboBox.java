@@ -86,6 +86,7 @@ public class PropertyBoundComboBox extends JComboBox
 	    public void resumeNotifications()
 	    { suspend_notice = false; }
 
+	    @Override
 	    public void syncToValue( PropertyEditor editor, Object newVal )
 	    {
 		if (newVal == null)
@@ -94,10 +95,12 @@ public class PropertyBoundComboBox extends JComboBox
 		    setSelectedItem( newVal ); 
 	    }
 	    
+	    @Override
 	    public void addUserModificationListeners()
 	    {
 		ItemListener isl = new ItemListener()
 		    {
+			@Override
 			public void itemStateChanged( ItemEvent evt )
 			{
 			    if (! suspend_notice)
@@ -107,6 +110,7 @@ public class PropertyBoundComboBox extends JComboBox
 		addItemListener( isl );
 	    }
 	    
+	    @Override
 	    public Object fetchUserModification( PropertyEditor editor, Object oldValue )
 	    { 
 		Object out = getSelectedItem(); 
@@ -115,6 +119,7 @@ public class PropertyBoundComboBox extends JComboBox
 		return out;
 	    }
 	    
+	    @Override
 	    public void alertErroneousInput()
 	    { getToolkit().beep(); }
 	};
@@ -126,6 +131,7 @@ public class PropertyBoundComboBox extends JComboBox
 		TestBean tb = new TestBean();
 		PropertyChangeListener pcl = new PropertyChangeListener()
 		    {
+			@Override
 			public void propertyChange( PropertyChangeEvent evt )
 			{ BeansUtils.debugShowPropertyChange( evt ); }
 		    };

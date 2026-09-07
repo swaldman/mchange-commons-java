@@ -83,9 +83,11 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	return new BasicMultiPropertiesConfig( rps, pbrm, pms, allVetoed, allNotFound, allFaults );
     }
 
+    @Override
     public String[] getPropertiesResourcePaths()
     { return (String[]) resourcePaths.clone(); }
 
+    @Override
     public Properties getPropertiesByResourcePath(String path)
     {
 	// Not robust to overlapping resource paths
@@ -109,6 +111,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	return out;
     }
 
+    @Override
     public Properties getPropertiesByPrefix(String pfx)
     {
 	List entries = new LinkedList();
@@ -128,6 +131,7 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
         return out;
     }
 
+    @Override
     public String getProperty( String key )
     {
 	for (int i = configs.length - 1; i >= 0; --i)
@@ -140,30 +144,39 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
 	return null;
     }
 
+    @Override
     public List getDelayedLogItems()
     { return parseMessages; }
 
+    @Override
     public boolean wasRead(String resourcePath)
     { return allRead.contains(resourcePath); }
 
+    @Override
     public boolean wasVetoed(String resourcePath)
     { return allVetoed.contains(resourcePath); }
 
+    @Override
     public boolean wasNotFound(String resourcePath)
     { return allNotFound.contains(resourcePath); }
 
+    @Override
     public boolean wasFault(String resourcePath)
     { return allFaults.contains(resourcePath); }
 
+    @Override
     public Set getAllRead()
     { return allRead; }
 
+    @Override
     public Set getAllVetoed()
     { return allVetoed; }
 
+    @Override
     public Set getAllNotFound()
     { return allNotFound; }
 
+    @Override
     public Set getAllFaults()
     { return allFaults; }
 }

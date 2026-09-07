@@ -35,18 +35,21 @@ public class IndentedWriter extends FilterWriter
     public void downIndent()
     { --indent_level; }
 
+    @Override
     public void write( int c ) throws IOException
     { 
 	out.write( c );
 	at_line_start = isEol( (char) c );
     }
 
+    @Override
     public void write( char[] chars, int off, int len ) throws IOException
     {
 	out.write( chars, off, len );
 	at_line_start = isEol( chars[ off + len - 1] );
     }
 
+    @Override
     public void write( String s, int off, int len ) throws IOException
     {
 	if (len > 0)

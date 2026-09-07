@@ -27,9 +27,11 @@ public final class MLogBootstrapResilienceJUnitTestCase extends TestCase
 {
     private Path dir;
 
+    @Override
     protected void setUp() throws Exception
     { dir = Files.createTempDirectory( "mchange-cfg-bootstrap-" ); }
 
+    @Override
     protected void tearDown() throws Exception
     {
         if ( dir != null )

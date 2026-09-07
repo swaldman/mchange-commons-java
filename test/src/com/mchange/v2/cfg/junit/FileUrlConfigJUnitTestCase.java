@@ -41,6 +41,7 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
     private Path worldRead;  // 0644  secret.key=from-worldread
     private Path second;     // 0600  secret.key=from-second
 
+    @Override
     protected void setUp() throws Exception
     {
         // toRealPath: on macOS the temp dir sits under /var, which is itself a symlink, and these
@@ -51,6 +52,7 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         second    = write( "second.properties",    "secret.key=from-second\nonly.second=yes\n",     "rw-------" );
     }
 
+    @Override
     protected void tearDown() throws Exception
     {
         // recursive: the deletion-risk tests build subdirectories, some of them unwritable

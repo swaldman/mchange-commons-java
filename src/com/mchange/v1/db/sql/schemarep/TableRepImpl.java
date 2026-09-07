@@ -40,24 +40,31 @@ public class TableRepImpl implements TableRep
 			       Collections.unmodifiableSet( new HashSet( uniqConstrReps ) ) );
     }
 
+    @Override
     public String getTableName()
     { return tableName; }
 
+    @Override
     public Iterator getColumnNames()
     { return colNameList.iterator(); }
 
+    @Override
     public ColumnRep columnRepForName(String name)
     { return (ColumnRep) namesToColReps.get( name ); }
 
+    @Override
     public Set getPrimaryKeyColumnNames()
     { return primaryKeyColNames; }
 
+    @Override
     public Set getForeignKeyReps()
     { return foreignKeyReps; }
 
+    @Override
     public Set getUniquenessConstraintReps()
     { return uniqConstrReps; }
 
+    @Override
     public boolean equals( Object o )
     {
 	if (o == null || this.getClass() != o.getClass())
@@ -73,6 +80,7 @@ public class TableRepImpl implements TableRep
 	    this.uniqConstrReps.equals( other.uniqConstrReps );
     }
 
+    @Override
     public int hashCode()
     {
 	return 

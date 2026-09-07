@@ -5,12 +5,16 @@ import com.mchange.v2.lang.ObjectUtils;
 
 public abstract class AbstractMapEntry implements Map.Entry
 {
+    @Override
     public abstract Object getKey();
 
+    @Override
     public abstract Object getValue();
 
+    @Override
     public abstract Object setValue(Object value);
 
+    @Override
     public boolean equals(Object o)
     {
 	if (o instanceof Map.Entry)
@@ -24,6 +28,7 @@ public abstract class AbstractMapEntry implements Map.Entry
 	    return false;
     }
 
+    @Override
     public int hashCode()
     {
 	return 

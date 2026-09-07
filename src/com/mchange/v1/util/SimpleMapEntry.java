@@ -13,12 +13,15 @@ public class SimpleMapEntry extends AbstractMapEntry implements Map.Entry
 	this.value = value;
     }
 
+    @Override
     public Object getKey()
     { return key; }
 
+    @Override
     public Object getValue()
     { return value; }
 
+    @Override
     public Object setValue(Object value)
     {
 	Object old = value;

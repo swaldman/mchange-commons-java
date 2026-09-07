@@ -38,12 +38,15 @@ public class CloneableExtension implements GeneratorExtension
     public CloneableExtension()
     { this ( true, false ); }
 
+    @Override
     public Collection extraGeneralImports()
     { return (mLoggerName == null ? ((Collection) Collections.EMPTY_SET) : ((Collection) Arrays.asList( new String[] {"com.mchange.v2.log"} )) ); }
 
+    @Override
     public Collection extraSpecificImports()
     { return Collections.EMPTY_SET; }
 
+    @Override
     public Collection extraInterfaceNames()
     {
 	Set set = new HashSet();
@@ -51,6 +54,7 @@ public class CloneableExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

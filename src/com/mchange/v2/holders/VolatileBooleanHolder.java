@@ -7,9 +7,11 @@ public class VolatileBooleanHolder implements ThreadSafeBooleanHolder, Serializa
 {
     transient volatile boolean value;
 
+    @Override
     public boolean getValue()
     { return value; }
 
+    @Override
     public void setValue(boolean value)
     { this.value = value; }
 

@@ -204,6 +204,7 @@ public abstract class AbstractResourcePool
     {
 	boolean success = false;
 	
+	@Override
 	public void run()
 	{
 	    for (int i = 0; !success && i < num_acq_attempts; ++i)

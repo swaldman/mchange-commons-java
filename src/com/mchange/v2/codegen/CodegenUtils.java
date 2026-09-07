@@ -205,6 +205,7 @@ public final class CodegenUtils
 
     public final static Comparator METHOD_COMPARATOR = new Comparator()
     {
+        @Override
         public int compare(Object a, Object b)
         { return key((Method)a).compareTo(key((Method)b)); }
 

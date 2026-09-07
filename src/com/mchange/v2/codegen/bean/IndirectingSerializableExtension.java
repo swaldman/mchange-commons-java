@@ -33,6 +33,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
     protected IndirectingSerializableExtension()
     {}
 
+    @Override
     public Collection extraSpecificImports()
     {
 	Collection col = super.extraSpecificImports();
@@ -65,6 +66,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	throws IOException
     {}
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {
@@ -72,6 +74,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	writeExtraDeclarations( info, superclassType, props, propTypes, iw);
     }
 
+    @Override
     protected void writeStoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
     {
 	IndirectPolicy policy = indirectingPolicy( prop, propType );
@@ -118,6 +121,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	iw.println("{ throw new IOException(\"Problem indirectly serializing " + prop.getName() + ": \" + indirectionOtherException.toString() ); }");
     }
 
+    @Override
     protected void writeUnstoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
     {
 	IndirectPolicy policy = indirectingPolicy( prop, propType );

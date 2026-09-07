@@ -7,12 +7,15 @@ public final class IteratorUtils
 {
     public final static Iterator EMPTY_ITERATOR = new Iterator()
     {
+	@Override
 	public boolean hasNext()
 	{ return false; }
 
+	@Override
 	public Object next()
 	{ throw new NoSuchElementException(); }
 
+	@Override
 	public void remove()
 	{ throw new IllegalStateException(); }
     };
@@ -23,8 +26,10 @@ public final class IteratorUtils
 	    {
 		boolean shot = false;
 
+		@Override
 		public boolean hasNext() { return (!shot); }
 
+		@Override
 		public Object next()
 		{
 		    if (shot)
@@ -36,6 +41,7 @@ public final class IteratorUtils
 			}
 		}
 
+		@Override
 		public void remove()
 		{ throw new UnsupportedOperationException("remove() not supported."); }
 	    };

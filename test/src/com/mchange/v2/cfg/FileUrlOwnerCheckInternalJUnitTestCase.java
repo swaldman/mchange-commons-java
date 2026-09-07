@@ -88,7 +88,9 @@ public final class FileUrlOwnerCheckInternalJUnitTestCase extends TestCase
     {
         UserPrincipal impostor = new UserPrincipal()
         {
+            @Override
             public String getName() { return "root"; }
+            @Override
             public String toString() { return "root"; }
         };
 
@@ -103,7 +105,9 @@ public final class FileUrlOwnerCheckInternalJUnitTestCase extends TestCase
         final String me = System.getProperty( "user.name" );
         UserPrincipal impostor = new UserPrincipal()
         {
+            @Override
             public String getName() { return me; }
+            @Override
             public String toString() { return me; }
         };
 
@@ -145,7 +149,9 @@ public final class FileUrlOwnerCheckInternalJUnitTestCase extends TestCase
         final String realName = ownerOfUidZero.getName();
         UserPrincipal sameNameDifferentPrincipal = new UserPrincipal()
         {
+            @Override
             public String getName() { return realName; }
+            @Override
             public String toString() { return realName; }
         };
         assertFalse( "sharing the superuser's NAME must not be enough",

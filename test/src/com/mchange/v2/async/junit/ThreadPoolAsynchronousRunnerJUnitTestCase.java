@@ -10,6 +10,7 @@ public class ThreadPoolAsynchronousRunnerJUnitTestCase extends TestCase
     boolean no_go = true;
     int gone = 0;
 
+    @Override
     protected void setUp() 
     {
 	runner = new ThreadPoolAsynchronousRunner( 3,
@@ -19,6 +20,7 @@ public class ThreadPoolAsynchronousRunnerJUnitTestCase extends TestCase
 						   3 * 1000);
     }
 
+    @Override
     protected void tearDown() 
     { 
 	runner.close(); 
@@ -60,6 +62,7 @@ public class ThreadPoolAsynchronousRunnerJUnitTestCase extends TestCase
 	DumbTask(boolean ignore_interrupts)
 	{ this.ignore_interrupts = ignore_interrupts; }
 
+	@Override
 	public void run()
 	{
 	    try

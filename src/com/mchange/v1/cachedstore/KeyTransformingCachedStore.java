@@ -8,13 +8,16 @@ abstract class KeyTransformingCachedStore extends NoCleanupCachedStore
     protected KeyTransformingCachedStore( CachedStore.Manager manager )
     { super( manager ); }
 
+    @Override
     public Object getCachedValue(Object key)
     { return cache.get( toCacheFetchKey( key ) ); }
 
+    @Override
     public void removeFromCache(Object key) 
 	throws CachedStoreException
     { cache.remove( toCacheFetchKey( key ) ); }
 
+    @Override
     public void setCachedValue(Object key, Object value) 
 	throws CachedStoreException
     {
@@ -24,10 +27,12 @@ abstract class KeyTransformingCachedStore extends NoCleanupCachedStore
 	cache.put( newKey , value ); 
     }
 
+    @Override
     public Iterator cachedKeys() throws CachedStoreException
     { 
 	return new WrapperIterator( cache.keySet().iterator(), false )
 	    {
+		@Override
 		public Object transformObject( Object o )
 		{
 		    Object out = toUserKey( o );

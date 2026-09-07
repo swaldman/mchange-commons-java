@@ -34,6 +34,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	    {throw new UnexpectedException("Unexpected exception while initializing ConnectionBundlePool", e);}
     }
 
+    @Override
     public ConnectionBundle checkoutBundle() throws SQLException, BrokenObjectException, InterruptedException
     {
 	try
@@ -48,10 +49,12 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	    {throw new UnexpectedException("Unexpected exception while checking out ConnectionBundle", e);}
     }
 
+    @Override
     public void checkinBundle(ConnectionBundle bndl) throws BrokenObjectException
     {this.checkinResource(bndl);}
 
 
+    @Override
     public void close() throws SQLException
     {
 	try
@@ -62,6 +65,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	    {throw new UnexpectedException("Unexpected exception while closing pool.", e);}
     }
     
+    @Override
     protected Object acquireResource() throws Exception
     {
 	Connection con = DriverManager.getConnection(jdbcUrl, username, pwd);
@@ -69,6 +73,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
 	return new ConnectionBundleImpl(con);
     }
 
+    @Override
     protected void refurbishResource(Object resc) throws BrokenObjectException
     {
 	boolean bad;
@@ -85,6 +90,7 @@ public abstract class ConnectionBundlePoolImpl extends AbstractResourcePool impl
     }
 	
 
+    @Override
     protected void destroyResource(Object resc) throws Exception
     {((ConnectionBundle) resc).close();}
 

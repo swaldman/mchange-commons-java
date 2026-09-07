@@ -64,6 +64,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
     public void removeReferenceProperty( String propName )
     { referenceProperties.remove( propName ); }
 
+    @Override
     public Reference createReference( Object bean, PropertiesConfig pcfg )
 	throws NamingException
     {
@@ -205,6 +206,7 @@ public class JavaBeanReferenceMaker implements ReferenceMaker
 	    }
     }
 
+    @Override
     public Reference createReference( Object bean )
 	throws NamingException
     { return createReference( bean, null ); }

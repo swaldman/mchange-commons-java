@@ -20,6 +20,7 @@ class DbAuth
     public String getPassword()
     { return password; }
 
+    @Override
     public boolean equals(Object o)
     {
 	if (o != null && this.getClass() == o.getClass())
@@ -32,6 +33,7 @@ class DbAuth
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return username.hashCode() ^ password.hashCode(); }
 }

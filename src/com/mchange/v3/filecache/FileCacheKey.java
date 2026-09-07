@@ -7,6 +7,8 @@ public interface FileCacheKey
     public URL getURL(); //Any potential Exceptions should be thrown by the constructor
     public String getCacheFilePath();
 
+    @Override
     public boolean equals( Object o );
+    @Override
     public int hashCode();
 }

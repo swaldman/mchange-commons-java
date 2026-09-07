@@ -25,6 +25,7 @@ public class LazyStringMemoryFileImpl extends LazyReadOnlyMemoryFileImpl impleme
   public LazyStringMemoryFileImpl(String fname)
     {super(fname);}
 
+  @Override
   public synchronized String asString(String enc) throws IOException, UnsupportedEncodingException
     {
       update();
@@ -33,6 +34,7 @@ public class LazyStringMemoryFileImpl extends LazyReadOnlyMemoryFileImpl impleme
       return string;
     }
 
+  @Override
   public String asString() throws IOException
     {
       try
@@ -42,6 +44,7 @@ public class LazyStringMemoryFileImpl extends LazyReadOnlyMemoryFileImpl impleme
     }
 
   /* should be called in sync'ed methods */
+  @Override
   void refreshBytes() throws IOException
     {
       super.refreshBytes();

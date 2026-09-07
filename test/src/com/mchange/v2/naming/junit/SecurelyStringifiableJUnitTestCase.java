@@ -31,6 +31,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
             return new Point( Integer.parseInt( parts[0] ), Integer.parseInt( parts[1] ) );
         }
 
+        @Override
         public boolean equals( Object o )
         {
             if ( this == o ) return true;
@@ -39,9 +40,11 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
             return this.x == other.x && this.y == other.y;
         }
 
+        @Override
         public int hashCode()
         { return 31 * x + y; }
 
+        @Override
         public String toString()
         { return "Point(" + x + "," + y + ")"; }
     }

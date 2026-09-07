@@ -573,6 +573,7 @@ public final class MConfig
         Kind     kind;
 	List     delayedLogItems;
 
+	@Override
 	public boolean equals(Object o)
 	{ 
 	    if (o instanceof PathsKey)
@@ -584,6 +585,7 @@ public final class MConfig
 		return false;
 	}
 
+	@Override
 	public int hashCode()
 	{
             int out = ArrayUtils.hashArray( paths );
@@ -603,9 +605,11 @@ public final class MConfig
 
     private static class CSManager implements CachedStore.Manager
     {
+	@Override
 	public boolean isDirty(Object key, Object cached) throws Exception
 	{ return false; }
 
+	@Override
 	public Object recreateFromKey(Object key) throws Exception
 	{
 	    PathsKey pk = (PathsKey) key;

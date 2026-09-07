@@ -18,6 +18,7 @@ class NoCleanupCachedStore implements TweakableCachedStore
     // be careful if you modify this! subclasses depend upon this
     // exact implementation when overriding methods for key / value
     // transformations!
+    @Override
     public Object find(Object key) throws CachedStoreException
     {
 	try
@@ -42,23 +43,28 @@ class NoCleanupCachedStore implements TweakableCachedStore
     }
 
     //overridden by subclasses!
+    @Override
     public Object getCachedValue(Object key)
     { return cache.get( key ); }
 
     //overridden by subclasses!
+    @Override
     public void removeFromCache(Object key) 
 	throws CachedStoreException
     { cache.remove( key ); }
 
     //overridden by subclasses!
+    @Override
     public void setCachedValue(Object key, Object value) 
 	throws CachedStoreException
     { cache.put(key, value); }
 
     //overridden by subclasses!
+    @Override
     public Iterator cachedKeys() throws CachedStoreException
     { return cache.keySet().iterator(); }
 
+    @Override
     public void reset()
     { cache.clear(); }
 }

@@ -26,21 +26,27 @@ public class ColumnRepImpl implements ColumnRep
 	this.defaultValue = defaultValue;
     }
 
+    @Override
     public String getColumnName()
     { return colName; }
 
+    @Override
     public int getColumnType()
     { return col_type; }
 
+    @Override
     public int[] getColumnSize()
     { return colSize; }
 
+    @Override
     public boolean acceptsNulls()
     { return accepts_nulls; }
 
+    @Override
     public Object getDefaultValue()
     { return defaultValue; }
 
+    @Override
     public boolean equals( Object o )
     {
 	if (o == null || this.getClass() != o.getClass())
@@ -63,6 +69,7 @@ public class ColumnRepImpl implements ColumnRep
 	return true;
     }
 
+    @Override
     public int hashCode()
     {
 	int out = 

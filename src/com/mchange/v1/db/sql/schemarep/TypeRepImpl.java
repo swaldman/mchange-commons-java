@@ -11,12 +11,15 @@ public final class TypeRepImpl implements TypeRep
 	this.typeSize  = typeSize;
     }
 
+    @Override
     public int   getTypeCode()
     { return type_code; }
 
+    @Override
     public int[] getTypeSize()
     { return typeSize; }
 
+    @Override
     public boolean equals(Object o)
     {
 	if (this == o) 
@@ -27,6 +30,7 @@ public final class TypeRepImpl implements TypeRep
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return TypeRepIdenticator.getInstance().hash(this); }
 }

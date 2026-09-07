@@ -10,11 +10,13 @@ public class ThreadPerTaskAsynchronousRunnerJUnitTestCase extends TestCase
     boolean no_go = true;
     int gone = 0;
 
+    @Override
     protected void setUp() 
     {
 	runner = new ThreadPerTaskAsynchronousRunner(5);
     }
 
+    @Override
     protected void tearDown() 
     { 
 	runner.close(); 
@@ -120,7 +122,7 @@ public class ThreadPerTaskAsynchronousRunnerJUnitTestCase extends TestCase
 		runner = new ThreadPerTaskAsynchronousRunner(5, 1000); //interrupt tasks after 1 sec, consider deadlocked after ~3 secs..
 		//Runnable r = new Runnable() { public synchronized void run() { while (true) { try { this.wait();} catch (Exception e) {} } } };
 		Runnable r = new DumbTask( true );
-		Runnable r2 = new Runnable() { public void run() { System.out.println("done."); } };
+		Runnable r2 = new Runnable() { @Override public void run() { System.out.println("done."); } };
 		for( int i = 0; i < 5; ++i )
 		    runner.postRunnable( r );
 		for( int i = 0; i < 5; ++i )
@@ -147,6 +149,7 @@ public class ThreadPerTaskAsynchronousRunnerJUnitTestCase extends TestCase
 	DumbTask(boolean ignore_interrupts)
 	{ this.ignore_interrupts = ignore_interrupts; }
 
+	@Override
 	public void run()
 	{
 	    try

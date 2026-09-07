@@ -37,6 +37,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
     public CurrentConfigFinder getConfigFinder()
     { return this.cfgFinder; }
 
+    @Override
     public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable env)
 	throws Exception
     {

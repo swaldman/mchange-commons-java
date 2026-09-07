@@ -12,9 +12,11 @@ final class StrongIdHashKey extends IdHashKey
 	this.keyObj = keyObj;
     }
 
+    @Override
     public Object getKeyObj()
     { return keyObj; }
 
+    @Override
     public boolean equals(Object o)
     {
 	//  fast type-exact match for final class
@@ -24,6 +26,7 @@ final class StrongIdHashKey extends IdHashKey
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return id.hash( keyObj ); }
 }

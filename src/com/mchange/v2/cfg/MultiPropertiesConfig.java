@@ -86,10 +86,12 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
      *
      *  @return an empty Properties, even if prefix is unknown, just to avoid downstream NullPointerExceptions
      */
+    @Override
     public abstract Properties getPropertiesByPrefix(String pfx);
 
 //    public abstract Properties getProperties( String key );
 
+    @Override
     public abstract String getProperty( String key );
 
     public abstract List getDelayedLogItems();

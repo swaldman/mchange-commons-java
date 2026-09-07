@@ -7,9 +7,11 @@ public class SynchronizedDoubleHolder implements ThreadSafeDoubleHolder, Seriali
 {
     transient double value;
 
+    @Override
     public synchronized double getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(double value)
     { this.value = value; }
 

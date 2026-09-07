@@ -9,9 +9,11 @@ class CoalesceIdenticator implements Identicator
     CoalesceIdenticator( CoalesceChecker cc )
     { this.cc = cc; }
 
+    @Override
     public boolean identical(Object a, Object b)
     { return cc.checkCoalesce( a , b ); }
 
+    @Override
     public int hash(Object o)
     { return cc.coalesceHash( o ); }
 }

@@ -47,271 +47,325 @@ public abstract class SynchronizedFilterConnection implements Connection
 	public synchronized Connection getInner()
 	{ return inner; }
 	
+	@Override
 	public synchronized void commit() throws SQLException
 	{
 		inner.commit();
 	}
 	
+	@Override
 	public synchronized void clearWarnings() throws SQLException
 	{
 		inner.clearWarnings();
 	}
 	
+	@Override
 	public synchronized Array createArrayOf(String a, Object[] b) throws SQLException
 	{
 		return inner.createArrayOf(a, b);
 	}
 	
+	@Override
 	public synchronized Blob createBlob() throws SQLException
 	{
 		return inner.createBlob();
 	}
 	
+	@Override
 	public synchronized Clob createClob() throws SQLException
 	{
 		return inner.createClob();
 	}
 	
+	@Override
 	public synchronized NClob createNClob() throws SQLException
 	{
 		return inner.createNClob();
 	}
 	
+	@Override
 	public synchronized SQLXML createSQLXML() throws SQLException
 	{
 		return inner.createSQLXML();
 	}
 	
+	@Override
 	public synchronized Statement createStatement(int a, int b, int c) throws SQLException
 	{
 		return inner.createStatement(a, b, c);
 	}
 	
+	@Override
 	public synchronized Statement createStatement(int a, int b) throws SQLException
 	{
 		return inner.createStatement(a, b);
 	}
 	
+	@Override
 	public synchronized Statement createStatement() throws SQLException
 	{
 		return inner.createStatement();
 	}
 	
+	@Override
 	public synchronized Struct createStruct(String a, Object[] b) throws SQLException
 	{
 		return inner.createStruct(a, b);
 	}
 	
+	@Override
 	public synchronized boolean getAutoCommit() throws SQLException
 	{
 		return inner.getAutoCommit();
 	}
 	
+	@Override
 	public synchronized String getCatalog() throws SQLException
 	{
 		return inner.getCatalog();
 	}
 	
+	@Override
 	public synchronized String getClientInfo(String a) throws SQLException
 	{
 		return inner.getClientInfo(a);
 	}
 	
+	@Override
 	public synchronized Properties getClientInfo() throws SQLException
 	{
 		return inner.getClientInfo();
 	}
 	
+	@Override
 	public synchronized int getHoldability() throws SQLException
 	{
 		return inner.getHoldability();
 	}
 	
+	@Override
 	public synchronized DatabaseMetaData getMetaData() throws SQLException
 	{
 		return inner.getMetaData();
 	}
 	
+	@Override
 	public synchronized int getNetworkTimeout() throws SQLException
 	{
 		return inner.getNetworkTimeout();
 	}
 	
+	@Override
 	public synchronized String getSchema() throws SQLException
 	{
 		return inner.getSchema();
 	}
 	
+	@Override
 	public synchronized int getTransactionIsolation() throws SQLException
 	{
 		return inner.getTransactionIsolation();
 	}
 	
+	@Override
 	public synchronized Map getTypeMap() throws SQLException
 	{
 		return inner.getTypeMap();
 	}
 	
+	@Override
 	public synchronized SQLWarning getWarnings() throws SQLException
 	{
 		return inner.getWarnings();
 	}
 	
+	@Override
 	public synchronized boolean isClosed() throws SQLException
 	{
 		return inner.isClosed();
 	}
 	
+	@Override
 	public synchronized String nativeSQL(String a) throws SQLException
 	{
 		return inner.nativeSQL(a);
 	}
 	
+	@Override
 	public synchronized CallableStatement prepareCall(String a, int b, int c, int d) throws SQLException
 	{
 		return inner.prepareCall(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized CallableStatement prepareCall(String a, int b, int c) throws SQLException
 	{
 		return inner.prepareCall(a, b, c);
 	}
 	
+	@Override
 	public synchronized CallableStatement prepareCall(String a) throws SQLException
 	{
 		return inner.prepareCall(a);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a, int b, int c, int d) throws SQLException
 	{
 		return inner.prepareStatement(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a, int b) throws SQLException
 	{
 		return inner.prepareStatement(a, b);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a, int[] b) throws SQLException
 	{
 		return inner.prepareStatement(a, b);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a, String[] b) throws SQLException
 	{
 		return inner.prepareStatement(a, b);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a) throws SQLException
 	{
 		return inner.prepareStatement(a);
 	}
 	
+	@Override
 	public synchronized PreparedStatement prepareStatement(String a, int b, int c) throws SQLException
 	{
 		return inner.prepareStatement(a, b, c);
 	}
 	
+	@Override
 	public synchronized void releaseSavepoint(Savepoint a) throws SQLException
 	{
 		inner.releaseSavepoint(a);
 	}
 	
+	@Override
 	public synchronized void rollback() throws SQLException
 	{
 		inner.rollback();
 	}
 	
+	@Override
 	public synchronized void rollback(Savepoint a) throws SQLException
 	{
 		inner.rollback(a);
 	}
 	
+	@Override
 	public synchronized void setAutoCommit(boolean a) throws SQLException
 	{
 		inner.setAutoCommit(a);
 	}
 	
+	@Override
 	public synchronized void setCatalog(String a) throws SQLException
 	{
 		inner.setCatalog(a);
 	}
 	
+	@Override
 	public synchronized void setClientInfo(String a, String b) throws SQLClientInfoException
 	{
 		inner.setClientInfo(a, b);
 	}
 	
+	@Override
 	public synchronized void setClientInfo(Properties a) throws SQLClientInfoException
 	{
 		inner.setClientInfo(a);
 	}
 	
+	@Override
 	public synchronized void setHoldability(int a) throws SQLException
 	{
 		inner.setHoldability(a);
 	}
 	
+	@Override
 	public synchronized void setNetworkTimeout(Executor a, int b) throws SQLException
 	{
 		inner.setNetworkTimeout(a, b);
 	}
 	
+	@Override
 	public synchronized Savepoint setSavepoint() throws SQLException
 	{
 		return inner.setSavepoint();
 	}
 	
+	@Override
 	public synchronized Savepoint setSavepoint(String a) throws SQLException
 	{
 		return inner.setSavepoint(a);
 	}
 	
+	@Override
 	public synchronized void setSchema(String a) throws SQLException
 	{
 		inner.setSchema(a);
 	}
 	
+	@Override
 	public synchronized void setTransactionIsolation(int a) throws SQLException
 	{
 		inner.setTransactionIsolation(a);
 	}
 	
+	@Override
 	public synchronized void setTypeMap(Map a) throws SQLException
 	{
 		inner.setTypeMap(a);
 	}
 	
+	@Override
 	public synchronized void setReadOnly(boolean a) throws SQLException
 	{
 		inner.setReadOnly(a);
 	}
 	
+	@Override
 	public synchronized void close() throws SQLException
 	{
 		inner.close();
 	}
 	
+	@Override
 	public synchronized boolean isValid(int a) throws SQLException
 	{
 		return inner.isValid(a);
 	}
 	
+	@Override
 	public synchronized boolean isReadOnly() throws SQLException
 	{
 		return inner.isReadOnly();
 	}
 	
+	@Override
 	public synchronized void abort(Executor a) throws SQLException
 	{
 		inner.abort(a);
 	}
 	
+	@Override
 	public synchronized boolean isWrapperFor(Class a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
+	@Override
 	public synchronized Object unwrap(Class a) throws SQLException
 	{
 		return inner.unwrap(a);

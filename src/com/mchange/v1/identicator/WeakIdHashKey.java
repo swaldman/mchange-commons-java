@@ -23,9 +23,11 @@ final class WeakIdHashKey extends IdHashKey
     public Ref getInternalRef()
     { return this.keyRef; }
 
+    @Override
     public Object getKeyObj()
     { return keyRef.get(); }
 
+    @Override
     public boolean equals(Object o)
     {
 	// fast type-exact match for final class
@@ -48,6 +50,7 @@ final class WeakIdHashKey extends IdHashKey
 	    return false;
     }
 
+    @Override
     public int hashCode()
     { return hash; }
 

@@ -42,6 +42,7 @@ public class HexAsciiMD5PropertiesPasswordManager implements PasswordManager
 	{throw new InternalError(DIGEST_ALGORITHM + " is not supported???");}
     }
 
+  @Override
   public synchronized boolean validate(String username, String password) throws IOException
     {
       try
@@ -60,6 +61,7 @@ public class HexAsciiMD5PropertiesPasswordManager implements PasswordManager
 	}
     }
 
+  @Override
   public synchronized boolean updatePassword(String username, String oldPassword, String newPassword) throws IOException
     {
       if (!validate(username, oldPassword)) return false;

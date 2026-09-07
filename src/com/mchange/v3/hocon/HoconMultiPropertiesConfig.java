@@ -133,13 +133,21 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     public List getDelayedLogItems()
     { return delayedLogItems; }
 
+    @Override
     public boolean wasRead(String resourcePath)      { return qrpSet.contains(resourcePath); }
+    @Override
     public boolean wasVetoed(String resourcePath)    { return false; }
+    @Override
     public boolean wasNotFound(String resourcePath)  { return false; }
+    @Override
     public boolean wasFault(String resourcePath)     { return false; }
+    @Override
     public Set getAllRead()                          { return qrpSet; }
+    @Override
     public Set getAllVetoed()                        { return Collections.emptySet(); }
+    @Override
     public Set getAllNotFound()                      { return Collections.emptySet(); }
+    @Override
     public Set getAllFaults()                        { return Collections.emptySet(); }
 }
 

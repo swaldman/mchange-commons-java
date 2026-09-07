@@ -8,12 +8,15 @@ public class IteratorUtils
     {
       return new Iterator()
 	{
+	  @Override
 	  public boolean hasNext()
 	    {return ii.hasNext();}
 	  
+	  @Override
 	  public Object next()
 	    {return ii.next();}
 
+	  @Override
 	  public void remove()
 	    {throw new UnsupportedOperationException("This Iterator does not support the remove operation.");}
 	};

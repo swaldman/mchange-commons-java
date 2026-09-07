@@ -8,6 +8,7 @@ abstract class KeyValueTransformingCachedStore extends ValueTransformingCachedSt
     protected KeyValueTransformingCachedStore( CachedStore.Manager manager )
     { super( manager ); }
 
+    @Override
     public Object getCachedValue(Object key)
     { return toUserValue( cache.get( toCacheFetchKey( key ) ) ); }
 
@@ -15,14 +16,17 @@ abstract class KeyValueTransformingCachedStore extends ValueTransformingCachedSt
 	throws CachedStoreException
     { cache.remove( toCacheFetchKey( key ) ); }
 
+    @Override
     public void setCachedValue(Object key, Object value) 
 	throws CachedStoreException
     { cache.put( toCachePutKey( key ), toCacheValue( value ) ); }
 
+    @Override
     public Iterator cachedKeys() throws CachedStoreException
     { 
 	return new WrapperIterator( cache.keySet().iterator(), false )
 	    {
+		@Override
 		public Object transformObject( Object o )
 		{
 		    Object out = toUserKey( o );

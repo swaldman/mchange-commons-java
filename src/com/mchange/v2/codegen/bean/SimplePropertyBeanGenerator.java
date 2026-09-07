@@ -65,6 +65,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
     public synchronized void removeExtension( GeneratorExtension ext )
     { generatorExtensions.remove( ext ); }
 
+    @Override
     public synchronized void generate( ClassInfo info, Property[] props, Writer w) throws IOException
     {
 	this.info = info;

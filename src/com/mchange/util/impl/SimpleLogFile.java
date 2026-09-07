@@ -26,12 +26,14 @@ public class SimpleLogFile implements MessageLogger
                          new FileOutputStream(file.getAbsolutePath(), true)), true);
     }
 
+  @Override
   public synchronized void log(String message) throws IOException
     {
       logMessage(message);
       flush();
     }
 
+  @Override
   public synchronized void log(Throwable t, String message) throws IOException
     {
       logMessage(message);
@@ -48,6 +50,7 @@ public class SimpleLogFile implements MessageLogger
   public synchronized void close()
     {logWriter.close();}
 
+  @Override
   @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
   public void finalize()
     {close();}

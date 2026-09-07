@@ -35,6 +35,7 @@ public final class Slf4jMLog extends MLog
 	    throw new MLogInitializationException("slf4j found no binding or threatened to use its (dangerously silent) NOPLogger. We consider the slf4j library not found.");
     }
 
+    @Override
     public MLogger getMLogger(String name)
     {
         Logger lg = LoggerFactory.getLogger(name);
@@ -47,6 +48,7 @@ public final class Slf4jMLog extends MLog
             return new Slf4jMLogger( lg ); 
     }
 
+    @Override
     public MLogger getMLogger()
     {
         Logger lg = LoggerFactory.getLogger(DFLT_LOGGER_NAME);
@@ -150,147 +152,202 @@ public final class Slf4jMLog extends MLog
 
 	private class OffLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     {}
+	    @Override
 	    public void log( String format, Object param)     {}
+	    @Override
 	    public void log( String format, Object[] params)  {}
+	    @Override
 	    public void log( String msg, Throwable t )        {}
 	}
 
 	private class TraceLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     { logger.trace( msg ); }
+	    @Override
 	    public void log( String format, Object param)     { logger.trace( format, param ); }
+	    @Override
 	    public void log( String format, Object[] params)  { logger.trace( format, params ); }
+	    @Override
 	    public void log( String msg, Throwable t )        { logger.trace( msg, t ); }
 	}
 
 	private class DebugLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     { logger.debug( msg ); }
+	    @Override
 	    public void log( String format, Object param)     { logger.debug( format, param ); }
+	    @Override
 	    public void log( String format, Object[] params)  { logger.debug( format, params ); }
+	    @Override
 	    public void log( String msg, Throwable t )        { logger.debug( msg, t ); }
 	}
 
 	private class InfoLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     { logger.info( msg ); }
+	    @Override
 	    public void log( String format, Object param)     { logger.info( format, param ); }
+	    @Override
 	    public void log( String format, Object[] params)  { logger.info( format, params ); }
+	    @Override
 	    public void log( String msg, Throwable t )        { logger.info( msg, t ); }
 	}
 
 	private class WarnLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     { logger.warn( msg ); }
+	    @Override
 	    public void log( String format, Object param)     { logger.warn( format, param ); }
+	    @Override
 	    public void log( String format, Object[] params)  { logger.warn( format, params ); }
+	    @Override
 	    public void log( String msg, Throwable t )        { logger.warn( msg, t ); }
 	}
 	
 	private class ErrorLogger implements LevelLogger
 	{
+	    @Override
 	    public void log( String msg )                     { logger.error( msg ); }
+	    @Override
 	    public void log( String format, Object param)     { logger.error( format, param ); }
+	    @Override
 	    public void log( String format, Object[] params)  { logger.error( format, params ); }
+	    @Override
 	    public void log( String msg, Throwable t )        { logger.error( msg, t ); }
 	}
 
+        @Override
         @Deprecated
         public ResourceBundle getResourceBundle()
         { return null; }
 
+        @Override
         @Deprecated
         public String getResourceBundleName()
         { return null; }
 
+        @Override
         @Deprecated
         public void setFilter(Object java14Filter) throws SecurityException
         { warning("setFilter() not supported by MLogger " + this.getClass().getName()); }
 
+        @Override
         @Deprecated
         public Object getFilter()
         { return null; }
 
+        @Override
         public void log(MLevel l, String msg)
 	{ levelLogger( l ).log( msg ); }
 
+        @Override
         public void log(MLevel l, String msg, Object param)
         { levelLogger( l ).log( msg, param ); }
 
+        @Override
         public void log(MLevel l,String msg, Object[] params)
 	{ levelLogger( l ).log( msg, params ); }
 
+        @Override
         public void log(MLevel l, String msg, Throwable t)
 	{ levelLogger( l ).log( msg, t ); }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, msg) ); }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object param)
         { levelLogger(l).log(  createMessage( srcClass, srcMeth, (msg!=null ? MessageFormat.format(msg, new Object[] {param}) : null) ) ); }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Object[] params)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, (msg!=null ? MessageFormat.format(msg, params) : null) ) ); }
 
+        @Override
         public void logp(MLevel l, String srcClass, String srcMeth, String msg, Throwable t)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, msg ),  t); }
 
+        @Override
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, formatMessage(rb, msg, null) ) ); }
 
+        @Override
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object param)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, formatMessage(rb, msg, new Object[] { param } ) ) ); }
 
+        @Override
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Object[] params)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, formatMessage(rb, msg, params) ) ); }
 
+        @Override
         public void logrb(MLevel l, String srcClass, String srcMeth, String rb, String msg, Throwable t)
         { levelLogger(l).log( createMessage( srcClass, srcMeth, formatMessage(rb, msg, null) ),  t); }
 
+        @Override
         public void entering(String srcClass, String srcMeth)
         { traceL.log( createMessage( srcClass, srcMeth, "entering method." ) ); }
 
+        @Override
         public void entering(String srcClass, String srcMeth, Object param)
         { traceL.log( createMessage( srcClass, srcMeth, "entering method... param: " + param.toString() ) ); }
 
+        @Override
         public void entering(String srcClass, String srcMeth, Object params[])
         { traceL.log( createMessage( srcClass, srcMeth, "entering method... " + LogUtils.createParamsList( params ) ) ); }
 
+        @Override
         public void exiting(String srcClass, String srcMeth)
         { traceL.log( createMessage( srcClass, srcMeth, "exiting method." ) ); }
 
+        @Override
         public void exiting(String srcClass, String srcMeth, Object result)
         { traceL.log( createMessage( srcClass, srcMeth, "exiting method... result: " + result.toString() ) ); }
 
+        @Override
         public void throwing(String srcClass, String srcMeth, Throwable t)
         { traceL.log( createMessage( srcClass, srcMeth, "throwing exception... " ),  t); }
 
+        @Override
         public void severe(String msg)
         { errorL.log( msg ); }
 
+        @Override
         public void warning(String msg)
         { warnL.log( msg ); }
 
+        @Override
         public void info(String msg)
         { infoL.log( msg ); }
 
+        @Override
         public void config(String msg)
         { debugL.log( msg ); }
 
+        @Override
         public void fine(String msg)
         { debugL.log( msg ); }
 
+        @Override
         public void finer(String msg)
         { debugL.log( msg ); }
 
+        @Override
         public void finest(String msg)
         { traceL.log( msg ); }
 
+        @Override
         @Deprecated
         public synchronized void setLevel(MLevel l) throws SecurityException
         { myLevel = l; }
 
+        @Override
         @Deprecated
         public synchronized MLevel getLevel()
         { 
@@ -299,32 +356,39 @@ public final class Slf4jMLog extends MLog
             return myLevel;
         }
 
+        @Override
         public boolean isLoggable(MLevel l)
         { return levelLogger( l ) != offL; }
 
+        @Override
         public String getName()
         { return logger.getName(); }
 
+        @Override
         @Deprecated
         public void addHandler(Object h) throws SecurityException
         { 
 	    throw new UnsupportedOperationException("Handlers not supported; the 'handler' " + h + " is not compatible with MLogger " + this); 
         }
 
+        @Override
         @Deprecated
         public void removeHandler(Object h) throws SecurityException
         {
 	    throw new UnsupportedOperationException("Handlers not supported; the 'handler' " + h + " is not compatible with MLogger " + this); 
         }
 
+        @Override
         @Deprecated
         public Object[] getHandlers()
         { return EMPTY_OBJ_ARRAY; }
 
+        @Override
         @Deprecated
         public void setUseParentHandlers(boolean uph)
         { throw new UnsupportedOperationException("Handlers not supported."); }
 
+        @Override
         @Deprecated
         public boolean getUseParentHandlers()
         { throw new UnsupportedOperationException("Handlers not supported."); }

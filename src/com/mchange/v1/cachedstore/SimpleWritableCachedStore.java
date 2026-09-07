@@ -25,6 +25,7 @@ class SimpleWritableCachedStore implements WritableCachedStore
 	this.manager = manager;
     }
 			       
+    @Override
     public Object find(Object key) throws CachedStoreException
     {
 	Object out = writeCache.get( key );
@@ -33,12 +34,15 @@ class SimpleWritableCachedStore implements WritableCachedStore
 	return (out == REMOVE_TOKEN ? null : out);
     }
 
+    @Override
     public void write(Object key, Object value) 
     { writeCache.put( key, value ); }
 
+    @Override
     public void remove( Object key )
     { write( key, REMOVE_TOKEN ); }
 
+    @Override
     public void flushWrites() throws CacheFlushException
     {
 	HashMap writeCacheCopy = (HashMap) writeCache.clone();
@@ -87,15 +91,18 @@ class SimpleWritableCachedStore implements WritableCachedStore
     }
 
     /** @return an unmodifiable snapshot of current failedWrites set, or null if there have been no failed writes. */
+    @Override
     public Set getFailedWrites()
     { return (failedWrites == null ? null : Collections.unmodifiableSet( new HashSet(failedWrites) ) ); }
 
+    @Override
     public void clearPendingWrites()
     { 
 	writeCache.clear(); 
 	failedWrites = null;
     }
 
+    @Override
     public void reset() throws CachedStoreException
     {
 	writeCache.clear();
@@ -103,6 +110,7 @@ class SimpleWritableCachedStore implements WritableCachedStore
 	failedWrites = null;
     }
 
+    @Override
     public void sync() throws CachedStoreException
     {
 	flushWrites();

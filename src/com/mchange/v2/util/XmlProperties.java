@@ -36,6 +36,7 @@ public class XmlProperties extends Properties
     {
 	EntityResolver er = new EntityResolver()
 	    {
+		@Override
 		public InputSource resolveEntity (String publicId, String systemId)
 		{
 		    if (DTD_SYSTEM_ID.equals( systemId )) 
@@ -49,12 +50,15 @@ public class XmlProperties extends Properties
 
 	ErrorHandler eh = new ErrorHandler()
 	    {
+		@Override
 		public void warning(SAXParseException e) throws SAXException
 		{ System.err.println("[Warning] " + e.toString()); }
 
+		@Override
 		public void error(SAXParseException e) throws SAXException
 		{ System.err.println("[Error] " + e.toString()); }
 
+		@Override
 		public void fatalError(SAXParseException e) throws SAXException
 		{ System.err.println("[Fatal Error] " + e.toString()); }
 	    };

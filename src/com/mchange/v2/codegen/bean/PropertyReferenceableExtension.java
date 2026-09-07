@@ -49,12 +49,14 @@ public class PropertyReferenceableExtension implements GeneratorExtension
    public String getJavaBeanReferenceMakerClassName()
    { return javaBeanReferenceMakerClassName; }
 
+    @Override
     public Collection extraGeneralImports()
     { 
 	Set set = new HashSet();
 	return set;
     }
 
+    @Override
     public Collection extraSpecificImports()
     {
 	Set set = new HashSet();
@@ -67,6 +69,7 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public Collection extraInterfaceNames()
     {
 	Set set = new HashSet();
@@ -74,6 +77,7 @@ public class PropertyReferenceableExtension implements GeneratorExtension
 	return set;
     }
 
+    @Override
     public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
 	throws IOException
     {

@@ -6,10 +6,15 @@ public class CircularListQueue implements Queue, Cloneable
 {
   CircularList list;
 
+  @Override
   public int     size()               {return list.size();}
+  @Override
   public boolean hasMoreElements()    {return list.size() > 0;}
+  @Override
   public void    enqueue(Object obj)  {list.appendElement(obj);}
+  @Override
   public Object  peek()               {return list.getFirstElement();}
+  @Override
   public Object  dequeue()  
     {
       Object out = list.getFirstElement();
@@ -21,6 +26,7 @@ public class CircularListQueue implements Queue, Cloneable
    * Returns a <B><I>shallow</I></B> copy. The queue is
    * cloned, but not the elements within it.
    */
+  @Override
   public Object clone()
     {return new CircularListQueue((CircularList) list.clone());}
 

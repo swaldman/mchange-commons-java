@@ -32,6 +32,7 @@ public class DelegatorGenerator
 
     final static Comparator classComp = new Comparator()
     {
+       @Override
        public int compare(Object a, Object b)
        { return ((Class) a).getName().compareTo(((Class) b).getName()); }
     };

@@ -45,6 +45,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     public static boolean isFileUrlIdentifier( String identifier )
     { return identifier.toLowerCase().startsWith("file:"); }
 
+    @Override
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     {
 	if ( isFileUrlIdentifier( identifier ) )

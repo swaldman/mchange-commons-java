@@ -12,6 +12,7 @@ final class SoftKey extends SoftReference
 	this.hash_code = o.hashCode();
     }
     
+    @Override
     public int hashCode()
     { return hash_code; }
     
@@ -19,6 +20,7 @@ final class SoftKey extends SoftReference
      *  we equals ourself, and any soft key whose ref equals ours.
      *  If we are cleared, we only equals ourself 
      */
+    @Override
     public boolean equals( Object o ) 
     {
 	if (this == o) return true;

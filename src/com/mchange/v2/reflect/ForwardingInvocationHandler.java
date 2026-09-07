@@ -9,6 +9,7 @@ public class ForwardingInvocationHandler implements InvocationHandler
     public ForwardingInvocationHandler(Object inner)
     { this.inner = inner; }
 
+    @Override
     public Object invoke(Object proxy, Method m, Object[] args) throws Throwable
     { return m.invoke( inner, args ); }
 }

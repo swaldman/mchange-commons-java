@@ -34,881 +34,1057 @@ public abstract class SynchronizedFilterDatabaseMetaData implements DatabaseMeta
 	public synchronized DatabaseMetaData getInner()
 	{ return inner; }
 	
+	@Override
 	public synchronized boolean autoCommitFailureClosesAllResultSets() throws SQLException
 	{
 		return inner.autoCommitFailureClosesAllResultSets();
 	}
 	
+	@Override
 	public synchronized ResultSet getCatalogs() throws SQLException
 	{
 		return inner.getCatalogs();
 	}
 	
+	@Override
 	public synchronized boolean allProceduresAreCallable() throws SQLException
 	{
 		return inner.allProceduresAreCallable();
 	}
 	
+	@Override
 	public synchronized boolean allTablesAreSelectable() throws SQLException
 	{
 		return inner.allTablesAreSelectable();
 	}
 	
+	@Override
 	public synchronized boolean dataDefinitionCausesTransactionCommit() throws SQLException
 	{
 		return inner.dataDefinitionCausesTransactionCommit();
 	}
 	
+	@Override
 	public synchronized boolean dataDefinitionIgnoredInTransactions() throws SQLException
 	{
 		return inner.dataDefinitionIgnoredInTransactions();
 	}
 	
+	@Override
 	public synchronized boolean deletesAreDetected(int a) throws SQLException
 	{
 		return inner.deletesAreDetected(a);
 	}
 	
+	@Override
 	public synchronized boolean doesMaxRowSizeIncludeBlobs() throws SQLException
 	{
 		return inner.doesMaxRowSizeIncludeBlobs();
 	}
 	
+	@Override
 	public synchronized boolean generatedKeyAlwaysReturned() throws SQLException
 	{
 		return inner.generatedKeyAlwaysReturned();
 	}
 	
+	@Override
 	public synchronized ResultSet getBestRowIdentifier(String a, String b, String c, int d, boolean e) throws SQLException
 	{
 		return inner.getBestRowIdentifier(a, b, c, d, e);
 	}
 	
+	@Override
 	public synchronized String getCatalogSeparator() throws SQLException
 	{
 		return inner.getCatalogSeparator();
 	}
 	
+	@Override
 	public synchronized String getCatalogTerm() throws SQLException
 	{
 		return inner.getCatalogTerm();
 	}
 	
+	@Override
 	public synchronized ResultSet getClientInfoProperties() throws SQLException
 	{
 		return inner.getClientInfoProperties();
 	}
 	
+	@Override
 	public synchronized ResultSet getColumnPrivileges(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getColumnPrivileges(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized ResultSet getColumns(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getColumns(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized Connection getConnection() throws SQLException
 	{
 		return inner.getConnection();
 	}
 	
+	@Override
 	public synchronized ResultSet getCrossReference(String a, String b, String c, String d, String e, String f) throws SQLException
 	{
 		return inner.getCrossReference(a, b, c, d, e, f);
 	}
 	
+	@Override
 	public synchronized int getDatabaseMajorVersion() throws SQLException
 	{
 		return inner.getDatabaseMajorVersion();
 	}
 	
+	@Override
 	public synchronized int getDatabaseMinorVersion() throws SQLException
 	{
 		return inner.getDatabaseMinorVersion();
 	}
 	
+	@Override
 	public synchronized String getDatabaseProductName() throws SQLException
 	{
 		return inner.getDatabaseProductName();
 	}
 	
+	@Override
 	public synchronized String getDatabaseProductVersion() throws SQLException
 	{
 		return inner.getDatabaseProductVersion();
 	}
 	
+	@Override
 	public synchronized int getDefaultTransactionIsolation() throws SQLException
 	{
 		return inner.getDefaultTransactionIsolation();
 	}
 	
+	@Override
 	public synchronized int getDriverMajorVersion()
 	{
 		return inner.getDriverMajorVersion();
 	}
 	
+	@Override
 	public synchronized int getDriverMinorVersion()
 	{
 		return inner.getDriverMinorVersion();
 	}
 	
+	@Override
 	public synchronized String getDriverName() throws SQLException
 	{
 		return inner.getDriverName();
 	}
 	
+	@Override
 	public synchronized String getDriverVersion() throws SQLException
 	{
 		return inner.getDriverVersion();
 	}
 	
+	@Override
 	public synchronized ResultSet getExportedKeys(String a, String b, String c) throws SQLException
 	{
 		return inner.getExportedKeys(a, b, c);
 	}
 	
+	@Override
 	public synchronized String getExtraNameCharacters() throws SQLException
 	{
 		return inner.getExtraNameCharacters();
 	}
 	
+	@Override
 	public synchronized ResultSet getFunctionColumns(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getFunctionColumns(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized ResultSet getFunctions(String a, String b, String c) throws SQLException
 	{
 		return inner.getFunctions(a, b, c);
 	}
 	
+	@Override
 	public synchronized String getIdentifierQuoteString() throws SQLException
 	{
 		return inner.getIdentifierQuoteString();
 	}
 	
+	@Override
 	public synchronized ResultSet getImportedKeys(String a, String b, String c) throws SQLException
 	{
 		return inner.getImportedKeys(a, b, c);
 	}
 	
+	@Override
 	public synchronized ResultSet getIndexInfo(String a, String b, String c, boolean d, boolean e) throws SQLException
 	{
 		return inner.getIndexInfo(a, b, c, d, e);
 	}
 	
+	@Override
 	public synchronized int getJDBCMajorVersion() throws SQLException
 	{
 		return inner.getJDBCMajorVersion();
 	}
 	
+	@Override
 	public synchronized int getJDBCMinorVersion() throws SQLException
 	{
 		return inner.getJDBCMinorVersion();
 	}
 	
+	@Override
 	public synchronized int getMaxBinaryLiteralLength() throws SQLException
 	{
 		return inner.getMaxBinaryLiteralLength();
 	}
 	
+	@Override
 	public synchronized int getMaxCatalogNameLength() throws SQLException
 	{
 		return inner.getMaxCatalogNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxCharLiteralLength() throws SQLException
 	{
 		return inner.getMaxCharLiteralLength();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnNameLength() throws SQLException
 	{
 		return inner.getMaxColumnNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnsInGroupBy() throws SQLException
 	{
 		return inner.getMaxColumnsInGroupBy();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnsInIndex() throws SQLException
 	{
 		return inner.getMaxColumnsInIndex();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnsInOrderBy() throws SQLException
 	{
 		return inner.getMaxColumnsInOrderBy();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnsInSelect() throws SQLException
 	{
 		return inner.getMaxColumnsInSelect();
 	}
 	
+	@Override
 	public synchronized int getMaxColumnsInTable() throws SQLException
 	{
 		return inner.getMaxColumnsInTable();
 	}
 	
+	@Override
 	public synchronized int getMaxConnections() throws SQLException
 	{
 		return inner.getMaxConnections();
 	}
 	
+	@Override
 	public synchronized int getMaxCursorNameLength() throws SQLException
 	{
 		return inner.getMaxCursorNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxIndexLength() throws SQLException
 	{
 		return inner.getMaxIndexLength();
 	}
 	
+	@Override
 	public synchronized int getMaxProcedureNameLength() throws SQLException
 	{
 		return inner.getMaxProcedureNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxRowSize() throws SQLException
 	{
 		return inner.getMaxRowSize();
 	}
 	
+	@Override
 	public synchronized int getMaxSchemaNameLength() throws SQLException
 	{
 		return inner.getMaxSchemaNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxStatementLength() throws SQLException
 	{
 		return inner.getMaxStatementLength();
 	}
 	
+	@Override
 	public synchronized int getMaxStatements() throws SQLException
 	{
 		return inner.getMaxStatements();
 	}
 	
+	@Override
 	public synchronized int getMaxTableNameLength() throws SQLException
 	{
 		return inner.getMaxTableNameLength();
 	}
 	
+	@Override
 	public synchronized int getMaxTablesInSelect() throws SQLException
 	{
 		return inner.getMaxTablesInSelect();
 	}
 	
+	@Override
 	public synchronized int getMaxUserNameLength() throws SQLException
 	{
 		return inner.getMaxUserNameLength();
 	}
 	
+	@Override
 	public synchronized String getNumericFunctions() throws SQLException
 	{
 		return inner.getNumericFunctions();
 	}
 	
+	@Override
 	public synchronized ResultSet getPrimaryKeys(String a, String b, String c) throws SQLException
 	{
 		return inner.getPrimaryKeys(a, b, c);
 	}
 	
+	@Override
 	public synchronized ResultSet getProcedureColumns(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getProcedureColumns(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized String getProcedureTerm() throws SQLException
 	{
 		return inner.getProcedureTerm();
 	}
 	
+	@Override
 	public synchronized ResultSet getProcedures(String a, String b, String c) throws SQLException
 	{
 		return inner.getProcedures(a, b, c);
 	}
 	
+	@Override
 	public synchronized ResultSet getPseudoColumns(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getPseudoColumns(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized int getResultSetHoldability() throws SQLException
 	{
 		return inner.getResultSetHoldability();
 	}
 	
+	@Override
 	public synchronized RowIdLifetime getRowIdLifetime() throws SQLException
 	{
 		return inner.getRowIdLifetime();
 	}
 	
+	@Override
 	public synchronized String getSQLKeywords() throws SQLException
 	{
 		return inner.getSQLKeywords();
 	}
 	
+	@Override
 	public synchronized int getSQLStateType() throws SQLException
 	{
 		return inner.getSQLStateType();
 	}
 	
+	@Override
 	public synchronized String getSchemaTerm() throws SQLException
 	{
 		return inner.getSchemaTerm();
 	}
 	
+	@Override
 	public synchronized ResultSet getSchemas(String a, String b) throws SQLException
 	{
 		return inner.getSchemas(a, b);
 	}
 	
+	@Override
 	public synchronized ResultSet getSchemas() throws SQLException
 	{
 		return inner.getSchemas();
 	}
 	
+	@Override
 	public synchronized String getSearchStringEscape() throws SQLException
 	{
 		return inner.getSearchStringEscape();
 	}
 	
+	@Override
 	public synchronized String getStringFunctions() throws SQLException
 	{
 		return inner.getStringFunctions();
 	}
 	
+	@Override
 	public synchronized ResultSet getSuperTables(String a, String b, String c) throws SQLException
 	{
 		return inner.getSuperTables(a, b, c);
 	}
 	
+	@Override
 	public synchronized ResultSet getSuperTypes(String a, String b, String c) throws SQLException
 	{
 		return inner.getSuperTypes(a, b, c);
 	}
 	
+	@Override
 	public synchronized String getSystemFunctions() throws SQLException
 	{
 		return inner.getSystemFunctions();
 	}
 	
+	@Override
 	public synchronized ResultSet getTablePrivileges(String a, String b, String c) throws SQLException
 	{
 		return inner.getTablePrivileges(a, b, c);
 	}
 	
+	@Override
 	public synchronized ResultSet getTableTypes() throws SQLException
 	{
 		return inner.getTableTypes();
 	}
 	
+	@Override
 	public synchronized ResultSet getTables(String a, String b, String c, String[] d) throws SQLException
 	{
 		return inner.getTables(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized String getTimeDateFunctions() throws SQLException
 	{
 		return inner.getTimeDateFunctions();
 	}
 	
+	@Override
 	public synchronized ResultSet getTypeInfo() throws SQLException
 	{
 		return inner.getTypeInfo();
 	}
 	
+	@Override
 	public synchronized ResultSet getUDTs(String a, String b, String c, int[] d) throws SQLException
 	{
 		return inner.getUDTs(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized String getUserName() throws SQLException
 	{
 		return inner.getUserName();
 	}
 	
+	@Override
 	public synchronized ResultSet getVersionColumns(String a, String b, String c) throws SQLException
 	{
 		return inner.getVersionColumns(a, b, c);
 	}
 	
+	@Override
 	public synchronized boolean insertsAreDetected(int a) throws SQLException
 	{
 		return inner.insertsAreDetected(a);
 	}
 	
+	@Override
 	public synchronized boolean isCatalogAtStart() throws SQLException
 	{
 		return inner.isCatalogAtStart();
 	}
 	
+	@Override
 	public synchronized boolean locatorsUpdateCopy() throws SQLException
 	{
 		return inner.locatorsUpdateCopy();
 	}
 	
+	@Override
 	public synchronized boolean nullPlusNonNullIsNull() throws SQLException
 	{
 		return inner.nullPlusNonNullIsNull();
 	}
 	
+	@Override
 	public synchronized boolean nullsAreSortedAtEnd() throws SQLException
 	{
 		return inner.nullsAreSortedAtEnd();
 	}
 	
+	@Override
 	public synchronized boolean nullsAreSortedAtStart() throws SQLException
 	{
 		return inner.nullsAreSortedAtStart();
 	}
 	
+	@Override
 	public synchronized boolean nullsAreSortedHigh() throws SQLException
 	{
 		return inner.nullsAreSortedHigh();
 	}
 	
+	@Override
 	public synchronized boolean nullsAreSortedLow() throws SQLException
 	{
 		return inner.nullsAreSortedLow();
 	}
 	
+	@Override
 	public synchronized boolean othersDeletesAreVisible(int a) throws SQLException
 	{
 		return inner.othersDeletesAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean othersInsertsAreVisible(int a) throws SQLException
 	{
 		return inner.othersInsertsAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean othersUpdatesAreVisible(int a) throws SQLException
 	{
 		return inner.othersUpdatesAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean ownDeletesAreVisible(int a) throws SQLException
 	{
 		return inner.ownDeletesAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean ownInsertsAreVisible(int a) throws SQLException
 	{
 		return inner.ownInsertsAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean ownUpdatesAreVisible(int a) throws SQLException
 	{
 		return inner.ownUpdatesAreVisible(a);
 	}
 	
+	@Override
 	public synchronized boolean storesLowerCaseIdentifiers() throws SQLException
 	{
 		return inner.storesLowerCaseIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean storesLowerCaseQuotedIdentifiers() throws SQLException
 	{
 		return inner.storesLowerCaseQuotedIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean storesMixedCaseIdentifiers() throws SQLException
 	{
 		return inner.storesMixedCaseIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean storesMixedCaseQuotedIdentifiers() throws SQLException
 	{
 		return inner.storesMixedCaseQuotedIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean storesUpperCaseIdentifiers() throws SQLException
 	{
 		return inner.storesUpperCaseIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean storesUpperCaseQuotedIdentifiers() throws SQLException
 	{
 		return inner.storesUpperCaseQuotedIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean supportsANSI92EntryLevelSQL() throws SQLException
 	{
 		return inner.supportsANSI92EntryLevelSQL();
 	}
 	
+	@Override
 	public synchronized boolean supportsANSI92FullSQL() throws SQLException
 	{
 		return inner.supportsANSI92FullSQL();
 	}
 	
+	@Override
 	public synchronized boolean supportsANSI92IntermediateSQL() throws SQLException
 	{
 		return inner.supportsANSI92IntermediateSQL();
 	}
 	
+	@Override
 	public synchronized boolean supportsAlterTableWithAddColumn() throws SQLException
 	{
 		return inner.supportsAlterTableWithAddColumn();
 	}
 	
+	@Override
 	public synchronized boolean supportsAlterTableWithDropColumn() throws SQLException
 	{
 		return inner.supportsAlterTableWithDropColumn();
 	}
 	
+	@Override
 	public synchronized boolean supportsBatchUpdates() throws SQLException
 	{
 		return inner.supportsBatchUpdates();
 	}
 	
+	@Override
 	public synchronized boolean supportsCatalogsInDataManipulation() throws SQLException
 	{
 		return inner.supportsCatalogsInDataManipulation();
 	}
 	
+	@Override
 	public synchronized boolean supportsCatalogsInIndexDefinitions() throws SQLException
 	{
 		return inner.supportsCatalogsInIndexDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsCatalogsInPrivilegeDefinitions() throws SQLException
 	{
 		return inner.supportsCatalogsInPrivilegeDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsCatalogsInProcedureCalls() throws SQLException
 	{
 		return inner.supportsCatalogsInProcedureCalls();
 	}
 	
+	@Override
 	public synchronized boolean supportsCatalogsInTableDefinitions() throws SQLException
 	{
 		return inner.supportsCatalogsInTableDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsColumnAliasing() throws SQLException
 	{
 		return inner.supportsColumnAliasing();
 	}
 	
+	@Override
 	public synchronized boolean supportsConvert(int a, int b) throws SQLException
 	{
 		return inner.supportsConvert(a, b);
 	}
 	
+	@Override
 	public synchronized boolean supportsConvert() throws SQLException
 	{
 		return inner.supportsConvert();
 	}
 	
+	@Override
 	public synchronized boolean supportsCoreSQLGrammar() throws SQLException
 	{
 		return inner.supportsCoreSQLGrammar();
 	}
 	
+	@Override
 	public synchronized boolean supportsCorrelatedSubqueries() throws SQLException
 	{
 		return inner.supportsCorrelatedSubqueries();
 	}
 	
+	@Override
 	public synchronized boolean supportsDataDefinitionAndDataManipulationTransactions() throws SQLException
 	{
 		return inner.supportsDataDefinitionAndDataManipulationTransactions();
 	}
 	
+	@Override
 	public synchronized boolean supportsDataManipulationTransactionsOnly() throws SQLException
 	{
 		return inner.supportsDataManipulationTransactionsOnly();
 	}
 	
+	@Override
 	public synchronized boolean supportsDifferentTableCorrelationNames() throws SQLException
 	{
 		return inner.supportsDifferentTableCorrelationNames();
 	}
 	
+	@Override
 	public synchronized boolean supportsExpressionsInOrderBy() throws SQLException
 	{
 		return inner.supportsExpressionsInOrderBy();
 	}
 	
+	@Override
 	public synchronized boolean supportsExtendedSQLGrammar() throws SQLException
 	{
 		return inner.supportsExtendedSQLGrammar();
 	}
 	
+	@Override
 	public synchronized boolean supportsFullOuterJoins() throws SQLException
 	{
 		return inner.supportsFullOuterJoins();
 	}
 	
+	@Override
 	public synchronized boolean supportsGetGeneratedKeys() throws SQLException
 	{
 		return inner.supportsGetGeneratedKeys();
 	}
 	
+	@Override
 	public synchronized boolean supportsGroupBy() throws SQLException
 	{
 		return inner.supportsGroupBy();
 	}
 	
+	@Override
 	public synchronized boolean supportsGroupByBeyondSelect() throws SQLException
 	{
 		return inner.supportsGroupByBeyondSelect();
 	}
 	
+	@Override
 	public synchronized boolean supportsGroupByUnrelated() throws SQLException
 	{
 		return inner.supportsGroupByUnrelated();
 	}
 	
+	@Override
 	public synchronized boolean supportsIntegrityEnhancementFacility() throws SQLException
 	{
 		return inner.supportsIntegrityEnhancementFacility();
 	}
 	
+	@Override
 	public synchronized boolean supportsLikeEscapeClause() throws SQLException
 	{
 		return inner.supportsLikeEscapeClause();
 	}
 	
+	@Override
 	public synchronized boolean supportsLimitedOuterJoins() throws SQLException
 	{
 		return inner.supportsLimitedOuterJoins();
 	}
 	
+	@Override
 	public synchronized boolean supportsMinimumSQLGrammar() throws SQLException
 	{
 		return inner.supportsMinimumSQLGrammar();
 	}
 	
+	@Override
 	public synchronized boolean supportsMixedCaseIdentifiers() throws SQLException
 	{
 		return inner.supportsMixedCaseIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean supportsMixedCaseQuotedIdentifiers() throws SQLException
 	{
 		return inner.supportsMixedCaseQuotedIdentifiers();
 	}
 	
+	@Override
 	public synchronized boolean supportsMultipleOpenResults() throws SQLException
 	{
 		return inner.supportsMultipleOpenResults();
 	}
 	
+	@Override
 	public synchronized boolean supportsMultipleResultSets() throws SQLException
 	{
 		return inner.supportsMultipleResultSets();
 	}
 	
+	@Override
 	public synchronized boolean supportsMultipleTransactions() throws SQLException
 	{
 		return inner.supportsMultipleTransactions();
 	}
 	
+	@Override
 	public synchronized boolean supportsNamedParameters() throws SQLException
 	{
 		return inner.supportsNamedParameters();
 	}
 	
+	@Override
 	public synchronized boolean supportsNonNullableColumns() throws SQLException
 	{
 		return inner.supportsNonNullableColumns();
 	}
 	
+	@Override
 	public synchronized boolean supportsOpenCursorsAcrossCommit() throws SQLException
 	{
 		return inner.supportsOpenCursorsAcrossCommit();
 	}
 	
+	@Override
 	public synchronized boolean supportsOpenCursorsAcrossRollback() throws SQLException
 	{
 		return inner.supportsOpenCursorsAcrossRollback();
 	}
 	
+	@Override
 	public synchronized boolean supportsOpenStatementsAcrossCommit() throws SQLException
 	{
 		return inner.supportsOpenStatementsAcrossCommit();
 	}
 	
+	@Override
 	public synchronized boolean supportsOpenStatementsAcrossRollback() throws SQLException
 	{
 		return inner.supportsOpenStatementsAcrossRollback();
 	}
 	
+	@Override
 	public synchronized boolean supportsOrderByUnrelated() throws SQLException
 	{
 		return inner.supportsOrderByUnrelated();
 	}
 	
+	@Override
 	public synchronized boolean supportsOuterJoins() throws SQLException
 	{
 		return inner.supportsOuterJoins();
 	}
 	
+	@Override
 	public synchronized boolean supportsPositionedDelete() throws SQLException
 	{
 		return inner.supportsPositionedDelete();
 	}
 	
+	@Override
 	public synchronized boolean supportsPositionedUpdate() throws SQLException
 	{
 		return inner.supportsPositionedUpdate();
 	}
 	
+	@Override
 	public synchronized boolean supportsResultSetConcurrency(int a, int b) throws SQLException
 	{
 		return inner.supportsResultSetConcurrency(a, b);
 	}
 	
+	@Override
 	public synchronized boolean supportsResultSetHoldability(int a) throws SQLException
 	{
 		return inner.supportsResultSetHoldability(a);
 	}
 	
+	@Override
 	public synchronized boolean supportsResultSetType(int a) throws SQLException
 	{
 		return inner.supportsResultSetType(a);
 	}
 	
+	@Override
 	public synchronized boolean supportsSavepoints() throws SQLException
 	{
 		return inner.supportsSavepoints();
 	}
 	
+	@Override
 	public synchronized boolean supportsSchemasInDataManipulation() throws SQLException
 	{
 		return inner.supportsSchemasInDataManipulation();
 	}
 	
+	@Override
 	public synchronized boolean supportsSchemasInIndexDefinitions() throws SQLException
 	{
 		return inner.supportsSchemasInIndexDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsSchemasInPrivilegeDefinitions() throws SQLException
 	{
 		return inner.supportsSchemasInPrivilegeDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsSchemasInProcedureCalls() throws SQLException
 	{
 		return inner.supportsSchemasInProcedureCalls();
 	}
 	
+	@Override
 	public synchronized boolean supportsSchemasInTableDefinitions() throws SQLException
 	{
 		return inner.supportsSchemasInTableDefinitions();
 	}
 	
+	@Override
 	public synchronized boolean supportsSelectForUpdate() throws SQLException
 	{
 		return inner.supportsSelectForUpdate();
 	}
 	
+	@Override
 	public synchronized boolean supportsStatementPooling() throws SQLException
 	{
 		return inner.supportsStatementPooling();
 	}
 	
+	@Override
 	public synchronized boolean supportsStoredFunctionsUsingCallSyntax() throws SQLException
 	{
 		return inner.supportsStoredFunctionsUsingCallSyntax();
 	}
 	
+	@Override
 	public synchronized boolean supportsStoredProcedures() throws SQLException
 	{
 		return inner.supportsStoredProcedures();
 	}
 	
+	@Override
 	public synchronized boolean supportsSubqueriesInComparisons() throws SQLException
 	{
 		return inner.supportsSubqueriesInComparisons();
 	}
 	
+	@Override
 	public synchronized boolean supportsSubqueriesInExists() throws SQLException
 	{
 		return inner.supportsSubqueriesInExists();
 	}
 	
+	@Override
 	public synchronized boolean supportsSubqueriesInIns() throws SQLException
 	{
 		return inner.supportsSubqueriesInIns();
 	}
 	
+	@Override
 	public synchronized boolean supportsSubqueriesInQuantifieds() throws SQLException
 	{
 		return inner.supportsSubqueriesInQuantifieds();
 	}
 	
+	@Override
 	public synchronized boolean supportsTableCorrelationNames() throws SQLException
 	{
 		return inner.supportsTableCorrelationNames();
 	}
 	
+	@Override
 	public synchronized boolean supportsTransactionIsolationLevel(int a) throws SQLException
 	{
 		return inner.supportsTransactionIsolationLevel(a);
 	}
 	
+	@Override
 	public synchronized boolean supportsTransactions() throws SQLException
 	{
 		return inner.supportsTransactions();
 	}
 	
+	@Override
 	public synchronized boolean supportsUnion() throws SQLException
 	{
 		return inner.supportsUnion();
 	}
 	
+	@Override
 	public synchronized boolean supportsUnionAll() throws SQLException
 	{
 		return inner.supportsUnionAll();
 	}
 	
+	@Override
 	public synchronized boolean updatesAreDetected(int a) throws SQLException
 	{
 		return inner.updatesAreDetected(a);
 	}
 	
+	@Override
 	public synchronized boolean usesLocalFilePerTable() throws SQLException
 	{
 		return inner.usesLocalFilePerTable();
 	}
 	
+	@Override
 	public synchronized boolean usesLocalFiles() throws SQLException
 	{
 		return inner.usesLocalFiles();
 	}
 	
+	@Override
 	public synchronized String getURL() throws SQLException
 	{
 		return inner.getURL();
 	}
 	
+	@Override
 	public synchronized boolean isReadOnly() throws SQLException
 	{
 		return inner.isReadOnly();
 	}
 	
+	@Override
 	public synchronized ResultSet getAttributes(String a, String b, String c, String d) throws SQLException
 	{
 		return inner.getAttributes(a, b, c, d);
 	}
 	
+	@Override
 	public synchronized boolean isWrapperFor(Class a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
+	@Override
 	public synchronized Object unwrap(Class a) throws SQLException
 	{
 		return inner.unwrap(a);

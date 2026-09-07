@@ -7,9 +7,11 @@ public class SynchronizedShortHolder implements ThreadSafeShortHolder, Serializa
 {
     transient short value;
 
+    @Override
     public synchronized short getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(short value)
     { this.value = value; }
 

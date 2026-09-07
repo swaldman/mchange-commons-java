@@ -38,6 +38,7 @@ public class Jdk14MLogLogrbJUnitTestCase extends TestCase
     private List        records;
     private boolean     savedUseParentHandlers;
 
+    @Override
     public void setUp()
     {
 	records = new ArrayList();
@@ -47,13 +48,17 @@ public class Jdk14MLogLogrbJUnitTestCase extends TestCase
 	julLogger.setLevel( Level.ALL );
 	captured = new Handler()
 	{
+	    @Override
 	    public void publish(LogRecord r) { records.add(r); }
+	    @Override
 	    public void flush() {}
+	    @Override
 	    public void close() {}
 	};
 	julLogger.addHandler( captured );
     }
 
+    @Override
     public void tearDown()
     {
 	if (julLogger != null)

@@ -37,6 +37,7 @@ class PropertyBoundButtonGroup extends ButtonGroup
 	pcbu.resync();
     }
 
+    @Override
     public void add(AbstractButton button)
     {
 	System.err.println( this + "Warning: The button '" + button + "' has been implicitly associated with a null value!");
@@ -48,6 +49,7 @@ class PropertyBoundButtonGroup extends ButtonGroup
 	pcbu.resync();
     }
 
+    @Override
     public void remove(AbstractButton button)
     {
 	button.removeActionListener( wcl );
@@ -56,6 +58,7 @@ class PropertyBoundButtonGroup extends ButtonGroup
 
     class MyHbi implements HostBindingInterface
 	{
+	    @Override
 	    public void syncToValue( PropertyEditor editor, Object newVal )
 	    {
 		ButtonModel selectMe = (ButtonModel) valuesToButtonModels.get( newVal );
@@ -65,24 +68,28 @@ class PropertyBoundButtonGroup extends ButtonGroup
 		    setSelected( fakeButton.getModel(), true );
 	    }
 	    
+	    @Override
 	    public void addUserModificationListeners()
 	    {
 		// we can not do this on initialization... we
 		// add our listener to each button as it is added.
 	    }
 	    
+	    @Override
 	    public Object fetchUserModification( PropertyEditor editor, Object oldValue )
 	    {
 		ButtonModel model = getSelection();
 		return buttonsModelsToValues.get( model );
 	    }
 	    
+	    @Override
 	    public void alertErroneousInput()
 	    { Toolkit.getDefaultToolkit().beep(); }
 	};
 
     class WeChangedListener implements ActionListener
     {
+	@Override
 	public void actionPerformed( ActionEvent evt )
 	{ pcbu.userModification(); }
     }

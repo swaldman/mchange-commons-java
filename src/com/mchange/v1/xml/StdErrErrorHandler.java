@@ -4,6 +4,7 @@ import org.xml.sax.*;
 
 public class StdErrErrorHandler implements ErrorHandler
 {
+    @Override
     public void warning(SAXParseException e) 
     {
 	System.err.println("[Warning]");
@@ -11,6 +12,7 @@ public class StdErrErrorHandler implements ErrorHandler
 	e.printStackTrace();
     }
 		
+    @Override
     public void error(SAXParseException e) 
     {
 	System.err.println("[Error]");
@@ -18,6 +20,7 @@ public class StdErrErrorHandler implements ErrorHandler
 	e.printStackTrace();
     }
 		
+    @Override
     public void fatalError(SAXParseException e) throws SAXException 
     {
 	System.err.println("[Fatal Error]");

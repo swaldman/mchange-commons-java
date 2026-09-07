@@ -24,6 +24,7 @@ public class SmtpMailSender implements MailSender
   public SmtpMailSender(String host) throws UnknownHostException
     {this(host, SmtpUtils.DEFAULT_SMTP_PORT);}
 
+  @Override
   public void sendMail(String from, String[] to, String[] cc,  String[] bcc, String subject, String body, String enc)
     throws IOException, ProtocolException, UnsupportedEncodingException
     {
@@ -58,6 +59,7 @@ public class SmtpMailSender implements MailSender
       SmtpUtils.sendMail(hostAddr, port, from, rcptTo, headers, body.getBytes(enc));
     }
 
+  @Override
   public void sendMail(String from, String[] to, String[] cc,  String[] bcc, String subject, String body)
     throws IOException, ProtocolException
     {

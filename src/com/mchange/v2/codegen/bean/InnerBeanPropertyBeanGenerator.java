@@ -53,6 +53,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 	    {
 		maskedProps[i] = new SimplePropertyMask( props[i] )
 		    {
+			@Override
 			public int getVariableModifiers()
 			{ return Modifier.PRIVATE | Modifier.TRANSIENT; }
 		    };
@@ -60,9 +61,11 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 
 	ClassInfo ci = new WrapperClassInfo( info )
 	    {
+		@Override
 		public String getClassName()
 		{ return "InnerBean"; }
 		
+		@Override
 		public int getModifiers()
 		{ return findInnerClassModifiers(); }
 	    };
@@ -81,6 +84,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 	return innerGenerator;
     }
 
+    @Override
     protected void writeOtherVariables() throws IOException
     {
 	iw.println(  CodegenUtils.getModifierString( inner_bean_member_modifiers ) + ' ' +
@@ -91,6 +95,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 	iw.println("{ return innerBean; }");
     }
 
+    @Override
     protected void writeOtherFunctions() throws IOException
     {
 	iw.print( CodegenUtils.getModifierString( inner_bean_replacer_modifiers ) + ' ' +
@@ -137,15 +142,18 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 	iw.println("{ this.innerBean = innerBean; }");
     }
 
+    @Override
     protected void writeOtherClasses() throws IOException
     {
 	if (innerBeanClassName == null)
 	    writeSyntheticInnerBeanClass();
     }
 
+    @Override
     protected void writePropertyVariable( Property prop ) throws IOException
     { /* do nothing... we have no members, only the inner bean */ }
 
+    @Override
     protected void writePropertyGetter( Property prop, Class propType ) throws IOException
     { 
 	String stn = prop.getSimpleTypeName();
@@ -163,6 +171,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
 	iw.println('}');
     }
 
+    @Override
     protected void writePropertySetter( Property prop, Class propType ) throws IOException
     {
 	String stn = prop.getSimpleTypeName();

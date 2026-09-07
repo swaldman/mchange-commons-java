@@ -23,9 +23,11 @@ public class PotentiallySecondaryError extends Error implements PotentiallySecon
     public PotentiallySecondaryError()
     {this("", null);}
 
+    @Override
     public Throwable getNestedThrowable()
     {return nested;}
 
+    @Override
     public void printStackTrace(PrintWriter pw)
     {
 	super.printStackTrace(pw);
@@ -36,6 +38,7 @@ public class PotentiallySecondaryError extends Error implements PotentiallySecon
 	    }
     }
 
+    @Override
     public void printStackTrace(PrintStream ps)
     {
 	super.printStackTrace(ps);
@@ -46,6 +49,7 @@ public class PotentiallySecondaryError extends Error implements PotentiallySecon
 	    }
     }
 
+    @Override
     public void printStackTrace()
     {printStackTrace(System.err);}
 }

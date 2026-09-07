@@ -35,9 +35,11 @@ public class QuotesAndWhitespaceTokenizer extends StringEnumerationHelperBase
       advance();
     }
 
+  @Override
   public synchronized boolean hasMoreStrings()
     {return current != null;}
 
+  @Override
   public synchronized String nextString()
     {
       if (current instanceof String)

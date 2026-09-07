@@ -32,6 +32,7 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
     public DriverManagerDataSource(String jdbcUrl)
     { this( jdbcUrl, null, null ); }
 
+    @Override
     public Connection getConnection() throws SQLException
     { 
 	//  				System.err.println( "user: " + dfltUser );
@@ -39,6 +40,7 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
 	return DriverManager.getConnection( jdbcUrl, createProps(null, null) ); 
     }
 
+    @Override
     public Connection getConnection(String username, String password) throws SQLException
     { 
 	//  				System.err.println( "user: " + username );
@@ -46,26 +48,33 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
 	return DriverManager.getConnection( jdbcUrl, createProps(username, password) ); 
     }
 
+    @Override
     public PrintWriter getLogWriter() throws SQLException
     { return DriverManager.getLogWriter(); }
 
+    @Override
     public void setLogWriter(PrintWriter out) throws SQLException
     { DriverManager.setLogWriter( out ); }
 
+    @Override
     public int getLoginTimeout() throws SQLException
     { return DriverManager.getLoginTimeout(); }
 
+    @Override
     public void setLoginTimeout(int seconds) throws SQLException
     { DriverManager.setLoginTimeout( seconds ); }
 
     // JDBC4 add-ons
+    @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException
     { return false; }
 
+    @Override
     public <T> T unwrap(Class<T> iface) throws SQLException
     { throw new SQLException( this.getClass().getName() + " is not a wrapper for an object implementing any interface." ); }
 
 
+    @Override
     public Reference getReference() throws NamingException
     {
 	Reference out = new Reference(this.getClass().getName(),
@@ -79,6 +88,7 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
     }
 
     // JDK7 add-on
+    @Override
     public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException
     { throw new SQLFeatureNotSupportedException("javax.sql.DataSource.getParentLogger() is not currently supported by " + this.getClass().getName());}
 
@@ -128,6 +138,7 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
     //ObjectFactory for JNDI referencing
     public static class DmdsObjectFactory implements ObjectFactory
     {
+	@Override
 	public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable env)
 	    throws Exception
 	{

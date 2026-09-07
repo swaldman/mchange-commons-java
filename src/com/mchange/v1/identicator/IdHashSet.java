@@ -26,10 +26,12 @@ public class IdHashSet extends AbstractSet implements Set
     public IdHashSet(int initialCapacity, Identicator id) 
     { this(new HashSet( initialCapacity, 0.75f ), id); }
 
+    @Override
     public Iterator iterator()
     {
 	return new WrapperIterator(inner.iterator(), true)
 	    {
+		@Override
 		protected Object transformObject(Object o)
 		{
 		    IdHashKey idKey = (IdHashKey) o;
@@ -38,18 +40,23 @@ public class IdHashSet extends AbstractSet implements Set
 	    };
     }
 
+    @Override
     public int size()
     { return inner.size(); }
 
+    @Override
     public boolean contains(Object o)
     { return inner.contains( createKey( o ) ); }
 
+    @Override
     public boolean add(Object o)
     { return inner.add( createKey( o ) ); }
 
+    @Override
     public boolean remove(Object o)
     { return inner.remove( createKey( o ) ); }
 
+    @Override
     public void clear()
     { inner.clear(); }
 

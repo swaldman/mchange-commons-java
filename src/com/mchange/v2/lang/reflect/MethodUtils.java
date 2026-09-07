@@ -7,6 +7,7 @@ public final class MethodUtils
 {
     public final static Comparator METHOD_COMPARATOR = new Comparator()
     {
+        @Override
         public int compare(Object a, Object b)
         {
             Method aa = (Method) a;

@@ -12,12 +12,14 @@ public abstract class SimpleCursor implements UIterator
     public SimpleCursor(ResultSet rs)
     {this.rs = rs;}
 
+    @Override
     public boolean hasNext() throws SQLException
     {
 	ratchet();
 	return (available == 1);
     }
     
+    @Override
     public Object next() throws SQLException
     {
 	ratchet();
@@ -26,15 +28,18 @@ public abstract class SimpleCursor implements UIterator
 	return out;
     }
     
+    @Override
     public void remove()
     {throw new UnsupportedOperationException();}
 
+    @Override
     public void close() throws Exception
     {
 	rs.close();
 	rs = null;
     }
 
+    @Override
     @SuppressWarnings("deprecation") // a close() safety net; finalize() is deprecated but still called
     public void finalize() throws Exception
     {if (rs != null) this.close();}

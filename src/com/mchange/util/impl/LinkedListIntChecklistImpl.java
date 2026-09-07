@@ -10,6 +10,7 @@ public class LinkedListIntChecklistImpl implements IntChecklist
   private final LLICIRecord headRecord = new LLICIRecord();
   private int num_checked = 0;
 
+  @Override
   public void check(int num)
   {
     LLICIRecord finger = findPrevious(num);
@@ -23,6 +24,7 @@ public class LinkedListIntChecklistImpl implements IntChecklist
       }
   }
 
+  @Override
   public void uncheck(int num)
   {
     LLICIRecord finger = findPrevious(num);
@@ -33,21 +35,25 @@ public class LinkedListIntChecklistImpl implements IntChecklist
       }
   }
 
+  @Override
   public boolean isChecked(int num)
   {
     LLICIRecord finger = findPrevious(num);
     return (finger.next != null && finger.next.contained == num);
   }
 
+  @Override
   public void clear()
   {
     headRecord.next = null;
     num_checked = 0;
   }
 
+  @Override
   public int countChecked()
   {return num_checked;}
 
+  @Override
   public int[] getChecked()
   {
     LLICIRecord finger = headRecord;
@@ -61,12 +67,14 @@ public class LinkedListIntChecklistImpl implements IntChecklist
     return out;
   }
 
+  @Override
   public IntEnumeration checked()
     {
       return new IntEnumerationHelperBase()
 	{
 	  LLICIRecord finger = headRecord;
 	  
+	  @Override
 	  public int nextInt()
 	    {
 	      try 
@@ -78,6 +86,7 @@ public class LinkedListIntChecklistImpl implements IntChecklist
 		{throw new java.util.NoSuchElementException();}
 	    }
 
+	  @Override
 	  public boolean hasMoreInts()
 	    {return (finger.next != null);}
 	};

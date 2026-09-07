@@ -48,6 +48,7 @@ public class SynchronizerJUnitTestCase extends TestCase
 
     public static class ServiceImpl implements Service
     {
+        @Override
         public Object call( String what ) throws Declared
         {
             if ( "declared".equals( what ) )   throw new Declared( "declared checked" );
@@ -70,11 +71,13 @@ public class SynchronizerJUnitTestCase extends TestCase
     public interface FromSuper { String fromSuper(); }
 
     public static class Parent implements FromSuper
-    { public String fromSuper() { return "parent"; } }
+    { @Override public String fromSuper() { return "parent"; } }
 
     public static class Child extends Parent implements Sub
     {
+        @Override
         public String base() { return "base"; }
+        @Override
         public String sub()  { return "sub"; }
     }
 
@@ -82,11 +85,13 @@ public class SynchronizerJUnitTestCase extends TestCase
     interface Hidden { String hidden(); }
 
     public static class OnlyHidden implements Hidden
-    { public String hidden() { return "hidden"; } }
+    { @Override public String hidden() { return "hidden"; } }
 
     public static class PublicAndHidden implements Base, Hidden
     {
+        @Override
         public String base()   { return "base"; }
+        @Override
         public String hidden() { return "hidden"; }
     }
 
@@ -97,7 +102,9 @@ public class SynchronizerJUnitTestCase extends TestCase
     {
         private final String name;
         public NamedThing( String name ) { this.name = name; }
+        @Override
         public String base() { return name; }
+        @Override
         public String toString() { return "NamedThing[" + name + "]"; }
     }
 
@@ -105,7 +112,9 @@ public class SynchronizerJUnitTestCase extends TestCase
     public static class LockAwareToString implements Base
     {
         public Object proxy; // assigned after wrapping
+        @Override
         public String base() { return "base"; }
+        @Override
         public String toString()
         { return String.valueOf( proxy != null && Thread.holdsLock( proxy ) ); }
     }
@@ -114,7 +123,7 @@ public class SynchronizerJUnitTestCase extends TestCase
     public interface LockReporter { boolean callerHoldsLockOn( Object o ); }
 
     public static class LockReporterImpl implements LockReporter
-    { public boolean callerHoldsLockOn( Object o ) { return Thread.holdsLock( o ); } }
+    { @Override public boolean callerHoldsLockOn( Object o ) { return Thread.holdsLock( o ); } }
 
     // ---------------------------------------------------------- convenience
 
@@ -301,6 +310,7 @@ public class SynchronizerJUnitTestCase extends TestCase
         final CountDownLatch entered = new CountDownLatch( 1 );
         Thread waiter = new Thread( "Synchronizer-wait-probe" )
         {
+            @Override
             public void run()
             {
                 try { synchronized ( p ) { entered.countDown(); p.wait(); } }
@@ -391,6 +401,7 @@ public class SynchronizerJUnitTestCase extends TestCase
         final AtomicBoolean acquired = new AtomicBoolean( false );
         Thread other = new Thread()
         {
+            @Override
             public void run()
             { synchronized ( s ) { acquired.set( true ); } }
         };
@@ -409,6 +420,7 @@ public class SynchronizerJUnitTestCase extends TestCase
 
         class Counter implements Base
         {
+            @Override
             public String base()
             {
                 int now = concurrent.incrementAndGet();
@@ -431,6 +443,7 @@ public class SynchronizerJUnitTestCase extends TestCase
         {
             threads[i] = new Thread()
             {
+                @Override
                 public void run()
                 {
                     ready.countDown();

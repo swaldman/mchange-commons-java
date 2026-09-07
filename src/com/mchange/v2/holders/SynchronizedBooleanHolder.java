@@ -14,9 +14,11 @@ public class SynchronizedBooleanHolder implements ThreadSafeBooleanHolder, Seria
 {
     transient boolean value;
 
+    @Override
     public synchronized boolean getValue()
     { return value; }
 
+    @Override
     public synchronized void setValue(boolean b)
     { this.value = b; }
 

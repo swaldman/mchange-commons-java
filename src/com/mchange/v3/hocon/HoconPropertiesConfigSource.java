@@ -225,6 +225,7 @@ public final class HoconPropertiesConfigSource implements PropertiesConfigSource
 	return new Parse( pc.properties, dlis );
     }
 
+    @Override
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     { return propertiesFromSource( HoconPropertiesConfigSource.class.getClassLoader(), identifier ); }
 }

@@ -14,6 +14,7 @@ public abstract class CBPCursor extends SimpleCursor
 	this.home     = home;
     }
 
+    @Override
     public void close() throws Exception 
     {
 	try

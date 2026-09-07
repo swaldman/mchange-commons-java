@@ -9,10 +9,12 @@ class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
     HashSet inner = new HashSet();
     ReferenceQueue queue = new ReferenceQueue();
 
+    @Override
     public Iterator iterator()
     {
 	return new WrapperIterator( inner.iterator(), true )
 	    {
+		@Override
 		protected Object transformObject(Object o)
 		{
 		    SoftKey sk = (SoftKey) o;
@@ -28,9 +30,11 @@ class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
      * this call, one must presume that elements may at
      * unpredictable times, simply "disappear".
      */
+    @Override
     public int size()
     { return inner.size(); }
 
+    @Override
     public boolean contains(Object o)
     { return inner.contains( new SoftKey( o, null ) ); }
 
@@ -42,21 +46,27 @@ class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
 	return out;
     }
 
+    @Override
     public Object[] toArray() 
     { return this.toArrayList().toArray(); }
 
+    @Override
     public Object[] toArray(Object[] a) 
     { return this.toArrayList().toArray(a); }
 
+    @Override
     public boolean add(Object o) 
     { return inner.add( new SoftKey(o, queue) ); }
 
+    @Override
     public boolean remove(Object o) 
     { return inner.remove( new SoftKey( o, null ) ); }
 
+    @Override
     public void clear()
     { inner.clear(); }
 
+    @Override
     public void vacuum() throws CachedStoreException
     { 
 	SoftKey key;

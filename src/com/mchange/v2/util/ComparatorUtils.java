@@ -8,6 +8,7 @@ public final class ComparatorUtils
     { 
 	return new Comparator()
 	    {
+		@Override
 		public int compare( Object a, Object b )
 		{ return -c.compare( a, b ); }
 	    };

@@ -17,6 +17,7 @@ public abstract class GentleThread extends Thread
     public GentleThread(String name)
     { super( name ); }
 
+    @Override
     public abstract void run();
 
     /**

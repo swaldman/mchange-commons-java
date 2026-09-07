@@ -38,6 +38,7 @@ public final class DecodeUtils
 
     static class JavaMapDecoderFinder implements DecoderFinder
     {
+	@Override
 	public String decoderClassName( Object encoded ) throws CannotDecodeException
 	{
 	    if ( encoded instanceof Map )

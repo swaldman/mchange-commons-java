@@ -22,9 +22,11 @@ public class SimpleRunnableQueue implements RunnableQueue, Queuable
     public SimpleRunnableQueue()
     { this( true ); }
 
+    @Override
     public RunnableQueue asRunnableQueue()
     { return this; }
 
+    @Override
     public synchronized void postRunnable(Runnable r)
     {
 	if (gentle_close_requested)
@@ -35,6 +37,7 @@ public class SimpleRunnableQueue implements RunnableQueue, Queuable
 	this.notifyAll();
     }
 
+    @Override
     public synchronized void close( boolean skip_remaining_tasks )
     {
 	if (skip_remaining_tasks)
@@ -43,6 +46,7 @@ public class SimpleRunnableQueue implements RunnableQueue, Queuable
 	    gentle_close_requested = true;
     }
 
+    @Override
     public synchronized void close()
     { this.close( true ); }
 
@@ -68,6 +72,7 @@ public class SimpleRunnableQueue implements RunnableQueue, Queuable
 	TaskThread()
 	{ super("SimpleRunnableQueue.TaskThread"); }
 
+	@Override
 	public void run()
 	{
 	    try

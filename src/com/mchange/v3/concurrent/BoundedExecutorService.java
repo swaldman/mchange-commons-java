@@ -59,12 +59,15 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     public synchronized State getState()
     { return state; }
 
+    @Override
     public synchronized boolean isShutdown()
     { return state == SHUTDOWN || state == SHUTDOWN_NOW; }
 
+    @Override
     public synchronized boolean isTerminated()
     { return isShutdown() && permits == 0; }
 
+    @Override
     public synchronized void shutdown()
     {
 	inner.shutdown();
@@ -73,6 +76,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	this.notifyAll();
     }
 
+    @Override
     public synchronized List<Runnable> shutdownNow()
     {
 	updateState( SHUTDOWN_NOW );
@@ -94,6 +98,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	return Collections.unmodifiableList( out );
     }
 
+    @Override
     public synchronized boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException
     {
 	long start = System.currentTimeMillis();
@@ -117,10 +122,12 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     }
 
     //MT: no need to synchronize
+    @Override
     public void execute( Runnable runnable )
     { inner.execute( newTaskFor( runnable, null ) ); }
 
     //MT: no need to synchronize
+    @Override
     protected <V> RunnableFuture<V> newTaskFor(Callable<V> callable) {
 	PermitAcquiringCallable<V> pac = new PermitAcquiringCallable<V>( callable );
 	ReleasingFutureTask<V>     rft = new ReleasingFutureTask<V>( pac );
@@ -129,6 +136,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
     }
 
     //MT: no need to synchronize
+    @Override
     protected <V> RunnableFuture<V> newTaskFor(Runnable runnable, V result) {
 	PermitAcquiringRunnable<V> par = new PermitAcquiringRunnable<V>( runnable );
 	ReleasingFutureTask<V>     rft = new ReleasingFutureTask<V>( par, result );
@@ -244,11 +252,13 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	    this.callable = callable;
 	}
 
+	@Override
 	public void setTask( ReleasingFutureTask<V> task )
 	{
 	    this.task = task;
 	}
 	    
+	@Override
 	public V call() throws Exception
 	{
 	    acquirePermit( this.task );
@@ -266,11 +276,13 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	    this.runnable = runnable;
 	}
 	
+	@Override
 	public void setTask( ReleasingFutureTask<V> task )
 	{
 	    this.task = task;
 	}
 
+	@Override
 	public void run()
 	{
 	    acquirePermit( this.task );
@@ -294,6 +306,7 @@ public final class BoundedExecutorService extends AbstractExecutorService {
 	ReleasingFutureTask(PermitAcquiringRunnable<V> runnable, V result)
 	{ super( runnable, result ); }
 
+	@Override
 	protected void done() 
 	{ releasePermit(); }
     }

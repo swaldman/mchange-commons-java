@@ -8,17 +8,22 @@ public final class ListUtils
     {
 	return new AbstractList()
 	    {
+		@Override
 		public Iterator iterator()
 		{ return IteratorUtils.oneElementUnmodifiableIterator( elem ); }
 		
+		@Override
 		public int size() { return 1; }
 		
+		@Override
 		public boolean isEmpty()
 		{ return false; }
 		
+		@Override
 		public boolean contains(Object o) 
 		{ return o == elem; }
 
+		@Override
 		public Object get(int index)
 		{
 		    if (index != 0)

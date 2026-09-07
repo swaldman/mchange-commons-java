@@ -27,6 +27,7 @@ public abstract class WrapperIterator implements Iterator
     public WrapperIterator(Iterator inner)
     { this( inner, false ); }
 
+    @Override
     public boolean hasNext()
     {
 	findNext();
@@ -42,6 +43,7 @@ public abstract class WrapperIterator implements Iterator
 	    }
     }
 
+    @Override
     public Object next()
     {
 	findNext();
@@ -59,6 +61,7 @@ public abstract class WrapperIterator implements Iterator
 	return lastOut;
     }
     
+    @Override
     public void remove()
     { 
 	if (supports_remove)

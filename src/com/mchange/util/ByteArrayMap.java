@@ -8,6 +8,7 @@ public interface ByteArrayMap extends IOByteArrayMap
    *  Gets the byte array associated with key, or none if
    *  this key is not present.
    */
+  @Override
   public byte[] get(byte[] key);
 
   /**
@@ -15,6 +16,7 @@ public interface ByteArrayMap extends IOByteArrayMap
    *  the hash. If key is already present in the map, the
    *  old value associated with it is replaced by {@code value}.
    */
+  @Override
   public void put(byte[] key, byte[] value);
 
   /**
@@ -22,16 +24,19 @@ public interface ByteArrayMap extends IOByteArrayMap
    *  the hash. Fails (and returns false) if key is
    *  already present in the map.
    */
+  @Override
   public boolean putNoReplace(byte[] key, byte[] value);
 
   /**
    *  Removes the key, value pair whose key is the argument. 
    */
+  @Override
   public boolean remove(byte[] key);
 
   /**
    *  Returns true iff {@code key} is present.
    */
+  @Override
   public boolean containsKey(byte[] key);
 
   /**
@@ -39,6 +44,7 @@ public interface ByteArrayMap extends IOByteArrayMap
    *  or deletes are made while the Enumeration is untraversed.
    *  If inserts or deletes are made. the behavior is undefined. 
    */
+  @Override
   public IOByteArrayEnumeration keys();
 
   /**

@@ -24,6 +24,7 @@ public class PropertyBoundTextField extends JTextField
 
     class MyHbi implements HostBindingInterface
 	{
+	    @Override
 	    public void syncToValue( PropertyEditor editor, Object newVal )
 	    {
 		if (newVal == null)
@@ -36,6 +37,7 @@ public class PropertyBoundTextField extends JTextField
 		    }
 	    }
 	    
+	    @Override
 	    public void addUserModificationListeners()
 	    {
 		WeChangedListener wcl = new WeChangedListener();
@@ -43,6 +45,7 @@ public class PropertyBoundTextField extends JTextField
 		addFocusListener( wcl );
 	    }
 	    
+	    @Override
 	    public Object fetchUserModification( PropertyEditor editor, Object oldValue )
 	    {
 		String valAsStr = getText().trim();
@@ -55,6 +58,7 @@ public class PropertyBoundTextField extends JTextField
 		    }
 	    }
 	    
+	    @Override
 	    public void alertErroneousInput()
 	    { getToolkit().beep(); }
 	};
@@ -62,11 +66,14 @@ public class PropertyBoundTextField extends JTextField
 
     class WeChangedListener implements ActionListener, FocusListener
     {
+	@Override
 	public void actionPerformed( ActionEvent evt )
 	{ pcbu.userModification(); }
 	
+	@Override
 	public void focusGained( FocusEvent evt ) {}
 	
+	@Override
 	public void focusLost( FocusEvent evt )
 	{ pcbu.userModification(); }
     }
@@ -79,6 +86,7 @@ public class PropertyBoundTextField extends JTextField
 		TestBean tb = new TestBean();
 		PropertyChangeListener pcl = new PropertyChangeListener()
 		    {
+			@Override
 			public void propertyChange( PropertyChangeEvent evt )
 			{ BeansUtils.debugShowPropertyChange( evt ); }
 		    };

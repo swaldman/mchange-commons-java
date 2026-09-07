@@ -5,9 +5,11 @@ import java.rmi.*;
 
 public interface RemotePasswordManager extends PasswordManager, Remote
 {
+  @Override
   public boolean validate(String username, String password) 
     throws RemoteException, IOException;
 
+  @Override
   public boolean updatePassword(String username, String oldPassword, String newPassword)
     throws RemoteException, IOException;
 }

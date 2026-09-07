@@ -7,6 +7,7 @@ public class ManagementUtils
 {
     public final static Comparator PARAM_INFO_COMPARATOR = new Comparator()
     {
+        @Override
         public int compare(Object a, Object b)
         {
             MBeanParameterInfo aa = (MBeanParameterInfo) a;
@@ -35,6 +36,7 @@ public class ManagementUtils
     
     public final static Comparator OP_INFO_COMPARATOR = new Comparator()
     {
+        @Override
         public int compare(Object a, Object b)
         {
             MBeanOperationInfo aa = (MBeanOperationInfo) a;

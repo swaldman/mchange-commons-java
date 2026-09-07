@@ -15,6 +15,7 @@ public class JoinedIterator implements Iterator
 	this.permit_removes = permit_removes;
     }
 
+    @Override
     public boolean hasNext()
     {
 	if (cur == its.length)
@@ -28,6 +29,7 @@ public class JoinedIterator implements Iterator
 	    }
     }
 
+    @Override
     public Object next()
     {
 	if (! this.hasNext())
@@ -37,6 +39,7 @@ public class JoinedIterator implements Iterator
 	return removeIterator.next();
     }
 
+    @Override
     public void remove()
     {
 	if (permit_removes)

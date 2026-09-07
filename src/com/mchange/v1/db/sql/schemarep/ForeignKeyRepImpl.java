@@ -18,15 +18,19 @@ public class ForeignKeyRepImpl implements ForeignKeyRep
 	this.refColNames = Collections.unmodifiableList( new ArrayList( refColNames ) );
     }
 
+    @Override
     public List getLocalColumnNames()
     { return locColNames; }
 
+    @Override
     public String getReferencedTableName()
     { return refTableName; }
 
+    @Override
     public List getReferencedColumnNames()
     { return refColNames; }
 
+    @Override
     public boolean equals( Object o )
     {
 	if (o == null || this.getClass() != o.getClass())
@@ -39,6 +43,7 @@ public class ForeignKeyRepImpl implements ForeignKeyRep
 	    ListUtils.equivalent( this.refColNames, other.refColNames );
     }
 
+    @Override
     public int hashCode()
     {
 	return 

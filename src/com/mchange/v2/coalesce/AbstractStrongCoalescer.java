@@ -9,6 +9,7 @@ class AbstractStrongCoalescer implements Coalescer
     AbstractStrongCoalescer( Map coalesced )
     { this.coalesced = coalesced; }
 
+    @Override
     public Object coalesce( Object o )
     {
 	Object out = coalesced.get( o );
@@ -20,9 +21,11 @@ class AbstractStrongCoalescer implements Coalescer
 	return out;
     }
 
+    @Override
     public int countCoalesced()
     { return coalesced.size(); }
 
+    @Override
     public Iterator iterator()
     { return new CoalescerIterator( coalesced.keySet().iterator() ); }
 }

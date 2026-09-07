@@ -13,6 +13,7 @@ public class TypeRepIdenticator implements Identicator
     private TypeRepIdenticator()
     {}
 
+    @Override
     public boolean identical(Object a, Object b)
     {
 	if (a == b)
@@ -26,6 +27,7 @@ public class TypeRepIdenticator implements Identicator
 	    Arrays.equals( aa.getTypeSize(), bb.getTypeSize() );
     }
 
+    @Override
     public int hash(Object o)
     {
 	TypeRep tr = (TypeRep) o;

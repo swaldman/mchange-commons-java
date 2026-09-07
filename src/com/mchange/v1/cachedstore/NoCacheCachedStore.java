@@ -11,6 +11,7 @@ class NoCacheCachedStore implements TweakableCachedStore
     NoCacheCachedStore(CachedStore.Manager mgr)
     { this.mgr = mgr; }
 
+    @Override
     public Object find(Object key) throws CachedStoreException
     { 
 	try {return mgr.recreateFromKey( key ); }
@@ -21,18 +22,23 @@ class NoCacheCachedStore implements TweakableCachedStore
 	    }
     }
 
+    @Override
     public void reset()
     {}
 
+    @Override
     public Object getCachedValue(Object key) 
     { return null; }
 
+    @Override
     public void removeFromCache(Object key) 
     {}
 
+    @Override
     public void setCachedValue(Object key, Object value) 
     {}
 
+    @Override
     public Iterator cachedKeys() 
     { return IteratorUtils.EMPTY_ITERATOR; }
 }

@@ -20,12 +20,15 @@ public class RMIRegistryCallingCard implements CallingCard, Serializable
   public RMIRegistryCallingCard(String regHost, String name)
     {this(regHost, Registry.REGISTRY_PORT, name);}
 
+  @Override
   public boolean equals(Object o)
     {return (o instanceof RMIRegistryCallingCard) && this.url.equals(((RMIRegistryCallingCard) o).url);}
 
+  @Override
   public int hashCode()
     {return url.hashCode();}
 
+  @Override
   public Remote findRemote() throws ServiceUnavailableException, RemoteException
     {
       if (cached instanceof Checkable)
@@ -57,6 +60,7 @@ public class RMIRegistryCallingCard implements CallingCard, Serializable
 	}
     }
 
+  @Override
   public String toString()
     {return super.toString() + " [" + url + "];";}
 

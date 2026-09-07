@@ -14,6 +14,7 @@ public final class ForwardingLogger extends Logger
 	this.forwardTo = forwardTo;
     }
 
+    @Override
     public void log(LogRecord lr)
     {
 	Level  lvl = lr.getLevel();

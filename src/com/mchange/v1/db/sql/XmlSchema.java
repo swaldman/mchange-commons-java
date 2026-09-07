@@ -77,6 +77,7 @@ public class XmlSchema implements Schema
 	    }
     }
 
+    @Override
     public String getStatementText(String appName, String stmtName)
     {
 	SqlApp app = (SqlApp) appMap.get(appName);
@@ -86,9 +87,11 @@ public class XmlSchema implements Schema
 	return out;
     }
 
+    @Override
     public void createSchema(Connection con) throws SQLException
     {doStatementList(createStmts, con);}
 
+    @Override
     public void dropSchema(Connection con) throws SQLException
     {doStatementList(dropStmts, con);}
 
@@ -114,6 +117,7 @@ public class XmlSchema implements Schema
 	SqlApp       currentApp      = null; //non-null iff we are in an application
 	String       currentStmtName = null; //non-null iff we are in a named (application) stmt
 
+	@Override
 	public void startElement(String uri, String localName, String name, Attributes attributes)
 	{
 	    if (name.equals("create"))
@@ -159,6 +163,7 @@ public class XmlSchema implements Schema
 		}
 	}
 
+	@Override
 	public void characters(char[] ch, int start, int length)
 	    throws SAXException
 	{
@@ -169,6 +174,7 @@ public class XmlSchema implements Schema
 		}
 	}
 
+	@Override
 	public void endElement(String uri, String localName, String name)
 	{
 	    if (name.equals("statement"))
@@ -192,6 +198,7 @@ public class XmlSchema implements Schema
 
 	//from IBM examples,.,.
 	/** Warning. */
+	@Override
 	public void warning(SAXParseException ex) {
 	    System.err.println("[Warning] "+
 			       //getLocationString(ex)+": "+
@@ -199,6 +206,7 @@ public class XmlSchema implements Schema
 	}
 		
 	/** Error. */
+	@Override
 	public void error(SAXParseException ex) {
 	    System.err.println("[Error] "+
 			       //getLocationString(ex)+": "+
@@ -206,6 +214,7 @@ public class XmlSchema implements Schema
 	}
 		
 	/** Fatal error. */
+	@Override
 	public void fatalError(SAXParseException ex) throws SAXException {
 	    System.err.println("[Fatal Error] "+
 			       //getLocationString(ex)+": "+

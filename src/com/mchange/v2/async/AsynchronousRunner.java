@@ -29,5 +29,6 @@ public interface AsynchronousRunner extends ClosableResource
      * and any tasks executing when close() is called may
      * or may not be interrupted. Equivalent to close( true ).
      */
+    @Override
     public void close();
 }

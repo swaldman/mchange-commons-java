@@ -22,13 +22,16 @@ public class ConnectionBundlePoolBean implements ConnectionBundlePool
 	this.inner = new InnerPool(jdbcUrl, username, pwd, start, max, inc);
     }
 
+    @Override
     public ConnectionBundle checkoutBundle() 
 	throws SQLException, InterruptedException, BrokenObjectException
     { return inner.checkoutBundle(); }
 	
+    @Override
     public void checkinBundle(ConnectionBundle bndl) throws SQLException, BrokenObjectException
     { inner.checkinBundle(bndl); }
 	
+    @Override
     public void close() throws SQLException
     { inner.close(); }
 
@@ -49,6 +52,7 @@ public class ConnectionBundlePoolBean implements ConnectionBundlePool
 	    this.init(jdbcUrl, username, pwd);
 	}
 	
+	@Override
 	protected void setConnectionOptions(Connection con) throws SQLException
 	    { ConnectionBundlePoolBean.this.setConnectionOptions( con ); }
     }

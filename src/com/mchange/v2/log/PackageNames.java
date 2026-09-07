@@ -2,9 +2,11 @@ package com.mchange.v2.log;
 
 public class PackageNames implements NameTransformer
 {
+    @Override
     public String transformName( String name )
     { return null; }
 
+    @Override
     public String transformName( Class cl )
     {
 	String fqcn = cl.getName();
@@ -15,6 +17,7 @@ public class PackageNames implements NameTransformer
 	    return fqcn.substring(0,i);
     }
 
+    @Override
     public String transformName()
     { return null; }
 }

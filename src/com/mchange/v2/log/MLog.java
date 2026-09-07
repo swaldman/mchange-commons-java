@@ -149,6 +149,7 @@ public abstract class MLog
 		    loggerDesc = _mlog.getClass().getName();
 		}
 
+		@Override
 		public void run()
 		{
 		    if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))

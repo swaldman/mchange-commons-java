@@ -401,6 +401,7 @@ public final class CfgScenario implements Closeable
      *  defines a few dozen small classes; across a whole suite run that is negligible,
      *  and it is the price of per-scenario static isolation.
      */
+    @Override
     public void close() throws IOException
     {}
 

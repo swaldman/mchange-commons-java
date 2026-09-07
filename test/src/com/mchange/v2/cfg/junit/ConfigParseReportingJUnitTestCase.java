@@ -36,9 +36,11 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
 
     private Path dir;
 
+    @Override
     protected void setUp() throws Exception
     { dir = Files.createTempDirectory( "mchange-cfg-reporting-" ).toRealPath(); }
 
+    @Override
     protected void tearDown() throws Exception
     { try { Files.deleteIfExists( dir ); } catch ( IOException e ) { /* best effort */ } }
 
