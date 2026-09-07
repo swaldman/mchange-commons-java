@@ -1,4 +1,6 @@
 //| mill-version: 1.1.8
+//| mvnDeps:
+//| - com.mchange::mchange-java-build-checkers-millplugin::0.0.1-SNAPSHOT
 
 package build
 
@@ -12,6 +14,11 @@ package build
 //   ./mill publishSonatypeCentral
 //   ./mill updateSite
 //
+// Modules mix in StringentJavaModule, so compiling also checks that every method
+// which overrides something says so. ./mill <module>.overrideAnnotate writes copies
+// of the offenders with @Override inserted, for a maintainer to review and copy
+// across; it never edits the source tree.
+//
 // Layout is mill's default: src/ and resources/ for the library, test/src/ and
 // test/resources/ for its tests.
 //
@@ -21,7 +28,9 @@ import mill.javalib.*
 import mill.javalib.publish.*
 import mill.util.Jvm
 
-object `package` extends JavaModule, SonatypeCentralPublishModule {
+import com.mchange.jbcs.millplugin.StringentJavaModule
+
+object `package` extends StringentJavaModule, SonatypeCentralPublishModule {
 
   val orgName     = "com.mchange"
   val projectName = "mchange-commons-java"
@@ -142,7 +151,7 @@ object `package` extends JavaModule, SonatypeCentralPublishModule {
   // MILL_PGP_PASSPHRASE.
   //
 
-  object test extends JavaTests, TestModule.Junit4 {
+  object test extends JavaTests, StringentJavaModule, TestModule.Junit4 {
 
     // Only the library itself needs to be Java 7 compatible. Without this,
     // the tests would inherit the module's -source/-target 1.7.
