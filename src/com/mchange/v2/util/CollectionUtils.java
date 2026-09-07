@@ -11,47 +11,53 @@ import java.lang.reflect.*;
  */
 public final class CollectionUtils
 {
-    public final static SortedSet EMPTY_SORTED_SET = Collections.unmodifiableSortedSet( new TreeSet() );
+    /**
+     *  Left raw deliberately, as java.util.Collections leaves EMPTY_LIST and EMPTY_SET raw:
+     *  a raw empty constant can be assigned to a SortedSet of any element type, where a
+     *  SortedSet<?> could not be assigned to anything. The initializer is parameterized so
+     *  that the rawness costs no unchecked operation.
+     */
+    public final static SortedSet EMPTY_SORTED_SET = Collections.unmodifiableSortedSet( new TreeSet<Object>() );
 
-    final static Class[]  EMPTY_ARG_CLASSES = { };
+    final static Class<?>[]  EMPTY_ARG_CLASSES = { };
     final static Object[] EMPTY_ARGS        = { };
 
-    final static Class[] COMPARATOR_ARG_CLASSES = { Comparator.class };
-    final static Class[] COLLECTION_ARG_CLASSES = { Collection.class };
-    final static Class[] SORTED_SET_ARG_CLASSES = { SortedSet.class };
-    final static Class[] MAP_ARG_CLASSES        = { Map.class };
-    final static Class[] SORTED_MAP_ARG_CLASSES = { SortedMap.class };
+    final static Class<?>[] COMPARATOR_ARG_CLASSES = { Comparator.class };
+    final static Class<?>[] COLLECTION_ARG_CLASSES = { Collection.class };
+    final static Class<?>[] SORTED_SET_ARG_CLASSES = { SortedSet.class };
+    final static Class<?>[] MAP_ARG_CLASSES        = { Map.class };
+    final static Class<?>[] SORTED_MAP_ARG_CLASSES = { SortedMap.class };
 
-    final static Class STD_UNMODIFIABLE_COLLECTION_CL;
-    final static Class STD_UNMODIFIABLE_SET_CL;
-    final static Class STD_UNMODIFIABLE_LIST_CL;
-    final static Class STD_UNMODIFIABLE_RA_LIST_CL;
-    final static Class STD_UNMODIFIABLE_SORTED_SET_CL;
-    final static Class STD_UNMODIFIABLE_MAP_CL;
-    final static Class STD_UNMODIFIABLE_SORTED_MAP_CL;
-    final static Class STD_SYNCHRONIZED_COLLECTION_CL;
-    final static Class STD_SYNCHRONIZED_SET_CL;
-    final static Class STD_SYNCHRONIZED_LIST_CL;
-    final static Class STD_SYNCHRONIZED_RA_LIST_CL;
-    final static Class STD_SYNCHRONIZED_SORTED_SET_CL;
-    final static Class STD_SYNCHRONIZED_MAP_CL;
-    final static Class STD_SYNCHRONIZED_SORTED_MAP_CL;
+    final static Class<?> STD_UNMODIFIABLE_COLLECTION_CL;
+    final static Class<?> STD_UNMODIFIABLE_SET_CL;
+    final static Class<?> STD_UNMODIFIABLE_LIST_CL;
+    final static Class<?> STD_UNMODIFIABLE_RA_LIST_CL;
+    final static Class<?> STD_UNMODIFIABLE_SORTED_SET_CL;
+    final static Class<?> STD_UNMODIFIABLE_MAP_CL;
+    final static Class<?> STD_UNMODIFIABLE_SORTED_MAP_CL;
+    final static Class<?> STD_SYNCHRONIZED_COLLECTION_CL;
+    final static Class<?> STD_SYNCHRONIZED_SET_CL;
+    final static Class<?> STD_SYNCHRONIZED_LIST_CL;
+    final static Class<?> STD_SYNCHRONIZED_RA_LIST_CL;
+    final static Class<?> STD_SYNCHRONIZED_SORTED_SET_CL;
+    final static Class<?> STD_SYNCHRONIZED_MAP_CL;
+    final static Class<?> STD_SYNCHRONIZED_SORTED_MAP_CL;
 
-    final static Set UNMODIFIABLE_WRAPPERS;
-    final static Set SYNCHRONIZED_WRAPPERS;
-    final static Set ALL_COLLECTIONS_WRAPPERS;
+    final static Set<Class<?>> UNMODIFIABLE_WRAPPERS;
+    final static Set<Class<?>> SYNCHRONIZED_WRAPPERS;
+    final static Set<Class<?>> ALL_COLLECTIONS_WRAPPERS;
 
     static
     {
-	HashSet hs = new HashSet();
-	TreeSet ts = new TreeSet();
-	LinkedList ll = new LinkedList();
-	ArrayList al = new ArrayList();
-	HashMap hm = new HashMap();
-	TreeMap tm = new TreeMap();
+	HashSet<Object> hs = new HashSet<Object>();
+	TreeSet<Object> ts = new TreeSet<Object>();
+	LinkedList<Object> ll = new LinkedList<Object>();
+	ArrayList<Object> al = new ArrayList<Object>();
+	HashMap<Object,Object> hm = new HashMap<Object,Object>();
+	TreeMap<Object,Object> tm = new TreeMap<Object,Object>();
 
-	HashSet tmp0 = new HashSet();
-	HashSet tmp1 = new HashSet();
+	HashSet<Class<?>> tmp0 = new HashSet<Class<?>>();
+	HashSet<Class<?>> tmp1 = new HashSet<Class<?>>();
 
 	tmp0.add( STD_UNMODIFIABLE_COLLECTION_CL = Collections.unmodifiableCollection( al ).getClass() );
 	tmp0.add( STD_UNMODIFIABLE_SET_CL = Collections.unmodifiableSet( hs ).getClass() );
@@ -73,50 +79,50 @@ public final class CollectionUtils
 
 	SYNCHRONIZED_WRAPPERS = Collections.unmodifiableSet( tmp1 );
 
-	HashSet tmp2 = new HashSet( tmp0 );
+	HashSet<Class<?>> tmp2 = new HashSet<Class<?>>( tmp0 );
 	tmp2.addAll( tmp1 );
 	ALL_COLLECTIONS_WRAPPERS = Collections.unmodifiableSet( tmp2 );
     }
 
-    public static boolean isCollectionsWrapper( Class cl )
+    public static boolean isCollectionsWrapper( Class<?> cl )
     { return ALL_COLLECTIONS_WRAPPERS.contains( cl ); }
 
-    public static boolean isCollectionsWrapper( Collection c )
+    public static boolean isCollectionsWrapper( Collection<?> c )
     { return isCollectionsWrapper( c.getClass() ); }
 
-    public static boolean isCollectionsWrapper( Map m )
+    public static boolean isCollectionsWrapper( Map<?,?> m )
     { return isCollectionsWrapper( m.getClass() ); }
 
-    public static boolean isSynchronizedWrapper( Class cl )
+    public static boolean isSynchronizedWrapper( Class<?> cl )
     { return SYNCHRONIZED_WRAPPERS.contains( cl ); }
 
-    public static boolean isSynchronizedWrapper( Collection c )
+    public static boolean isSynchronizedWrapper( Collection<?> c )
     { return isSynchronizedWrapper( c.getClass() ); }
 
-    public static boolean isSynchronizedWrapper( Map m )
+    public static boolean isSynchronizedWrapper( Map<?,?> m )
     { return isSynchronizedWrapper( m.getClass() ); }
 
-    public static boolean isUnmodifiableWrapper( Class cl )
+    public static boolean isUnmodifiableWrapper( Class<?> cl )
     { return UNMODIFIABLE_WRAPPERS.contains( cl ); }
 
-    public static boolean isUnmodifiableWrapper( Collection c )
+    public static boolean isUnmodifiableWrapper( Collection<?> c )
     { return isUnmodifiableWrapper( c.getClass() ); }
 
-    public static boolean isUnmodifiableWrapper( Map m )
+    public static boolean isUnmodifiableWrapper( Map<?,?> m )
     { return isUnmodifiableWrapper( m.getClass() ); }
 
     /*
      * should we worry about the case where an Object (bizarrely)
      * implements both Set and List? don't think so...
      */
-    public static Collection narrowUnmodifiableCollection( Collection c )
+    public static <T> Collection<T> narrowUnmodifiableCollection( Collection<T> c )
     {
 	if (c instanceof SortedSet)
-	    return Collections.unmodifiableSortedSet( (SortedSet) c );
+	    return Collections.unmodifiableSortedSet( (SortedSet<T>) c );
 	else if (c instanceof Set)
-	    return Collections.unmodifiableSet( (Set) c );
+	    return Collections.unmodifiableSet( (Set<T>) c );
 	else if (c instanceof List)
-	    return Collections.unmodifiableList( (List) c );
+	    return Collections.unmodifiableList( (List<T>) c );
 	else
 	    return Collections.unmodifiableCollection( c );
     }
@@ -125,30 +131,30 @@ public final class CollectionUtils
      * should we worry about the case where an Object (bizarrely)
      * implements both Set and List? don't think so...
      */
-    public static Collection narrowSynchronizedCollection( Collection c )
+    public static <T> Collection<T> narrowSynchronizedCollection( Collection<T> c )
     {
 	if (c instanceof SortedSet)
-	    return Collections.synchronizedSortedSet( (SortedSet) c );
+	    return Collections.synchronizedSortedSet( (SortedSet<T>) c );
 	else if (c instanceof Set)
-	    return Collections.synchronizedSet( (Set) c );
+	    return Collections.synchronizedSet( (Set<T>) c );
 	else if (c instanceof List)
-	    return Collections.synchronizedList( (List) c );
+	    return Collections.synchronizedList( (List<T>) c );
 	else
 	    return Collections.synchronizedCollection( c );
     }
 
-    public static Map narrowUnmodifiableMap( Map m )
+    public static <K,V> Map<K,V> narrowUnmodifiableMap( Map<K,V> m )
     {
 	if (m instanceof SortedMap)
-	    return Collections.unmodifiableSortedMap( (SortedMap) m );
+	    return Collections.unmodifiableSortedMap( (SortedMap<K,V>) m );
 	else
 	    return Collections.unmodifiableMap( m );
     }
 
-    public static Map narrowSynchronizedMap( Map m )
+    public static <K,V> Map<K,V> narrowSynchronizedMap( Map<K,V> m )
     {
 	if (m instanceof SortedMap)
-	    return Collections.synchronizedSortedMap( (SortedMap) m );
+	    return Collections.synchronizedSortedMap( (SortedMap<K,V>) m );
 	else
 	    return Collections.synchronizedMap( m );
     }
@@ -156,22 +162,29 @@ public final class CollectionUtils
     /**
      *  Attempts to find a public clone() method or a copy constructor, in that
      *  order, and calls what it finds. If neither is available, throws a NoSuchMethodException.
+     *
+     *  Unchecked is suppressed rather than avoided here. Every route to the copy --
+     *  Object clone(), Method.invoke(...), Constructor.newInstance(...) -- is typed to
+     *  return Object, so the element type cannot be checked at the point of the cast,
+     *  only preserved. A copy of a Collection has the element type of the original, which is what the
+     *  signature says; the compiler simply cannot see it through reflection.
      */
-    public static Collection attemptClone( Collection c ) throws NoSuchMethodException
+    @SuppressWarnings("unchecked")
+    public static <T> Collection<T> attemptClone( Collection<T> c ) throws NoSuchMethodException
     {
-	if (c instanceof Vector) return (Collection) ((Vector) c).clone();
-	else if (c instanceof ArrayList) return (Collection) ((ArrayList) c).clone();
-	else if (c instanceof LinkedList) return (Collection) ((LinkedList) c).clone();
-	else if (c instanceof HashSet) return (Collection) ((HashSet) c).clone();
-	else if (c instanceof TreeSet) return (Collection) ((TreeSet) c).clone();
+	if (c instanceof Vector) return (Collection<T>) ((Vector<T>) c).clone();
+	else if (c instanceof ArrayList) return (Collection<T>) ((ArrayList<T>) c).clone();
+	else if (c instanceof LinkedList) return (Collection<T>) ((LinkedList<T>) c).clone();
+	else if (c instanceof HashSet) return (Collection<T>) ((HashSet<T>) c).clone();
+	else if (c instanceof TreeSet) return (Collection<T>) ((TreeSet<T>) c).clone();
 	else
 	    {
-		Collection out = null;
-		Class colClass = c.getClass();
+		Collection<T> out = null;
+		Class<?> colClass = c.getClass();
 		try
 		    {
 			Method m = colClass.getMethod("clone", EMPTY_ARG_CLASSES);
-			out = (Collection) m.invoke( c, EMPTY_ARGS );
+			out = (Collection<T>) m.invoke( c, EMPTY_ARGS );
 		    }
 		catch ( Exception e )
 		    { 
@@ -184,8 +197,8 @@ public final class CollectionUtils
 		    {
 			try
 			    {
-				Constructor ctor = colClass.getConstructor( (c instanceof SortedSet) ? SORTED_SET_ARG_CLASSES : COLLECTION_ARG_CLASSES );
-				out = (Collection) ctor.newInstance( new Object[] { c } );
+				Constructor<?> ctor = colClass.getConstructor( (c instanceof SortedSet) ? SORTED_SET_ARG_CLASSES : COLLECTION_ARG_CLASSES );
+				out = (Collection<T>) ctor.newInstance( new Object[] { c } );
 			    }
 			catch ( Exception e )
 			    {
@@ -199,8 +212,8 @@ public final class CollectionUtils
 		    {
 			try
 			    {
-				Constructor ctor = colClass.getConstructor( new Class[] { colClass } );
-				out = (Collection) ctor.newInstance( new Object[] { c } );
+				Constructor<?> ctor = colClass.getConstructor( new Class<?>[] { colClass } );
+				out = (Collection<T>) ctor.newInstance( new Object[] { c } );
 			    }
 			catch ( Exception e )
 			    { 
@@ -220,21 +233,28 @@ public final class CollectionUtils
     /**
      *  Attempts to find a public clone() method or a copy constructor, in that
      *  order, and calls what it finds. If neither is available, throws a NoSuchMethodException.
+     *
+     *  Unchecked is suppressed rather than avoided here. Every route to the copy --
+     *  Object clone(), Method.invoke(...), Constructor.newInstance(...) -- is typed to
+     *  return Object, so the element type cannot be checked at the point of the cast,
+     *  only preserved. A copy of a Map has the key and value types of the original, which is what the
+     *  signature says; the compiler simply cannot see it through reflection.
      */
-    public static Map attemptClone( Map m ) throws NoSuchMethodException
+    @SuppressWarnings("unchecked")
+    public static <K,V> Map<K,V> attemptClone( Map<K,V> m ) throws NoSuchMethodException
     {
-	if (m instanceof Properties) return (Map) ((Properties) m).clone();
-	else if (m instanceof Hashtable) return (Map) ((Hashtable) m).clone();
-	else if (m instanceof HashMap) return (Map) ((HashMap) m).clone();
-	else if (m instanceof TreeMap) return (Map) ((TreeMap) m).clone();
+	if (m instanceof Properties) return (Map<K,V>) ((Properties) m).clone();
+	else if (m instanceof Hashtable) return (Map<K,V>) ((Hashtable<K,V>) m).clone();
+	else if (m instanceof HashMap) return (Map<K,V>) ((HashMap<K,V>) m).clone();
+	else if (m instanceof TreeMap) return (Map<K,V>) ((TreeMap<K,V>) m).clone();
 	else
 	    {
-		Map out = null;
-		Class mapClass = m.getClass();
+		Map<K,V> out = null;
+		Class<?> mapClass = m.getClass();
 		try
 		    {
 			Method meth = mapClass.getMethod("clone", EMPTY_ARG_CLASSES);
-			out = (Map) meth.invoke( m, EMPTY_ARGS );
+			out = (Map<K,V>) meth.invoke( m, EMPTY_ARGS );
 		    }
 		catch ( Exception e )
 		    { 
@@ -247,8 +267,8 @@ public final class CollectionUtils
 		    {
 			try
 			    {
-				Constructor ctor = mapClass.getConstructor( (m instanceof SortedMap) ? SORTED_MAP_ARG_CLASSES : MAP_ARG_CLASSES );
-				out = (Map) ctor.newInstance( new Object[] { m } );
+				Constructor<?> ctor = mapClass.getConstructor( (m instanceof SortedMap) ? SORTED_MAP_ARG_CLASSES : MAP_ARG_CLASSES );
+				out = (Map<K,V>) ctor.newInstance( new Object[] { m } );
 			    }
 			catch ( Exception e )
 			    { 
@@ -262,8 +282,8 @@ public final class CollectionUtils
 		    {
 			try
 			    {
-				Constructor ctor = mapClass.getConstructor( new Class[] { mapClass } );
-				out = (Map) ctor.newInstance( new Object[] { m } );
+				Constructor<?> ctor = mapClass.getConstructor( new Class<?>[] { mapClass } );
+				out = (Map<K,V>) ctor.newInstance( new Object[] { m } );
 			    }
 			catch ( Exception e )
 			    { 
@@ -286,18 +306,18 @@ public final class CollectionUtils
      * Language functions, which must be mapped to public 
      * static functions.
      */ 
-    public static void add(Collection c, Object o)
+    public static <T> void add(Collection<? super T> c, T o)
     { c.add( o ); }
 
-    public static void remove(Collection c, Object o)
+    public static void remove(Collection<?> c, Object o)
     { c.remove( o ); }
 
     public static int size( Object o )
     {
 	if (o instanceof Collection)
-	    return ((Collection) o).size();
+	    return ((Collection<?>) o).size();
 	else if (o instanceof Map)
-	    return ((Map) o).size();
+	    return ((Map<?,?>) o).size();
 	else if (o instanceof Object[])
 	    return ((Object[]) o).length;
 	else if (o instanceof boolean[])
