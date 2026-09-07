@@ -2,6 +2,7 @@ package com.mchange.v2.cfg;
 
 import java.util.*;
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -49,8 +50,11 @@ final class ConfigUtils
         }
         catch (Exception e)
         {
+            // reflective construction wraps whatever the constructor threw; report the cause
+            Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+
             if (delayedLogItems != null)
-                delayedLogItems.add( new DelayedLogItem( Level.WARNING, "PropertiesConfigSource for " + fqcn + " could not be constructed.", e ) );
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING, "PropertiesConfigSource for " + fqcn + " could not be constructed.", t ) );
             return null;
         }
     }

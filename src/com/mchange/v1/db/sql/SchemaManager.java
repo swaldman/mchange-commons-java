@@ -1,6 +1,7 @@
 package com.mchange.v1.db.sql;
 
 import java.sql.*;
+import java.lang.reflect.InvocationTargetException;
 
 import com.mchange.v2.cmdline.BadCommandLineException;
 import com.mchange.v2.cmdline.CommandLineUtils;
@@ -53,7 +54,11 @@ public class SchemaManager
 		    }
 	    }
 	catch (Exception e)
-	    {e.printStackTrace();}
+	    {
+		// reflective construction wraps whatever the constructor threw; report the cause
+		Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+		t.printStackTrace();
+	    }
 	finally
 	    {
 		try

@@ -1,6 +1,7 @@
 package com.mchange.v3.decode;
 
 import java.util.*;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.*;
 import com.mchange.v2.log.*;
 
@@ -29,8 +30,11 @@ public final class DecodeUtils
 		try { tmp.add( (DecoderFinder) Class.forName( finderClassNames[i] ).getDeclaredConstructor().newInstance() ); }
 		catch( Exception e )
 		    {
+			// reflective construction wraps whatever the constructor threw; report the cause
+			Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+
 			if ( logger.isLoggable( MLevel.INFO ) )
-			    logger.log( MLevel.INFO, "Could not load DecoderFinder '" + finderClassNames[i] + "'", e );
+			    logger.log( MLevel.INFO, "Could not load DecoderFinder '" + finderClassNames[i] + "'", t );
 		    }
 	    }
 	finders = Collections.unmodifiableList( tmp );
@@ -77,7 +81,11 @@ public final class DecodeUtils
 		return decoder.decode( encoded );
 	    }
 	catch ( Exception e )
-	    { throw new CannotDecodeException("An exception occurred while attempting to decode " + encoded, e); }
+	    {
+		// reflective construction wraps whatever the constructor threw; report the cause
+		Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+		throw new CannotDecodeException("An exception occurred while attempting to decode " + encoded, t);
+	    }
     }
 
     public static Object decode( Object encoded ) throws CannotDecodeException

@@ -1,6 +1,7 @@
 package com.mchange.v1.xmlprops;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.*;
 import java.util.*;
 import org.xml.sax.*;
@@ -28,8 +29,13 @@ public class SaxXmlPropsParser
 	    { throw e; }
 	catch (Exception e)
 	     {
-		 e.printStackTrace();
-		 throw new XmlPropsException("Exception while instantiating XMLReader.", e);
+		 // reflective construction wraps whatever the constructor threw; report the cause
+		 Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+
+		 if ( t instanceof XmlPropsException ) throw (XmlPropsException) t;
+
+		 t.printStackTrace();
+		 throw new XmlPropsException("Exception while instantiating XMLReader.", t);
 	     }
     } 
 

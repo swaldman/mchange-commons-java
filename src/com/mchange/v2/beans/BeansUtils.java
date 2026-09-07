@@ -1,6 +1,7 @@
 package com.mchange.v2.beans;
 
 import java.beans.*;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.*;
 import java.util.*;
 import com.mchange.v2.log.*;
@@ -25,11 +26,11 @@ public final class BeansUtils
         }
         catch (Exception e)
         {
-//          e.printStackTrace();
-//          System.err.println("WARNING: Bad property editor class " + editorClass.getName() + 
-//          " registered for property " + pd.getName());
+            // reflective construction wraps whatever the constructor threw; report the cause
+            Throwable t = ( e instanceof InvocationTargetException ? e.getCause() : e );
+
             if (logger.isLoggable( MLevel.WARNING ) )
-                logger.log(MLevel.WARNING, "Bad property editor class " + editorClass.getName() + " registered for property " + pd.getName(), e);
+                logger.log(MLevel.WARNING, "Bad property editor class " + editorClass.getName() + " registered for property " + pd.getName(), t);
         }
 
         if ( out == null )
