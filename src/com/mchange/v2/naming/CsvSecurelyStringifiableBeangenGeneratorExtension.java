@@ -25,18 +25,18 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
     { propNameToDecodeOverrideFunction.put(propName, function); }
 
     @Override
-    public Collection extraGeneralImports()
+    public Collection<String> extraGeneralImports()
     { 
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
         set.add("java.io");
         set.add("java.util");
 	return set;
     }
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
         set.add( "com.mchange.v2.lang.Coerce" );
         set.add( "com.mchange.v2.csv.FastCsvUtils" );
         set.add( "com.mchange.v2.csv.CsvBufferedReader" );
@@ -46,14 +46,14 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
     }
 
     @Override
-    public Collection extraInterfaceNames()
+    public Collection<String> extraInterfaceNames()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	return set;
     }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
         iw.println("public static String securelyStringify( " + info.getClassName() + " bean ) throws Exception");
@@ -64,7 +64,7 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
         {
             Property p = props[i];
             String propName = p.getName();
-            Class propType = propTypes[i];
+            Class<?> propType = propTypes[i];
             boolean refType = !propType.isPrimitive();
             if (refType)
             {
@@ -140,7 +140,7 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
         {
             Property p = props[i];
             String propName = p.getName();
-            Class propType = propTypes[i];
+            Class<?> propType = propTypes[i];
             boolean refType = !propType.isPrimitive();
 
             // decode expected properties here

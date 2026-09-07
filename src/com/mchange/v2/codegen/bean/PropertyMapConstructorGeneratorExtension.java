@@ -12,23 +12,23 @@ public class PropertyMapConstructorGeneratorExtension implements GeneratorExtens
     int ctor_modifiers = Modifier.PUBLIC;
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add("java.util.Map");
 	return set;
     }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraInterfaceNames()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	iw.print( CodegenUtils.getModifierString( ctor_modifiers ) );
@@ -41,7 +41,7 @@ public class PropertyMapConstructorGeneratorExtension implements GeneratorExtens
 	    {
 		Property prop   = props[i];
 		String propName = prop.getName();
-		Class propType  = propTypes[i];
+		Class<?> propType  = propTypes[i];
 		iw.println("raw = map.get( \"" + propName + "\" );");
 		iw.println("if (raw != null)");
 		iw.println("{");

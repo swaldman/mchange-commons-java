@@ -7,28 +7,28 @@ import com.mchange.v2.io.IndentedWriter;
 
 public class PropsToStringGeneratorExtension implements GeneratorExtension 
 {
-    private Collection excludePropNames = null;
+    private Collection<String> excludePropNames = null;
 
-    public void setExcludePropertyNames( Collection excludePropNames )
+    public void setExcludePropertyNames( Collection<String> excludePropNames )
     { this.excludePropNames = excludePropNames; }
 
-    public Collection getExcludePropertyNames()
+    public Collection<String> getExcludePropertyNames()
     { return excludePropNames; }
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraSpecificImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraInterfaceNames()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	iw.println("public String toString()");

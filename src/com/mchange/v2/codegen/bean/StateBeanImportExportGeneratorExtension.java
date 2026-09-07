@@ -11,20 +11,20 @@ public class StateBeanImportExportGeneratorExtension implements GeneratorExtensi
     int ctor_modifiers = Modifier.PUBLIC;
 
     @Override
-    public Collection extraGeneralImports()
-    { return Arrays.asList( new String[] {"com.mchange.v2.bean"} ); }
+    public Collection<String> extraGeneralImports()
+    { return Arrays.<String>asList( new String[] {"com.mchange.v2.bean"} ); }
 
     @Override
-    public Collection extraSpecificImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraSpecificImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Arrays.asList( new String[] {"StateBeanExporter"} ); }
+    public Collection<String> extraInterfaceNames()
+    { return Arrays.<String>asList( new String[] {"StateBeanExporter"} ); }
 
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	String cn = info.getClassName();

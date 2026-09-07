@@ -12,8 +12,8 @@ import com.mchange.v2.io.IndentedWriter;
  */
 public class SerializableExtension implements GeneratorExtension
 {
-    Set transientProperties;
-    Map transientPropertyInitializers;
+    Set<String> transientProperties;
+    Map<String,String> transientPropertyInitializers;
 
     /**
      *  @param transientProperties a set of Strings, the names of all properties that should be considered transient and not serialized
@@ -21,24 +21,24 @@ public class SerializableExtension implements GeneratorExtension
      *                                       expressions, which should be unterminated expressions, and which will be used verbatim in 
      *                                       the generated code.
      */
-    public SerializableExtension(Set transientProperties, Map transientPropertyInitializers)
+    public SerializableExtension(Set<String> transientProperties, Map<String,String> transientPropertyInitializers)
     { 
 	this.transientProperties = transientProperties; 
 	this.transientPropertyInitializers = transientPropertyInitializers;
     }
 
     public SerializableExtension()
-    { this ( Collections.EMPTY_SET, null ); }
+    { this ( Collections.<String>emptySet(), null ); }
 
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add( "java.io.IOException" );
 	set.add( "java.io.Serializable" );
 	set.add( "java.io.ObjectOutputStream" );
@@ -47,15 +47,15 @@ public class SerializableExtension implements GeneratorExtension
     }
 
     @Override
-    public Collection extraInterfaceNames()
+    public Collection<String> extraInterfaceNames()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add( "Serializable" );
 	return set;
     }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	iw.println("private static final long serialVersionUID = 1;"); 
@@ -72,7 +72,7 @@ public class SerializableExtension implements GeneratorExtension
 		Property prop = props[i];
 		if (! transientProperties.contains( prop.getName() ) )
 		    {
-			Class propType = propTypes[i];
+			Class<?> propType = propTypes[i];
 			if (propType != null && propType.isPrimitive()) //primitives should always resolve, object types may not, and be null
 			    {
 				if (propType == byte.class)
@@ -116,7 +116,7 @@ public class SerializableExtension implements GeneratorExtension
 		Property prop = props[i];
 		if (! transientProperties.contains( prop.getName() ) )
 		    {
-			Class propType = propTypes[i];
+			Class<?> propType = propTypes[i];
 			if (propType != null && propType.isPrimitive()) //if a propType is unresolvable, it ain't a primitive
 			    {
 				if (propType == byte.class)
@@ -161,21 +161,21 @@ public class SerializableExtension implements GeneratorExtension
 	iw.println("}");
     }
 
-    protected void writeStoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeStoreObject( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {
 	iw.println("oos.writeObject( " + prop.getName() + " );");
     }
 
-    protected void writeUnstoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeUnstoreObject( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {
 	iw.println("this." + prop.getName() + " = (" + prop.getSimpleTypeName() + ") ois.readObject();");
     }
 
-    protected void generateExtraSerWriteStatements(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    protected void generateExtraSerWriteStatements(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {}
 
-    protected void generateExtraSerInitializers(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    protected void generateExtraSerInitializers(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {}
 

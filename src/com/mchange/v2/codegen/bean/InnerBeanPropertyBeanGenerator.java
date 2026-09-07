@@ -154,7 +154,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
     { /* do nothing... we have no members, only the inner bean */ }
 
     @Override
-    protected void writePropertyGetter( Property prop, Class propType ) throws IOException
+    protected void writePropertyGetter( Property prop, Class<?> propType ) throws IOException
     { 
 	String stn = prop.getSimpleTypeName();
 	String pfx = ("boolean".equals( stn )  ? "is" : "get" );
@@ -172,7 +172,7 @@ public class InnerBeanPropertyBeanGenerator extends SimplePropertyBeanGenerator
     }
 
     @Override
-    protected void writePropertySetter( Property prop, Class propType ) throws IOException
+    protected void writePropertySetter( Property prop, Class<?> propType ) throws IOException
     {
 	String stn = prop.getSimpleTypeName();
 	String pfx = ("boolean".equals( stn )  ? "is" : "get" );

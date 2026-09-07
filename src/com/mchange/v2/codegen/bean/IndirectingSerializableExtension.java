@@ -34,9 +34,9 @@ public class IndirectingSerializableExtension extends SerializableExtension
     {}
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Collection col = super.extraSpecificImports();
+	Collection<String> col = super.extraSpecificImports();
 	col.add( indirectorClassName );
 	col.add( "com.mchange.v2.ser.IndirectlySerialized" );
 	col.add( "com.mchange.v2.ser.Indirector" );
@@ -46,7 +46,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	return col;
     }
 
-    protected IndirectPolicy indirectingPolicy( Property prop, Class propType )
+    protected IndirectPolicy indirectingPolicy( Property prop, Class<?> propType )
     {
 	if (Serializable.class.isAssignableFrom( propType ))
 	    return IndirectPolicy.DEFINITELY_DIRECT;
@@ -59,15 +59,15 @@ public class IndirectingSerializableExtension extends SerializableExtension
      * The indirector will be called, uh, "indirector".
      * You are in the middle of a method when you define this.
      */
-    protected void writeInitializeIndirector( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeInitializeIndirector( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {}
 
-    protected void writeExtraDeclarations(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    protected void writeExtraDeclarations(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {}
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	super.generate( info, superclassType, props, propTypes, iw);
@@ -75,7 +75,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
     }
 
     @Override
-    protected void writeStoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeStoreObject( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {
 	IndirectPolicy policy = indirectingPolicy( prop, propType );
 	if (policy == IndirectPolicy.DEFINITELY_INDIRECT)
@@ -103,7 +103,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
 	    throw new InternalError("indirectingPolicy() overridden to return unknown policy: " + policy);
     }
 
-    protected void writeIndirectStoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeIndirectStoreObject( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {
 	iw.println("try");
 	iw.println("{");
@@ -122,7 +122,7 @@ public class IndirectingSerializableExtension extends SerializableExtension
     }
 
     @Override
-    protected void writeUnstoreObject( Property prop, Class propType, IndentedWriter iw ) throws IOException
+    protected void writeUnstoreObject( Property prop, Class<?> propType, IndentedWriter iw ) throws IOException
     {
 	IndirectPolicy policy = indirectingPolicy( prop, propType );
 	if (policy == IndirectPolicy.DEFINITELY_INDIRECT || policy == IndirectPolicy.INDIRECT_ON_EXCEPTION)

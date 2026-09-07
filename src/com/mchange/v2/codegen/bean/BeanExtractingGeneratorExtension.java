@@ -24,13 +24,13 @@ public class BeanExtractingGeneratorExtension implements GeneratorExtension
     { return method_modifiers; }
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add("java.beans.BeanInfo");
 	set.add("java.beans.PropertyDescriptor");
 	set.add("java.beans.Introspector");
@@ -40,11 +40,11 @@ public class BeanExtractingGeneratorExtension implements GeneratorExtension
     }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraInterfaceNames()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	iw.println("private static Class[] NOARGS = new Class[0];");
@@ -82,7 +82,7 @@ public class BeanExtractingGeneratorExtension implements GeneratorExtension
 	iw.println("}");
     }
 
-    private String extractorExpr( Property prop, Class propType )
+    private String extractorExpr( Property prop, Class<?> propType )
     {
 	if ( propType.isPrimitive() )
 	    {

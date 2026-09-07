@@ -10,10 +10,10 @@ import com.mchange.v2.io.IndentedWriter;
  */
 public interface GeneratorExtension
 {
-    public Collection extraGeneralImports();
-    public Collection extraSpecificImports();
-    public Collection extraInterfaceNames();
+    public Collection<String> extraGeneralImports();
+    public Collection<String> extraSpecificImports();
+    public Collection<String> extraInterfaceNames();
 
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException;
 }

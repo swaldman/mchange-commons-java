@@ -50,16 +50,16 @@ public class PropertyReferenceableExtension implements GeneratorExtension
    { return javaBeanReferenceMakerClassName; }
 
     @Override
-    public Collection extraGeneralImports()
+    public Collection<String> extraGeneralImports()
     { 
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	return set;
     }
 
     @Override
-    public Collection extraSpecificImports()
+    public Collection<String> extraSpecificImports()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add( "javax.naming.Reference" );
 	set.add( "javax.naming.Referenceable" );
 	set.add( "javax.naming.NamingException" );
@@ -70,15 +70,15 @@ public class PropertyReferenceableExtension implements GeneratorExtension
     }
 
     @Override
-    public Collection extraInterfaceNames()
+    public Collection<String> extraInterfaceNames()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add( "Referenceable" );
 	return set;
     }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	iw.println("final static JavaBeanReferenceMaker referenceMaker = new " + javaBeanReferenceMakerClassName + "();");

@@ -22,15 +22,15 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
     protected Property[]     props;
     protected IndentedWriter iw;
 
-    protected Set generalImports;
-    protected Set specificImports;
-    protected Set interfaceNames;
+    protected Set<String> generalImports;
+    protected Set<String> specificImports;
+    protected Set<String> interfaceNames;
 
-    protected Class   superclassType;
-    protected List    interfaceTypes;
-    protected Class[] propertyTypes;
+    protected Class<?>   superclassType;
+    protected List<Class<?>>    interfaceTypes;
+    protected Class<?>[] propertyTypes;
 
-    protected List generatorExtensions = new ArrayList();
+    protected List<GeneratorExtension> generatorExtensions = new ArrayList<GeneratorExtension>();
 
     public synchronized void setInner( boolean inner )
     { this.inner = inner; }
@@ -73,15 +73,15 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 	Arrays.sort( props, BeangenUtils.PROPERTY_COMPARATOR );
 	this.iw = ( w instanceof IndentedWriter ? (IndentedWriter) w : new IndentedWriter(w));
 
-	this.generalImports = new TreeSet();
+	this.generalImports = new TreeSet<String>();
 	if ( info.getGeneralImports() != null )
 	    generalImports.addAll( Arrays.asList( info.getGeneralImports() ) );
 
-	this.specificImports = new TreeSet();
+	this.specificImports = new TreeSet<String>();
 	if ( info.getSpecificImports() != null )
 	    specificImports.addAll( Arrays.asList( info.getSpecificImports() ) );
 
-	this.interfaceNames = new TreeSet();
+	this.interfaceNames = new TreeSet<String>();
 	if ( info.getInterfaceNames() != null )
 	    interfaceNames.addAll( Arrays.asList( info.getInterfaceNames() ) );
 
@@ -126,8 +126,8 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 		    }
 	    }
 
-	interfaceTypes = new ArrayList( interfaceNames.size() );
-	for ( Iterator ii = interfaceNames.iterator(); ii.hasNext(); )
+	interfaceTypes = new ArrayList<Class<?>>( interfaceNames.size() );
+	for ( Iterator<String> ii = interfaceNames.iterator(); ii.hasNext(); )
 	    {
 		String name = (String) ii.next();
 		try 
@@ -144,7 +144,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 		    }
 	    }
 
-	propertyTypes = new Class[ props.length ];
+	propertyTypes = new Class<?>[ props.length ];
 	for ( int i = 0, len = props.length; i < len; ++i )
 	    {
 		String name = props[i].getSimpleTypeName();
@@ -180,7 +180,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 		specificImports.add("java.beans.VetoableChangeListener");
 	    }
 
-	for (Iterator ii = generatorExtensions.iterator(); ii.hasNext(); )
+	for (Iterator<GeneratorExtension> ii = generatorExtensions.iterator(); ii.hasNext(); )
 	    {
 		GeneratorExtension ge = (GeneratorExtension) ii.next();
 		specificImports.addAll( ge.extraSpecificImports() );
@@ -190,7 +190,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 
     protected void addInternalInterfaces()
     {
-	for (Iterator ii = generatorExtensions.iterator(); ii.hasNext(); )
+	for (Iterator<GeneratorExtension> ii = generatorExtensions.iterator(); ii.hasNext(); )
 	    {
 		GeneratorExtension ge = (GeneratorExtension) ii.next();
 		interfaceNames.addAll( ge.extraInterfaceNames() );
@@ -230,7 +230,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 							    completed_intfc_names,
 							    completed_gen_imports,
 							    completed_spc_imports );
-	for (Iterator ii = generatorExtensions.iterator(); ii.hasNext(); )
+	for (Iterator<GeneratorExtension> ii = generatorExtensions.iterator(); ii.hasNext(); )
 	    {
 		GeneratorExtension ext = (GeneratorExtension) ii.next();
 		iw.println();
@@ -362,7 +362,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 	    }
     }
 
-    protected void writeGetterSetterPair( Property prop, Class propType ) throws IOException
+    protected void writeGetterSetterPair( Property prop, Class<?> propType ) throws IOException
     {
 	writePropertyGetter( prop, propType );
 	
@@ -373,7 +373,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 	    }
     }
 
-    protected void writePropertyGetter( Property prop, Class propType ) throws IOException
+    protected void writePropertyGetter( Property prop, Class<?> propType ) throws IOException
     { 
 	BeangenUtils.writePropertyGetter( prop, this.getGetterDefensiveCopyExpression( prop, propType ), iw );
 
@@ -389,7 +389,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 //     boolean changeMarked( Property prop )
 //     { return prop.isBound() || prop.isConstrained(); }
 
-    protected void writePropertySetter( Property prop, Class propType ) throws IOException
+    protected void writePropertySetter( Property prop, Class<?> propType ) throws IOException
     {
 	BeangenUtils.writePropertySetter( prop, this.getSetterDefensiveCopyExpression( prop, propType ), iw );
 
@@ -472,13 +472,13 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 // 	iw.println('}');
     }
 
-    protected String getGetterDefensiveCopyExpression( Property prop, Class propType )
+    protected String getGetterDefensiveCopyExpression( Property prop, Class<?> propType )
     { return prop.getDefensiveCopyExpression(); }
     
-    protected String getSetterDefensiveCopyExpression( Property prop, Class propType )
+    protected String getSetterDefensiveCopyExpression( Property prop, Class<?> propType )
     { return prop.getDefensiveCopyExpression(); }
     
-    protected String getConstructorDefensiveCopyExpression( Property prop, Class propType )
+    protected String getConstructorDefensiveCopyExpression( Property prop, Class<?> propType )
     { return prop.getDefensiveCopyExpression(); }
 
     protected void writeHeader() throws IOException
@@ -517,9 +517,9 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 
     protected void writeImports() throws IOException
     {
-	for ( Iterator ii = generalImports.iterator(); ii.hasNext(); )
+	for ( Iterator<String> ii = generalImports.iterator(); ii.hasNext(); )
 	    iw.println("import " + ii.next() + ".*;");
-	for ( Iterator ii = specificImports.iterator(); ii.hasNext(); )
+	for ( Iterator<String> ii = specificImports.iterator(); ii.hasNext(); )
 	    iw.println("import " + ii.next() + ";");
     }
 
@@ -533,7 +533,7 @@ public class SimplePropertyBeanGenerator implements PropertyBeanGenerator
 	    {
 		iw.print(" implements ");
 		boolean first = true;
-		for (Iterator ii = interfaceNames.iterator(); ii.hasNext(); )
+		for ( Iterator<String> ii = interfaceNames.iterator(); ii.hasNext(); )
 		    {
 			if (first) 
 			    first = false;

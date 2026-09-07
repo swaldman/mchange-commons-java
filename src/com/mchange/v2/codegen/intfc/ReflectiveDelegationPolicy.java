@@ -5,12 +5,12 @@ public final class ReflectiveDelegationPolicy
     public final static ReflectiveDelegationPolicy USE_MAIN_DELEGATE_INTERFACE = new ReflectiveDelegationPolicy();
     public final static ReflectiveDelegationPolicy USE_RUNTIME_CLASS           = new ReflectiveDelegationPolicy();
     
-    Class delegateClass;
+    Class<?> delegateClass;
 
     private ReflectiveDelegationPolicy()
     {  this.delegateClass = null; }
 
-    public ReflectiveDelegationPolicy(Class dc)
+    public ReflectiveDelegationPolicy(Class<?> dc)
     { 
 	if (dc == null)
 	    throw new IllegalArgumentException("Class for reflective delegation cannot be null!");

@@ -44,29 +44,29 @@ public class ExplicitPropsConstructorGeneratorExtension implements GeneratorExte
     int ctor_modifiers = Modifier.PUBLIC;
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraSpecificImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraInterfaceNames()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
-	Map propNamesToProps = new HashMap();
+	Map<String,Property> propNamesToProps = new HashMap<String,Property>();
 	for (int i = 0, len = props.length; i < len; ++i)
 	    propNamesToProps.put( props[i].getName(), props[i] );
 
-	List subPropsList = new ArrayList( propNames.length );
+	List<Property> subPropsList = new ArrayList<Property>( propNames.length );
 	for (int i = 0, len = propNames.length; i < len; ++i)
 	    {
-		Property p = (Property) propNamesToProps.get( propNames[i] );
+		Property p = propNamesToProps.get( propNames[i] );
 		if ( p == null )
 		    logger.warning("Could not include property '" + propNames[i] +"' in explicit-props-constructor generated for bean class '" +
 				   info.getClassName() +"' because the property is not defined for the bean. Skipping.");

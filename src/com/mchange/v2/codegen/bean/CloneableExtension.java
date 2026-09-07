@@ -39,23 +39,23 @@ public class CloneableExtension implements GeneratorExtension
     { this ( true, false ); }
 
     @Override
-    public Collection extraGeneralImports()
-    { return (mLoggerName == null ? ((Collection) Collections.EMPTY_SET) : ((Collection) Arrays.asList( new String[] {"com.mchange.v2.log"} )) ); }
+    public Collection<String> extraGeneralImports()
+    { return (mLoggerName == null ? Collections.<String>emptySet() : Arrays.<String>asList( new String[] {"com.mchange.v2.log"} ) ); }
 
     @Override
-    public Collection extraSpecificImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraSpecificImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraInterfaceNames()
+    public Collection<String> extraInterfaceNames()
     {
-	Set set = new HashSet();
+	Set<String> set = new HashSet<String>();
 	set.add( "Cloneable" );
 	return set;
     }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     {
 	if (export_public)

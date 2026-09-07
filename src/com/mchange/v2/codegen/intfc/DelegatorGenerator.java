@@ -355,20 +355,20 @@ public class DelegatorGenerator
 
     protected void generateDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
-	Class  retType = method.getReturnType();
+	Class<?>  retType = method.getReturnType();
 
 	iw.println( (retType == void.class ? "" : "return " ) + "inner." + CodegenUtils.methodCall( method ) + ";" );
     }
 
     protected void generateReflectiveDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
-	Class  retType = method.getReturnType();
+	Class<?>  retType = method.getReturnType();
 
 	String paramTypesArrayStr = CodegenUtils.reflectiveMethodParameterTypeArray( method );
 	String argArrayStr = CodegenUtils.reflectiveMethodObjectArray( method );
 
-	Class[] exceptionsArray = method.getExceptionTypes();
-	Set exceptionsSet = new HashSet();
+	Class<?>[] exceptionsArray = method.getExceptionTypes();
+	Set<Class<?>> exceptionsSet = new HashSet<Class<?>>();
 	exceptionsSet.addAll( Arrays.asList( exceptionsArray ) );
 
 	iw.println("try");

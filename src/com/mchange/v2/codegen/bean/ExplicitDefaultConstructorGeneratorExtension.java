@@ -11,19 +11,19 @@ public class ExplicitDefaultConstructorGeneratorExtension implements GeneratorEx
     int ctor_modifiers = Modifier.PUBLIC;
 
     @Override
-    public Collection extraGeneralImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraGeneralImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraSpecificImports()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraSpecificImports()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public Collection extraInterfaceNames()
-    { return Collections.EMPTY_SET; }
+    public Collection<String> extraInterfaceNames()
+    { return Collections.<String>emptySet(); }
 
     @Override
-    public void generate(ClassInfo info, Class superclassType, Property[] props, Class[] propTypes, IndentedWriter iw)
+    public void generate(ClassInfo info, Class<?> superclassType, Property[] props, Class<?>[] propTypes, IndentedWriter iw)
 	throws IOException
     { BeangenUtils.writeExplicitDefaultConstructor( ctor_modifiers, info, iw); }
 }

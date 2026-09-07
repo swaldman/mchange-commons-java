@@ -9,16 +9,11 @@ import com.mchange.v2.io.IndentedWriter;
 
 public final class BeangenUtils
 {
-    public final static Comparator PROPERTY_COMPARATOR = new Comparator()
+    public final static Comparator<Property> PROPERTY_COMPARATOR = new Comparator<Property>()
     {
 	@Override
-	public int compare(Object a, Object b)
-	{
-	    Property aa = (Property) a;
-	    Property bb = (Property) b;
-
-	    return String.CASE_INSENSITIVE_ORDER.compare(aa.getName(), bb.getName() );
-	}
+	public int compare(Property a, Property b)
+	{ return String.CASE_INSENSITIVE_ORDER.compare(a.getName(), b.getName() ); }
      };
 
     public static String capitalize( String propName )
@@ -143,7 +138,7 @@ public final class BeangenUtils
 		String simpleTypeName = prop.getSimpleTypeName();
 		if ( ClassUtils.isPrimitive( simpleTypeName ) )
 		    {
-			Class propType = ClassUtils.classForPrimitive( simpleTypeName );
+			Class<?> propType = ClassUtils.classForPrimitive( simpleTypeName );
 
 			// PropertyChangeSupport already has overloads
 			// for boolean and int 
