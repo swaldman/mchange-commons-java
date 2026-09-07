@@ -39,9 +39,9 @@ public final class CodegenUtils
 	return sb.toString().trim();
     }
 
-    public static Class unarrayClass( Class cl )
+    public static Class<?> unarrayClass( Class<?> cl )
     {
-	Class out = cl;
+	Class<?> out = cl;
 	while ( out.isArray() )
 	    out = out.getComponentType();
 	return out;
@@ -87,7 +87,7 @@ public final class CodegenUtils
 	sb.append(' ');
 	sb.append( m.getName() );
 	sb.append('(');
-        Class[] cls = m.getParameterTypes();
+        Class<?>[] cls = m.getParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)
         {
            if (i != 0)
@@ -97,7 +97,7 @@ public final class CodegenUtils
            sb.append( argNames == null ? String.valueOf((char) ('a' + i)) : argNames[i] );
         }
         sb.append(')');
-	Class[] excClasses = m.getExceptionTypes();
+	Class<?>[] excClasses = m.getExceptionTypes();
 	if (excClasses.length > 0)
         {
            sb.append(" throws ");
@@ -119,7 +119,7 @@ public final class CodegenUtils
        StringBuffer sb = new StringBuffer(256);
        sb.append( m.getName() );
        sb.append('(');
-        Class[] cls = m.getParameterTypes();
+        Class<?>[] cls = m.getParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)
         {
            if (i != 0)
@@ -138,7 +138,7 @@ public final class CodegenUtils
        StringBuffer sb = new StringBuffer(256);
        sb.append( "new Object[] " );
        sb.append('{');
-        Class[] cls = m.getParameterTypes();
+        Class<?>[] cls = m.getParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)
         {
            if (i != 0)
@@ -154,7 +154,7 @@ public final class CodegenUtils
        StringBuffer sb = new StringBuffer(256);
        sb.append( "new Class[] " );
        sb.append('{');
-        Class[] cls = m.getParameterTypes();
+        Class<?>[] cls = m.getParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)
         {
            if (i != 0)
@@ -170,7 +170,7 @@ public final class CodegenUtils
     public static String generatedArgumentName( int index )
     { return String.valueOf((char) ('a' + index)); }
 
-    public static String simpleClassName( Class cl )
+    public static String simpleClassName( Class<?> cl )
     { return ClassUtils.simpleClassName( cl ); }
 
     public static IndentedWriter toIndentedWriter( Writer w )
@@ -190,7 +190,7 @@ public final class CodegenUtils
     {
         StringBuilder sb = new StringBuilder( m.getName() );
         sb.append('(');
-        Class[] params = m.getParameterTypes();
+        Class<?>[] params = m.getParameterTypes();
         for (int i = 0; i < params.length; ++i)
         {
             if (i !=0 )
@@ -203,11 +203,11 @@ public final class CodegenUtils
         return sb.toString();
     }
 
-    public final static Comparator METHOD_COMPARATOR = new Comparator()
+    public final static Comparator<Method> METHOD_COMPARATOR = new Comparator<Method>()
     {
         @Override
-        public int compare(Object a, Object b)
-        { return key((Method)a).compareTo(key((Method)b)); }
+        public int compare(Method a, Method b)
+        { return key(a).compareTo(key(b)); }
 
         private String key(Method m)
         { return methodToTotalSortingKey(m); }

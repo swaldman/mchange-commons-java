@@ -21,20 +21,20 @@ public class DelegatorGenerator
     boolean inner_setter         = true;
 
     // at most one of superclass and superclass by name should be set
-    Class  superclass = null;
+    Class<?>  superclass = null;
     String superclassByName = null;
 
-    Class[] extraInterfaces = null;
+    Class<?>[] extraInterfaces = null;
 
     // A rarely used feature, see below
     Method[]                   reflectiveDelegateMethods  = null;  //by default, none of this
     ReflectiveDelegationPolicy reflectiveDelegationPolicy = ReflectiveDelegationPolicy.USE_MAIN_DELEGATE_INTERFACE;
 
-    final static Comparator classComp = new Comparator()
+    final static Comparator<Class<?>> classComp = new Comparator<Class<?>>()
     {
        @Override
-       public int compare(Object a, Object b)
-       { return ((Class) a).getName().compareTo(((Class) b).getName()); }
+       public int compare(Class<?> a, Class<?> b)
+       { return a.getName().compareTo(b.getName()); }
     };
 
     public void setGenerateInnerSetter( boolean b )
@@ -85,10 +85,10 @@ public class DelegatorGenerator
     public int getClassModifiers()
     { return class_modifiers; }
 
-    public void setSuperclass( Class superclass )
+    public void setSuperclass( Class<?> superclass )
     { this.superclass = superclass; }
 
-    public Class getSuperclass()
+    public Class<?> getSuperclass()
     { return superclass; }
 
     /** can be a simple name of FQCN, but if a simple name, you may need to override generateExtraImports */
@@ -98,10 +98,10 @@ public class DelegatorGenerator
     public String getSuperclassByName()
     { return superclassByName; }
 
-    public void setExtraInterfaces( Class[] extraInterfaces )
+    public void setExtraInterfaces( Class<?>[] extraInterfaces )
     { this.extraInterfaces = extraInterfaces; }
 
-    public Class[] getExtraInterfaces()
+    public Class<?>[] getExtraInterfaces()
     { return extraInterfaces; }
 
     public Method[] getReflectiveDelegateMethods()
@@ -149,7 +149,7 @@ public class DelegatorGenerator
     // public void setDelegateRuntimeClass( boolean delegate_via_runtime_class )
     // { this.delegate_via_runtime_class = delegate_via_runtime_class; }
 
-    public void writeDelegator(Class intfcl, String genclass, Writer w) throws IOException
+    public void writeDelegator(Class<?> intfcl, String genclass, Writer w) throws IOException
     {
         if (superclass != null && superclassByName != null)
             throw new IllegalStateException("A delegator generator may specify a superclass by class or by name, but not both! superclass: " + superclass + "; superclassByName: " + superclassByName);
@@ -168,7 +168,7 @@ public class DelegatorGenerator
 		    eins[i] = ClassUtils.simpleClassName( extraInterfaces[i] );
 	    }
 
-	Set imports  = new TreeSet( classComp );
+	Set<Class<?>> imports  = new TreeSet<Class<?>>( classComp );
 
 	Method[] methods = intfcl.getMethods();
         Arrays.sort( methods, METHOD_COMPARATOR );
@@ -191,7 +191,7 @@ public class DelegatorGenerator
 	    {
 		for (int i = 0, len = extraInterfaces.length; i < len; ++i)
 		    {
-			Class checkMe = extraInterfaces[i];
+			Class<?> checkMe = extraInterfaces[i];
 			if (! CodegenUtils.inSamePackage( checkMe.getName(), genclass ) )
 			    imports.add( checkMe );
 		    }
@@ -208,8 +208,8 @@ public class DelegatorGenerator
 	generateBannerComment( iw );
 	iw.println("package " + pkg + ';');
 	iw.println();
-	for (Iterator ii = imports.iterator(); ii.hasNext(); )
-	    iw.println("import "+ ((Class) ii.next()).getName() + ';');
+	for (Class<?> imported : imports)
+	    iw.println("import "+ imported.getName() + ';');
 	generateExtraImports( iw );
 	iw.println();
 	generateClassJavaDocComment( iw );
@@ -315,7 +315,7 @@ public class DelegatorGenerator
     	iw.println("}");
     }
 
-    protected void generateFullDelegateMethod(Class intfcl, String genclass, Method method, IndentedWriter iw) throws IOException
+    protected void generateFullDelegateMethod(Class<?> intfcl, String genclass, Method method, IndentedWriter iw) throws IOException
     {
         iw.println( CodegenUtils.methodSignature( method_modifiers, method, null ) );
         iw.println("{");
@@ -329,17 +329,17 @@ public class DelegatorGenerator
         iw.println("}");
     }
 
-    private void ensureImports(String genclass, Set imports, Method[] methods )
+    private void ensureImports(String genclass, Set<Class<?>> imports, Method[] methods )
     {
 	for (int i = 0, len = methods.length; i < len; ++i)
 	{
-	    Class[] args = methods[i].getParameterTypes();
+	    Class<?>[] args = methods[i].getParameterTypes();
 	    for (int j = 0, jlen = args.length; j < jlen; ++j)
 		{
 		    if (! CodegenUtils.inSamePackage( args[j].getName(), genclass ) )
 			imports.add( CodegenUtils.unarrayClass( args[j] ) );
 		}
-	    Class[] excClasses = methods[i].getExceptionTypes();
+	    Class<?>[] excClasses = methods[i].getExceptionTypes();
 	    for (int j = 0, jlen = excClasses.length; j < jlen; ++j)
 		{
 		    if (! CodegenUtils.inSamePackage( excClasses[j].getName(), genclass ) )
@@ -353,14 +353,14 @@ public class DelegatorGenerator
 	}
     }
 
-    protected void generateDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
+    protected void generateDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
 	Class  retType = method.getReturnType();
 
 	iw.println( (retType == void.class ? "" : "return " ) + "inner." + CodegenUtils.methodCall( method ) + ";" );
     }
 
-    protected void generateReflectiveDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
+    protected void generateReflectiveDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException
     {
 	Class  retType = method.getReturnType();
 
@@ -435,7 +435,7 @@ public class DelegatorGenerator
     }
 
     protected void generateExtraImports( IndentedWriter iw ) throws IOException {}
-    protected void generatePreDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException {}
-    protected void generatePostDelegateCode( Class intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException {}
-    protected void generateExtraDeclarations( Class intfcl, String genclass, IndentedWriter iw ) throws IOException {}
+    protected void generatePreDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException {}
+    protected void generatePostDelegateCode( Class<?> intfcl, String genclass, Method method, IndentedWriter iw ) throws IOException {}
+    protected void generateExtraDeclarations( Class<?> intfcl, String genclass, IndentedWriter iw ) throws IOException {}
 }
