@@ -23,7 +23,10 @@ public class IdHashSet<T> extends AbstractSet<T> implements Set<T>
     { this( new HashSet<IdHashKey>(), id ); }
 
     public IdHashSet(Collection<? extends T> c, Identicator id) 
-    { this( new HashSet<IdHashKey>(2 * c.size()), id ); } 
+    {
+        this( new HashSet<IdHashKey>(2 * c.size()), id );
+        this.addAll(c);
+    } 
 
     public IdHashSet(int initialCapacity, float loadFactor, Identicator id) 
     { this( new HashSet<IdHashKey>( initialCapacity, loadFactor ), id ); }

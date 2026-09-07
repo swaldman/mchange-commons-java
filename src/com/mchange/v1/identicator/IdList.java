@@ -36,7 +36,7 @@ public class IdList<T> implements List<T>
     public boolean contains(Object o)
     {
 	IdHashKey wrappedO = new StrongIdHashKey(o, id);
-	return inner.contains(o);
+	return inner.contains(wrappedO);
     }
 
     @Override
