@@ -13,7 +13,7 @@ public final class Jdk14MLog extends MLog
 
     private final static String CHECK_CLASS = "java.util.logging.Logger";
 
-    private final Map namedLoggerMap = new DoubleWeakHashMap();
+    private final Map<String,MLogger> namedLoggerMap = new DoubleWeakHashMap<String,MLogger>();
 
     private final static boolean suppress_stack_walk;
 

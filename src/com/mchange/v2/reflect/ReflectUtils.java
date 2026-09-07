@@ -5,11 +5,11 @@ import java.util.*;
 
 public final class ReflectUtils
 {
-    public final static Class[] PROXY_CTOR_ARGS = new Class[]{ InvocationHandler.class };
+    public final static Class<?>[] PROXY_CTOR_ARGS = new Class<?>[]{ InvocationHandler.class };
 
-    public static Constructor findProxyConstructor(ClassLoader proxyClassLoader, Class intfc)
+    public static Constructor<?> findProxyConstructor(ClassLoader proxyClassLoader, Class<?> intfc)
 	throws NoSuchMethodException
-    { return findProxyConstructor( proxyClassLoader, new Class[] { intfc } ); }
+    { return findProxyConstructor( proxyClassLoader, new Class<?>[] { intfc } ); }
 
     //
     // Proxy.getProxyClass is deprecated as of jdk 9, which directs callers to
@@ -27,37 +27,37 @@ public final class ReflectUtils
     // constructor remains accessible, which is how this library is used.
     //
     @SuppressWarnings("deprecation")
-    public static Constructor findProxyConstructor(ClassLoader proxyClassLoader, Class[] interfaces)
+    public static Constructor<?> findProxyConstructor(ClassLoader proxyClassLoader, Class<?>[] interfaces)
 	throws NoSuchMethodException
     {
-	Class proxyCl = Proxy.getProxyClass(proxyClassLoader, interfaces);
+	Class<?> proxyCl = Proxy.getProxyClass(proxyClassLoader, interfaces);
 	return proxyCl.getConstructor( PROXY_CTOR_ARGS ); 
     }
 
     public static boolean isPublic( Member m )
     { return ((m.getModifiers() & Modifier.PUBLIC) != 0); }
 
-    public static boolean isPublic( Class cl )
+    public static boolean isPublic( Class<?> cl )
     { return ((cl.getModifiers() & Modifier.PUBLIC) != 0); }
 
-    public static Class findPublicParent( Class cl  )
+    public static Class<?> findPublicParent( Class<?> cl  )
     {
 	do cl = cl.getSuperclass();
 	while (cl != null && ! isPublic(cl) );
 	return cl;
     }
 
-    public static Iterator traverseInterfaces( Class cl )
+    public static Iterator<Class<?>> traverseInterfaces( Class<?> cl )
     {
-	Set set = new HashSet();
+	Set<Class<?>> set = new HashSet<Class<?>>();
 	if (cl.isInterface()) set.add( cl );
 	addParentInterfaces( set, cl );
 	return set.iterator();
     }
 
-    private static void addParentInterfaces(Set set, Class cl)
+    private static void addParentInterfaces(Set<Class<?>> set, Class<?> cl)
     {
-	Class[] intfcs = cl.getInterfaces();
+	Class<?>[] intfcs = cl.getInterfaces();
 	for (int i = 0, len = intfcs.length; i < len; ++i)
 	    {
 		set.add( intfcs[i] );
@@ -75,12 +75,12 @@ public final class ReflectUtils
     {
 	if (! isPublic(m))
 	    return null;
-	Class origClass = m.getDeclaringClass();
+	Class<?> origClass = m.getDeclaringClass();
 	if (isPublic( origClass ))
 	    return m;
 
 	//climb for public parent class
-	Class cl = origClass;
+	Class<?> cl = origClass;
 	while ((cl = findPublicParent(cl)) != null)
 	    {
 		try
@@ -89,10 +89,10 @@ public final class ReflectUtils
 		    { /* IGNORE... we didn't find it (this'll be slow) */ }
 	    }
 
-	Iterator ii = traverseInterfaces( origClass );
+	Iterator<Class<?>> ii = traverseInterfaces( origClass );
 	while ( ii.hasNext() )
 	    {
-		cl = (Class) ii.next();
+		cl = ii.next();
 		if ( isPublic( cl ) )
 		    {
 			try

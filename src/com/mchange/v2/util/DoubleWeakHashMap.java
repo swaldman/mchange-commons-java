@@ -28,31 +28,47 @@ import com.mchange.v1.util.WrapperIterator;
  * 
  * <p>This class does not accept null keys or values.</p>
  */
-public class DoubleWeakHashMap implements Map
+public class DoubleWeakHashMap<K,V> implements Map<K,V>
 {
-    HashMap        inner;
-    ReferenceQueue keyQ = new ReferenceQueue();
-    ReferenceQueue valQ = new ReferenceQueue();
+    HashMap<Object,WVal> inner;                                  // keys are WKey; lookups pass a CheckKeyHolder
+    ReferenceQueue<Object> keyQ = new ReferenceQueue<Object>();
+    ReferenceQueue<Object> valQ = new ReferenceQueue<Object>();
     
     CheckKeyHolder holder = new CheckKeyHolder();
     
-    Set userKeySet = null;
-    Collection valuesCollection = null;
+    Set<K> userKeySet = null;
+    Collection<V> valuesCollection = null;
     
     public DoubleWeakHashMap()
-    { this.inner = new HashMap(); }
+    { this.inner = new HashMap<Object,WVal>(); }
     
     public DoubleWeakHashMap(int initialCapacity)
-    { this.inner = new HashMap( initialCapacity ); }
+    { this.inner = new HashMap<Object,WVal>( initialCapacity ); }
     
     public DoubleWeakHashMap(int initialCapacity, float loadFactor)
-    { this.inner = new HashMap( initialCapacity, loadFactor ); }
+    { this.inner = new HashMap<Object,WVal>( initialCapacity, loadFactor ); }
     
-    public DoubleWeakHashMap(Map m)
+    public DoubleWeakHashMap(Map<? extends K,? extends V> m)
     {
         this();
         putAll(m);
     }
+
+    /**
+     *  WKey and WVal are static, so they cannot be WeakReference&lt;K&gt; and
+     *  WeakReference&lt;V&gt; -- a static nested class has no access to its enclosing
+     *  class's type parameters. Their referents are therefore typed Object, and these two
+     *  methods are the only places that narrow one back. Nothing but a K is ever stored
+     *  under a WKey, and nothing but a V under a WVal, so the casts hold; the compiler
+     *  cannot see that through WeakReference&lt;Object&gt;.
+     */
+    @SuppressWarnings("unchecked")
+    private K keyOf( WKey wk )
+    { return wk == null ? null : (K) wk.get(); }
+
+    @SuppressWarnings("unchecked")
+    private V valOf( WVal wv )
+    { return wv == null ? null : (V) wv.get(); }
 
     public void cleanCleared()
     {
@@ -85,9 +101,8 @@ public class DoubleWeakHashMap implements Map
     @Override
     public boolean containsValue(Object val)
     {
-        for (Iterator ii = inner.values().iterator(); ii.hasNext();)
+        for (WVal wval : inner.values())
         {
-            WVal wval = (WVal) ii.next();
             if (val.equals(wval.get()))
                 return true;
         }
@@ -95,20 +110,19 @@ public class DoubleWeakHashMap implements Map
     }
 
     @Override
-    public Set entrySet()
+    public Set<Map.Entry<K,V>> entrySet()
     {
         cleanCleared();
         return new UserEntrySet();
     }
 
     @Override
-    public Object get(Object key)
+    public V get(Object key)
     {
         try
         {
             cleanCleared();
-            WVal wval = (WVal) inner.get(holder.set(key));
-            return (wval == null ? null : wval.get());
+            return valOf( inner.get(holder.set(key)) );
         }
         finally
         { holder.clear(); }
@@ -122,7 +136,7 @@ public class DoubleWeakHashMap implements Map
     }
 
     @Override
-    public Set keySet()
+    public Set<K> keySet()
     {
         cleanCleared();
         if (userKeySet == null)
@@ -131,42 +145,34 @@ public class DoubleWeakHashMap implements Map
     }
 
     @Override
-    public Object put(Object key, Object val)
+    public V put(K key, V val)
     {
         cleanCleared();
-        WVal wout = doPut(key, val);
-        if (wout != null)
-            return wout.get();
-        else
-            return null;
+        return valOf( doPut(key, val) );
     }
     
     private WVal doPut(Object key, Object val)
     {
         WKey wk = new WKey(key, keyQ);
         WVal wv = new WVal(wk, val, valQ);
-        return (WVal) inner.put(wk, wv);
+        return inner.put(wk, wv);
     }
 
     @Override
-    public void putAll(Map m)
+    public void putAll(Map<? extends K,? extends V> m)
     {
        cleanCleared();
-       for (Iterator ii = m.entrySet().iterator(); ii.hasNext();)
-       {
-           Map.Entry entry = (Map.Entry) ii.next();
+       for (Map.Entry<? extends K,? extends V> entry : m.entrySet())
            this.doPut( entry.getKey(), entry.getValue() );
-       }
     }
 
     @Override
-    public Object remove(Object key)
+    public V remove(Object key)
     {
         try
         {
             cleanCleared();
-            WVal wv = (WVal) inner.remove( holder.set(key) );
-            return (wv == null ? null : wv.get());
+            return valOf( inner.remove( holder.set(key) ) );
         }
         finally
         { holder.clear(); }
@@ -180,7 +186,7 @@ public class DoubleWeakHashMap implements Map
     }
 
     @Override
-    public Collection values()
+    public Collection<V> values()
     {
         if (valuesCollection == null)
             this.valuesCollection = new ValuesCollection();
@@ -225,11 +231,11 @@ public class DoubleWeakHashMap implements Map
         }
     }
     
-    final static class WKey extends WeakReference
+    final static class WKey extends WeakReference<Object>
     {
         int cachedHash;
         
-        WKey(Object keyObj, ReferenceQueue rq)
+        WKey(Object keyObj, ReferenceQueue<Object> rq)
         {
             super(keyObj, rq);
             this.cachedHash = keyObj.hashCode();
@@ -269,10 +275,10 @@ public class DoubleWeakHashMap implements Map
         }
     }
     
-    final static class WVal extends WeakReference
+    final static class WVal extends WeakReference<Object>
     {
         WKey key;
-        WVal(WKey key, Object valObj, ReferenceQueue rq)
+        WVal(WKey key, Object valObj, ReferenceQueue<Object> rq)
         {
             super(valObj, rq);
             this.key = key;
@@ -283,25 +289,26 @@ public class DoubleWeakHashMap implements Map
     }
     
     
-    private final class UserEntrySet extends AbstractSet
+    private final class UserEntrySet extends AbstractSet<Map.Entry<K,V>>
     {
-        private Set innerEntrySet()
+        private Set<Map.Entry<Object,WVal>> innerEntrySet()
         {
             cleanCleared();
             return inner.entrySet();
         }
 
         @Override
-        public Iterator iterator()
+        public Iterator<Map.Entry<K,V>> iterator()
         {
-            return new WrapperIterator(innerEntrySet().iterator(), true)
+            return new WrapperIterator<Map.Entry<K,V>>(innerEntrySet().iterator(), true)
             {
                 @Override
+                @SuppressWarnings("unchecked") // transformObject is handed the elements of innerEntrySet(), which are exactly these
                 protected Object transformObject(Object o)
                 {
-                    Entry innerEntry = (Entry) o;
-                    Object key = ((WKey) innerEntry.getKey()).get();
-                    Object val = ((WVal) innerEntry.getValue()).get();
+                    Entry<Object,WVal> innerEntry = (Entry<Object,WVal>) o;
+                    K key = keyOf( (WKey) innerEntry.getKey() );
+                    V val = valOf( innerEntry.getValue() );
                     
                     if (key == null || val == null)
                         return WrapperIterator.SKIP_TOKEN;
@@ -316,13 +323,13 @@ public class DoubleWeakHashMap implements Map
         { return innerEntrySet().size(); }
     }
     
-    class UserEntry extends AbstractMapEntry
+    class UserEntry extends AbstractMapEntry<K,V>
     {
-        Entry innerEntry;
-        Object key;
-        Object val;
+        Entry<Object,WVal> innerEntry;
+        K key;
+        V val;
 
-        UserEntry(Entry innerEntry, Object key, Object val)
+        UserEntry(Entry<Object,WVal> innerEntry, K key, V val)
         { 
             this.innerEntry = innerEntry; 
             this.key = key;
@@ -330,29 +337,35 @@ public class DoubleWeakHashMap implements Map
         }
 
         @Override
-        public final Object getKey()
+        public final K getKey()
         { return key; }
 
         @Override
-        public final Object getValue()
+        public final V getValue()
         { return val; }
 
         @Override
-        public final Object setValue(Object value)
-        { return innerEntry.setValue( new WVal( (WKey) innerEntry.getKey() ,value, valQ) ); }
+        public final V setValue(V value)
+        {
+            // Returns the value previously mapped, per Map.Entry.setValue. Before this class
+            // was parameterized it returned innerEntry.setValue(...) directly, which is the
+            // previous WVal wrapper rather than the previous value -- typing it made that
+            // impossible to keep.
+            return valOf( innerEntry.setValue( new WVal( (WKey) innerEntry.getKey(), value, valQ) ) );
+        }
     }    
     
-    class UserKeySet implements Set
+    class UserKeySet implements Set<K>
     {
         @Override
-        public boolean add(Object o)
+        public boolean add(K o)
         {
             cleanCleared();
             throw new UnsupportedOperationException("You cannot add to a Map's key set.");
         }
 
         @Override
-        public boolean addAll(Collection c)
+        public boolean addAll(Collection<? extends K> c)
         {
             cleanCleared();
             throw new UnsupportedOperationException("You cannot add to a Map's key set.");
@@ -369,9 +382,9 @@ public class DoubleWeakHashMap implements Map
         }
 
         @Override
-        public boolean containsAll(Collection c)
+        public boolean containsAll(Collection<?> c)
         {
-            for (Iterator ii = c.iterator(); ii.hasNext();)
+            for (Iterator<?> ii = c.iterator(); ii.hasNext();)
                 if (! this.contains(ii.next()))
                     return false;
             return true;
@@ -382,15 +395,15 @@ public class DoubleWeakHashMap implements Map
         { return DoubleWeakHashMap.this.isEmpty(); }
 
         @Override
-        public Iterator iterator()
+        public Iterator<K> iterator()
         {
             cleanCleared();
-            return new WrapperIterator(DoubleWeakHashMap.this.inner.keySet().iterator(), true)
+            return new WrapperIterator<K>(DoubleWeakHashMap.this.inner.keySet().iterator(), true)
             {
                 @Override
                 protected Object transformObject(Object o)
                 {
-                    Object key = ((WKey) o).get();
+                    K key = keyOf( (WKey) o );
                     
                     if (key == null)
                         return WrapperIterator.SKIP_TOKEN;
@@ -407,20 +420,20 @@ public class DoubleWeakHashMap implements Map
         }
 
         @Override
-        public boolean removeAll(Collection c)
+        public boolean removeAll(Collection<?> c)
         {
             boolean out = false;
-            for (Iterator ii = c.iterator(); ii.hasNext();)
+            for (Iterator<?> ii = c.iterator(); ii.hasNext();)
                 out |= this.remove(ii.next());
             return out;
         }
 
         @Override
-        public boolean retainAll(Collection c)
+        public boolean retainAll(Collection<?> c)
         {
             //we implicitly cleanCleared() by calling iterator()
             boolean out = false;
-            for (Iterator ii = this.iterator(); ii.hasNext();)
+            for (Iterator<?> ii = this.iterator(); ii.hasNext();)
             {
                 if (!c.contains(ii.next()))
                 {
@@ -439,29 +452,29 @@ public class DoubleWeakHashMap implements Map
         public Object[] toArray()
         { 
             cleanCleared();
-            return new HashSet( this ).toArray(); 
+            return new HashSet<K>( this ).toArray(); 
         }
 
         @Override
-        public Object[] toArray(Object[] array)
+        public <T> T[] toArray(T[] array)
         {
             cleanCleared();
-            return new HashSet( this ).toArray(array); 
+            return new HashSet<K>( this ).toArray(array); 
         }
     }
 
-    class ValuesCollection implements Collection
+    class ValuesCollection implements Collection<V>
     {
 
         @Override
-        public boolean add(Object o)
+        public boolean add(V o)
         {
             cleanCleared();
             throw new UnsupportedOperationException("DoubleWeakHashMap does not support adding to its values Collection.");
         }
 
         @Override
-        public boolean addAll(Collection c)
+        public boolean addAll(Collection<? extends V> c)
         {
             cleanCleared();
             throw new UnsupportedOperationException("DoubleWeakHashMap does not support adding to its values Collection.");
@@ -476,9 +489,9 @@ public class DoubleWeakHashMap implements Map
         { return DoubleWeakHashMap.this.containsValue(o); }
 
         @Override
-        public boolean containsAll(Collection c)
+        public boolean containsAll(Collection<?> c)
         {
-            for (Iterator ii = c.iterator(); ii.hasNext();)
+            for (Iterator<?> ii = c.iterator(); ii.hasNext();)
                 if (!this.contains(ii.next()))
                     return false;
             return true;
@@ -489,9 +502,9 @@ public class DoubleWeakHashMap implements Map
         { return DoubleWeakHashMap.this.isEmpty(); }
 
         @Override
-        public Iterator iterator()
+        public Iterator<V> iterator()
         {
-            return new WrapperIterator(inner.values().iterator(), true)
+            return new WrapperIterator<V>(inner.values().iterator(), true)
             {
                 @Override
                 protected Object transformObject(Object o)
@@ -514,17 +527,17 @@ public class DoubleWeakHashMap implements Map
         }
 
         @Override
-        public boolean removeAll(Collection c)
+        public boolean removeAll(Collection<?> c)
         {
             cleanCleared();
             boolean out = false;
-            for (Iterator ii = c.iterator(); ii.hasNext();)
+            for (Iterator<?> ii = c.iterator(); ii.hasNext();)
                 out |= removeValue(ii.next());
             return out;
         }
 
         @Override
-        public boolean retainAll(Collection c)
+        public boolean retainAll(Collection<?> c)
         {
             cleanCleared();
             return retainValues(c);
@@ -538,20 +551,20 @@ public class DoubleWeakHashMap implements Map
         public Object[] toArray()
         { 
             cleanCleared();
-            return new ArrayList(this).toArray();
+            return new ArrayList<V>(this).toArray();
         }
 
         @Override
-        public Object[] toArray(Object[] array)
+        public <T> T[] toArray(T[] array)
         {
             cleanCleared();
-            return new ArrayList(this).toArray(array);
+            return new ArrayList<V>(this).toArray(array);
         }
 
         private boolean removeValue(Object val)
         {
             boolean out = false;
-            for (Iterator ii = inner.values().iterator(); ii.hasNext();)
+            for (Iterator<?> ii = inner.values().iterator(); ii.hasNext();)
             {
                 WVal wv = (WVal) ii.next();
                 if (val.equals(wv.get()))
@@ -563,10 +576,10 @@ public class DoubleWeakHashMap implements Map
             return out;
         }
         
-        private boolean retainValues(Collection c)
+        private boolean retainValues(Collection<?> c)
         {
             boolean out = false;
-            for (Iterator ii = inner.values().iterator(); ii.hasNext();)
+            for (Iterator<?> ii = inner.values().iterator(); ii.hasNext();)
             {
                 WVal wv = (WVal) ii.next();
                 if (! c.contains(wv.get()) )

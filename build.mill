@@ -48,7 +48,7 @@ object `package` extends StringentJavaModule, SonatypeCentralPublishModule {
 
   // -Xmaxwarns because javac stops reporting after 100 by default, which silently
   // understated the unchecked warnings by more than sixfold while we worked through them.
-  def javacOptions   = Seq("-source", "1.7", "-target", "1.7", "-Xlint:deprecation", "-Xlint:unchecked", "-Xmaxwarns", "100000")
+  def javacOptions   = Seq("-source", "1.7", "-target", "1.7", "-Xlint:deprecation", "-Xlint:unchecked", "-Xlint:rawtypes", "-Xmaxwarns", "100000")
   def javadocOptions = Seq("-source", "1.7", "-Xdoclint:none")
 
   //

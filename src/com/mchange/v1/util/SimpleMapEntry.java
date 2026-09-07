@@ -2,29 +2,29 @@ package com.mchange.v1.util;
 
 import java.util.Map;
 
-public class SimpleMapEntry extends AbstractMapEntry implements Map.Entry
+public class SimpleMapEntry<K,V> extends AbstractMapEntry<K,V> implements Map.Entry<K,V>
 {
-    Object key;
-    Object value;
+    K key;
+    V value;
 
-    public SimpleMapEntry(Object key, Object value)
+    public SimpleMapEntry(K key, V value)
     {
 	this.key = key;
 	this.value = value;
     }
 
     @Override
-    public Object getKey()
+    public K getKey()
     { return key; }
 
     @Override
-    public Object getValue()
+    public V getValue()
     { return value; }
 
     @Override
-    public Object setValue(Object value)
+    public V setValue(V value)
     {
-	Object old = value;
+	V old = value;
 	this.value = value;
 	return old;
     }

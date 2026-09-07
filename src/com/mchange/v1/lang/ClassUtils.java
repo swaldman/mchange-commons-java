@@ -15,11 +15,11 @@ public final class ClassUtils
 {
     final static String[] EMPTY_SA = new String[0];
 
-    static Map primitivesToClasses;
+    static Map<String,Class<?>> primitivesToClasses;
 
     static
     {
-	HashMap tmp = new HashMap();
+	HashMap<String,Class<?>> tmp = new HashMap<String,Class<?>>();
 	tmp.put( "boolean", boolean.class );
 	tmp.put( "int", int.class );
 	tmp.put( "char", char.class );
@@ -33,29 +33,28 @@ public final class ClassUtils
 	primitivesToClasses = Collections.unmodifiableMap( tmp );
     }
 
-    public static Set publicSupertypesForMethods(Class cl, Method[] methods)
+    public static Set<Class<?>> publicSupertypesForMethods(Class<?> cl, Method[] methods)
     {
-	Set testClasses = allAssignableFrom( cl );
-	Set out = new HashSet();
-	for (Iterator ii = testClasses.iterator(); ii.hasNext(); )
+	Set<Class<?>> testClasses = allAssignableFrom( cl );
+	Set<Class<?>> out = new HashSet<Class<?>>();
+	for (Class<?> check : testClasses)
 	{
-	    Class check = (Class) ii.next();
 	    if ( isPublic( check ) && hasAllMethodsAsSupertype( check, methods ) )
 		out.add(check);
 	}
 	return Collections.unmodifiableSet( out );
     }
 
-    public static boolean isPublic( Class cl )
+    public static boolean isPublic( Class<?> cl )
     { return ( (cl.getModifiers() & Modifier.PUBLIC) != 0 ); }
 
-    public static boolean hasAllMethodsAsSupertype(Class cl, Method[] methods)
+    public static boolean hasAllMethodsAsSupertype(Class<?> cl, Method[] methods)
     { return hasAllMethods( cl, methods, true ); }
 
-    public static boolean hasAllMethodsAsSubtype(Class cl, Method[] methods)
+    public static boolean hasAllMethodsAsSubtype(Class<?> cl, Method[] methods)
     { return hasAllMethods( cl, methods, false ); }
 
-    private static boolean hasAllMethods(Class cl, Method[] methods, boolean cl_as_supertype)
+    private static boolean hasAllMethods(Class<?> cl, Method[] methods, boolean cl_as_supertype)
     {
 	for (int i = 0, len = methods.length; i < len; ++i)
 	    if ( !containsMethod( cl, methods[i], cl_as_supertype) )
@@ -63,21 +62,21 @@ public final class ClassUtils
 	return true;
     }
 
-    public static boolean containsMethodAsSupertype(Class cl, Method m)
+    public static boolean containsMethodAsSupertype(Class<?> cl, Method m)
     { return containsMethod( cl, m, true ); }
 
-    public static boolean containsMethodAsSubtype(Class cl, Method m)
+    public static boolean containsMethodAsSubtype(Class<?> cl, Method m)
     { return containsMethod( cl, m, false ); }
 
-    private static boolean containsMethod(Class cl, Method m, boolean cl_as_supertype)
+    private static boolean containsMethod(Class<?> cl, Method m, boolean cl_as_supertype)
     {
 	Method check;
 
 	try 
 	{ 
 	    check = cl.getMethod( m.getName(), m.getParameterTypes() );
-	    Class mRetType = m.getReturnType();
-	    Class clRetType = check.getReturnType();
+	    Class<?> mRetType = m.getReturnType();
+	    Class<?> clRetType = check.getReturnType();
 
 	    // we deal with potentially covariant return types
 	    return ( ( mRetType.equals( clRetType ) ) ||
@@ -88,12 +87,12 @@ public final class ClassUtils
 	{ return false; }
     }
 
-    public static Set allAssignableFrom(Class type)
+    public static Set<Class<?>> allAssignableFrom(Class<?> type)
     {
-	Set out = new HashSet();
+	Set<Class<?>> out = new HashSet<Class<?>>();
 
 	//type itself and superclasses (if any)
-	for (Class cl = type; cl != null; cl = cl.getSuperclass())
+	for (Class<?> cl = type; cl != null; cl = cl.getSuperclass())
 	    out.add( cl );
 
 	//super interfaces (if any)
@@ -101,7 +100,7 @@ public final class ClassUtils
 	return out;
     }
 
-    public static String simpleClassName(Class cl)
+    public static String simpleClassName(Class<?> cl)
     {
 	String scn;
 	int array_level = 0;
@@ -146,18 +145,18 @@ public final class ClassUtils
     public static boolean isPrimitive(String typeStr)
     { return (primitivesToClasses.get( typeStr ) != null); }
 
-    public static Class classForPrimitive(String typeStr)
-    { return (Class) primitivesToClasses.get( typeStr ); }
+    public static Class<?> classForPrimitive(String typeStr)
+    { return primitivesToClasses.get( typeStr ); }
     
-    public static Class forName(String fqcnOrPrimitive ) throws ClassNotFoundException
+    public static Class<?> forName(String fqcnOrPrimitive ) throws ClassNotFoundException
     {
-        Class out = classForPrimitive( fqcnOrPrimitive );
+        Class<?> out = classForPrimitive( fqcnOrPrimitive );
         if (out == null)
             out = Class.forName( fqcnOrPrimitive );
         return out;
     }
 
-    public static Class forName( String fqOrSimple,  String[] importPkgs, String[] importClasses )
+    public static Class<?> forName( String fqOrSimple,  String[] importPkgs, String[] importClasses )
 	throws AmbiguousClassNameException, ClassNotFoundException
     {
 	try
@@ -166,11 +165,11 @@ public final class ClassUtils
 	    { return classForSimpleName( fqOrSimple, importPkgs, importClasses ); }
     }
 
-    public static Class classForSimpleName( String simpleName, String[] importPkgs, String[] importClasses )
+    public static Class<?> classForSimpleName( String simpleName, String[] importPkgs, String[] importClasses )
 	throws AmbiguousClassNameException, ClassNotFoundException
     {
-	Set checkSet = new HashSet();
-	Class out = classForPrimitive( simpleName );
+	Set<String> checkSet = new HashSet<String>();
+	Class<?> out = classForPrimitive( simpleName );
 
 	if (out == null)
 	    {
@@ -201,7 +200,7 @@ public final class ClassUtils
 				try
 				    {
 					String tryClass = importPkgs[i] + '.' + simpleName;
-					Class test = Class.forName( tryClass );
+					Class<?> test = Class.forName( tryClass );
 					if ( out == null )
 					    out = test;
 					else
@@ -221,7 +220,7 @@ public final class ClassUtils
 	    return out;
     }
 
-    public static String resolvableTypeName( Class type, String[] importPkgs, String[] importClasses )
+    public static String resolvableTypeName( Class<?> type, String[] importPkgs, String[] importClasses )
 	throws ClassNotFoundException
     {
 	String simpleName = simpleClassName( type );
@@ -242,9 +241,9 @@ public final class ClassUtils
 
 
     /* does not add type itself, only its superinterfaces */
-    private static void addSuperInterfacesToSet(Class type, Set set)
+    private static void addSuperInterfacesToSet(Class<?> type, Set<Class<?>> set)
     {
-	Class[] ifaces = type.getInterfaces();
+	Class<?>[] ifaces = type.getInterfaces();
 	for (int i = 0, len = ifaces.length; i < len; ++i)
 	    {
 		set.add( ifaces[i] );
