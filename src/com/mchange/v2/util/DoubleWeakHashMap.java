@@ -351,7 +351,14 @@ public class DoubleWeakHashMap<K,V> implements Map<K,V>
             // was parameterized it returned innerEntry.setValue(...) directly, which is the
             // previous WVal wrapper rather than the previous value -- typing it made that
             // impossible to keep.
-            return valOf( innerEntry.setValue( new WVal( (WKey) innerEntry.getKey(), value, valQ) ) );
+            V oldValue = valOf( innerEntry.setValue( new WVal( (WKey) innerEntry.getKey(), value, valQ) ) );
+
+            // the line above has set the inner entry to the new value, but we hand to the
+            // user an entry with a hard reference for as long as they choose to hold it.
+            // so we need to update our hard reference too.
+            this. val = value;
+
+            return oldValue;
         }
     }    
     

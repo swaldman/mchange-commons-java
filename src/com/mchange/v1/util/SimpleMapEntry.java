@@ -24,7 +24,7 @@ public class SimpleMapEntry<K,V> extends AbstractMapEntry<K,V> implements Map.En
     @Override
     public V setValue(V value)
     {
-	V old = value;
+	V old = this.value;
 	this.value = value;
 	return old;
     }
