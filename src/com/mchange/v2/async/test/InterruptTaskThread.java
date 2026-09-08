@@ -6,7 +6,7 @@ import com.mchange.v2.lang.ThreadUtils;
 
 public class InterruptTaskThread
 {
-    static Set interruptedThreads = Collections.synchronizedSet( new HashSet() );
+    static Set<Thread> interruptedThreads = Collections.synchronizedSet( new HashSet<Thread>() );
 
     public static void main( String[] argv )
     {

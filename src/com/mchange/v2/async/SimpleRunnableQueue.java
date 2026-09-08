@@ -8,7 +8,7 @@ import java.util.LinkedList;
  */
 public class SimpleRunnableQueue implements RunnableQueue, Queuable
 {
-    private List   taskList = new LinkedList();
+    private List<Runnable>   taskList = new LinkedList<Runnable>();
     private Thread t        = new TaskThread();
 
     boolean gentle_close_requested = false;

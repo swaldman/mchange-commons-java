@@ -31,9 +31,9 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 
     int        num_threads;
     boolean    daemon;
-    HashSet    managed;
-    HashSet    available;
-    LinkedList pendingTasks;
+    HashSet<PoolThread>    managed;
+    HashSet<PoolThread>    available;
+    LinkedList<Runnable> pendingTasks;
 
     Random rnd = new Random();
 
@@ -43,7 +43,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
     TimerTask deadlockDetector = new DeadlockDetector();
     TimerTask replacedThreadInterruptor = null;
 
-    Map stoppedThreadsToStopDates = new HashMap();
+    Map<PoolThread,Date> stoppedThreadsToStopDates = new HashMap<PoolThread,Date>();
 
     String threadLabel;
 
@@ -228,7 +228,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             if (should_cancel_timer)
                 myTimer.cancel();
             myTimer = null;
-            for (Iterator ii = managed.iterator(); ii.hasNext(); )
+            for (Iterator<PoolThread> ii = managed.iterator(); ii.hasNext(); )
             { 
                 PoolThread stopMe = (PoolThread) ii.next();
                 stopMe.gentleStop();
@@ -239,7 +239,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 
             if (!skip_remaining_tasks)
             {
-                for (Iterator ii = pendingTasks.iterator(); ii.hasNext(); )
+                for (Iterator<Runnable> ii = pendingTasks.iterator(); ii.hasNext(); )
                 {
                     Runnable r = (Runnable) ii.next();
                     new Thread(r).start();
@@ -303,7 +303,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             IndentedWriter iw = new IndentedWriter( sw );
             for (int i = 0; i < initial_indent; ++i)
                 iw.upIndent();
-            for (Iterator ii = managed.iterator(); ii.hasNext(); )
+            for (Iterator<PoolThread> ii = managed.iterator(); ii.hasNext(); )
             {
                 Object poolThread = ii.next();
                 Object[] stackTraces = (Object[]) m.invoke( poolThread, (Object[]) null ); // cast to suppress inexact type warning
@@ -336,15 +336,15 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
         try
         {
             Method m = Thread.class.getMethod("getAllStackTraces", (Class[]) null); // cast to suppress inexact type warning
-	    Map threadMap = (Map) m.invoke( null, (Object[]) null ); // cast to suppress inexact type warning
+	    Map<?,?> threadMap = (Map<?,?>) m.invoke( null, (Object[]) null ); // cast to suppress inexact type warning
 
             StringWriter sw = new StringWriter(2048);
             IndentedWriter iw = new IndentedWriter( sw );
             for (int i = 0; i < initial_indent; ++i)
                 iw.upIndent();
-            for (Iterator ii = threadMap.entrySet().iterator(); ii.hasNext(); )
+            for (Iterator<? extends Map.Entry<?,?>> ii = threadMap.entrySet().iterator(); ii.hasNext(); )
             {
-		Map.Entry entry = (Map.Entry) ii.next();
+		Map.Entry<?,?> entry = ii.next();
                 Object poolThread = entry.getKey();
                 Object[] stackTraces = (Object[]) entry.getValue();
 		printStackTraces( iw, poolThread, stackTraces );
@@ -403,7 +403,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             }
             else
             {
-                HashSet active = (HashSet) managed.clone();
+                HashSet<PoolThread> active = new HashSet<PoolThread>( managed );
                 active.removeAll( available );
 
                 iw.print("Managed Threads: ");
@@ -412,7 +412,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
                 iw.println( active.size() );
                 iw.println("Active Tasks: ");
                 iw.upIndent();
-                for (Iterator ii = active.iterator(); ii.hasNext(); )
+                for (Iterator<PoolThread> ii = active.iterator(); ii.hasNext(); )
                 {
                     PoolThread pt = (PoolThread) ii.next();
                     iw.println( pt.getCurrentTask() );
@@ -452,7 +452,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             sb.append( "[closed]" );
         else
         {
-            HashSet active = (HashSet) managed.clone();
+            HashSet<PoolThread> active = new HashSet<PoolThread>( managed );
             active.removeAll( available );
             sb.append("[num_managed_threads: ");
             sb.append( managed.size() );
@@ -460,7 +460,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             sb.append( active.size() );
             sb.append("; activeTasks: ");
             boolean first = true;
-            for (Iterator ii = active.iterator(); ii.hasNext(); )
+            for (Iterator<PoolThread> ii = active.iterator(); ii.hasNext(); )
             {
                 if (first)
                     first = false;
@@ -489,7 +489,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
         if ( this.managed != null)
         {
             Date aboutNow = new Date();
-            for (Iterator ii = managed.iterator(); ii.hasNext(); )
+            for (Iterator<PoolThread> ii = managed.iterator(); ii.hasNext(); )
             {
                 PoolThread pt = (PoolThread) ii.next();
                 pt.gentleStop();
@@ -498,12 +498,12 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             }
         }
 
-        this.managed = new HashSet();
-        this.available = new HashSet();
-        this.pendingTasks = new LinkedList();
+        this.managed = new HashSet<PoolThread>();
+        this.available = new HashSet<PoolThread>();
+        this.pendingTasks = new LinkedList<Runnable>();
         for (int i = 0; i < num_threads; ++i)
         {
-            Thread t = new PoolThread(i, daemon);
+            PoolThread t = new PoolThread(i, daemon);
             managed.add( t );
             available.add( t );
             t.start();
@@ -515,7 +515,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
     private void processReplacedThreads()
     {
         long about_now = System.currentTimeMillis();
-        for (Iterator ii = stoppedThreadsToStopDates.keySet().iterator(); ii.hasNext(); )
+        for (Iterator<PoolThread> ii = stoppedThreadsToStopDates.keySet().iterator(); ii.hasNext(); )
         {
             PoolThread pt = (PoolThread) ii.next();
             if (! pt.isAlive())
@@ -737,8 +737,8 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
 
     class DeadlockDetector extends TimerTask
     {
-        LinkedList last = null;
-        LinkedList current = null;
+        LinkedList<Runnable> last = null;
+        LinkedList<Runnable> current = null;
 
         @Override
         public void run()
@@ -755,7 +755,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
                     return;
                 }
 
-                current = (LinkedList) pendingTasks.clone();
+                current = new LinkedList<Runnable>( pendingTasks );
 		if ( logger.isLoggable( MLevel.FINEST ) )
 		    logger.log( MLevel.FINEST, this + " -- Running DeadlockDetector[last->" + last + ",current->" + current + ']');
 
@@ -805,7 +805,7 @@ public final class ThreadPoolAsynchronousRunner implements ThreadPoolReportingAs
             if (run_stray_tasks)
             {
                 AsynchronousRunner ar = new ThreadPerTaskAsynchronousRunner( DFLT_MAX_EMERGENCY_THREADS, max_individual_task_time );
-                for ( Iterator ii = current.iterator(); ii.hasNext(); )
+                for (Iterator<Runnable> ii = current.iterator(); ii.hasNext(); )
                     ar.postRunnable( (Runnable) ii.next() );
                 ar.close( false ); //tell the emergency runner to close itself when its tasks are complete
                 last = null;

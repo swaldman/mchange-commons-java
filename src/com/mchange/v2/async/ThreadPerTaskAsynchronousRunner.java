@@ -15,9 +15,9 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
     final long interrupt_task_delay;
     
     //MT: protected by this' lock
-    LinkedList queue =  new LinkedList(); 
-    ArrayList  running = new ArrayList(); //as a Collection -- duplicate-accepting-ness is important, order is not
-    ArrayList  deadlockSnapshot = null;
+    LinkedList<Runnable> queue =  new LinkedList<Runnable>(); 
+    ArrayList<Runnable>  running = new ArrayList<Runnable>(); //as a Collection -- duplicate-accepting-ness is important, order is not
+    ArrayList<Runnable>  deadlockSnapshot = null;
     boolean still_open = true;
 
     //MT: thread-safe and not reassigned post-ctor
@@ -76,7 +76,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 		if (skip_remaining_tasks)
 		    {
 			queue.clear();
-			for (Iterator ii = running.iterator(); ii.hasNext(); )
+			for (Iterator<Runnable> ii = running.iterator(); ii.hasNext(); )
 			    ((Thread) ii.next()).interrupt();
 			closeThreadResources();
 		    }
@@ -86,14 +86,14 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
     public synchronized int getRunningCount()
     { return running.size(); }
 
-    public synchronized Collection getRunningTasks()
-    { return (Collection) running.clone(); }
+    public synchronized Collection<Runnable> getRunningTasks()
+    { return new ArrayList<Runnable>( running ); }
 
     public synchronized int getWaitingCount()
     { return queue.size(); }
 
-    public synchronized Collection getWaitingTasks()
-    { return (Collection) queue.clone(); }
+    public synchronized Collection<Runnable> getWaitingTasks()
+    { return new LinkedList<Runnable>( queue ); }
 
     public synchronized boolean isClosed()
     { return !still_open; }
@@ -119,7 +119,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 	if (deadlockSnapshot == null)
 	    {
 		if (running.size() == max_task_threads)
-		    deadlockSnapshot = (ArrayList) running.clone();
+		    deadlockSnapshot = new ArrayList<Runnable>( running );
 	    }
 	else if (running.size() < max_task_threads)
 	    deadlockSnapshot = null;
@@ -149,7 +149,7 @@ public class ThreadPerTaskAsynchronousRunner implements AsynchronousRunner
 		deadlockSnapshot = null;
 	    }
 	else
-	    deadlockSnapshot = (ArrayList) running.clone();
+	    deadlockSnapshot = new ArrayList<Runnable>( running );
     }
 
     private void closeThreadResources()

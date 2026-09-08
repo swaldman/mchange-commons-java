@@ -15,5 +15,5 @@ public interface StrandedTaskReporting
      *  of Runnables otherwise, which will be empty only if all tasks
      *  were performed before the AsynchronousRunner shut down.
      */
-    public List getStrandedTasks();
+    public List<Runnable> getStrandedTasks();
 }

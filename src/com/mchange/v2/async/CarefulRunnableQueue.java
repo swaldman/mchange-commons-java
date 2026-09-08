@@ -12,14 +12,14 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
 {
     private final static MLogger logger = MLog.getLogger( CarefulRunnableQueue.class );
 
-    private List taskList = new LinkedList();
+    private List<Runnable> taskList = new LinkedList<Runnable>();
     private TaskThread t  = new TaskThread();
 
     private boolean shutdown_on_interrupt;
 
     private boolean gentle_close_requested = false;
 
-    private List strandedTasks = null;
+    private List<Runnable> strandedTasks = null;
 
     public CarefulRunnableQueue(boolean daemon, boolean shutdown_on_interrupt)
     {
@@ -78,7 +78,7 @@ public class CarefulRunnableQueue implements RunnableQueue, Queuable, StrandedTa
     { this.close( true ); }
 
     @Override
-    public synchronized List getStrandedTasks()
+    public synchronized List<Runnable> getStrandedTasks()
     {
 	try
 	    {
