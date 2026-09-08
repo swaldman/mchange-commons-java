@@ -4,7 +4,7 @@ import java.util.*;
 
 public abstract class NumberedObjectCache
 {
-    ArrayList al = new ArrayList();
+    ArrayList<Object> al = new ArrayList<Object>();
     
     public Object getObject(int num) throws Exception
     {

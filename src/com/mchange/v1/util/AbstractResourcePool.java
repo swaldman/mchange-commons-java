@@ -17,8 +17,8 @@ public abstract class AbstractResourcePool
 
     private static RunnableQueue sharedQueue = new SimpleRunnableQueue();
 
-    Set  managed = new HashSet();
-    List unused  = new LinkedList();
+    Set<Object>  managed = new HashSet<Object>();
+    List<Object> unused  = new LinkedList<Object>();
 
     int start;
     int max;
@@ -125,7 +125,7 @@ public abstract class AbstractResourcePool
 				//that resources that were checked out when the break
 				//occured can still be cleaned up
 	this.broken = true;
-	for (Iterator ii = managed.iterator(); ii.hasNext();)
+	for (Iterator<Object> ii = managed.iterator(); ii.hasNext();)
 	    {
 		try
 		    {removeResource(ii.next());}
@@ -185,7 +185,7 @@ public abstract class AbstractResourcePool
     private synchronized void unexpectedBreak()
     {
 	this.broken = true;
-	for (Iterator ii = unused.iterator(); ii.hasNext();)
+	for (Iterator<Object> ii = unused.iterator(); ii.hasNext();)
 	    {
 		try
 		    {removeResource(ii.next());}

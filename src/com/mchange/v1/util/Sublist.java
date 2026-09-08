@@ -2,28 +2,28 @@ package com.mchange.v1.util;
 
 import java.util.*;
 
-public class Sublist extends AbstractList
+public class Sublist<T> extends AbstractList<T>
 {
 
-    List parent;
+    List<T> parent;
     int  start_index;
     int  end_index;
 
     public Sublist()
-    { this( Collections.EMPTY_LIST, 0, 0 ); }
+    { this( Collections.<T>emptyList(), 0, 0 ); }
 
     /**
      * @param start_index index of the element of the parent list just before which the Sublist begins
      * @param end_index   index of the first element of parent excluded from the Sublist
      */
-    public Sublist(List parent, int start_index, int end_index)
+    public Sublist(List<T> parent, int start_index, int end_index)
     { setParent(parent, start_index, end_index); }
 
     /**
      * @param start_index index of the element of the parent list just before which the Sublist begins
      * @param end_index   index of the first element of parent excluded from the Sublist
      */
-    public void setParent(List parent, int start_index, int end_index)
+    public void setParent(List<T> parent, int start_index, int end_index)
     {
 	if (start_index > end_index || end_index > parent.size())
 	    throw new IndexOutOfBoundsException("start_index: " + start_index +
@@ -35,7 +35,7 @@ public class Sublist extends AbstractList
     }
 
     @Override
-    public Object get(int i)
+    public T get(int i)
     { return parent.get( start_index + i ); }
 
     @Override
@@ -43,7 +43,7 @@ public class Sublist extends AbstractList
     { return end_index - start_index; }
 
     @Override
-    public Object set(int index, Object element) 
+    public T set(int index, T element) 
     {
 	if (index < this.size())
 	    return parent.set(start_index + index, element);
@@ -52,7 +52,7 @@ public class Sublist extends AbstractList
     }
 
     @Override
-    public void add(int index, Object element) 
+    public void add(int index, T element) 
     {
 	if (index <= this.size())
 	    {
@@ -65,7 +65,7 @@ public class Sublist extends AbstractList
     }
 
     @Override
-    public Object remove(int index) {
+    public T remove(int index) {
 	if (index < this.size())
 	    {
 		--end_index;

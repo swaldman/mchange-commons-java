@@ -19,12 +19,12 @@ public final class MapUtils
      *  map's own key lookups already disagree with equals.
      */
     @Deprecated
-    public static boolean equivalentDisregardingSort(Map a, Map b)
+    public static boolean equivalentDisregardingSort(Map<?,?> a, Map<?,?> b)
     {
 	if (a.size() != b.size())
 	    return false;
 
-	for (Iterator ii = a.keySet().iterator(); ii.hasNext(); )
+	for (Iterator<?> ii = a.keySet().iterator(); ii.hasNext(); )
 	    {
 		Object key = ii.next();
 		if (! a.get( key ).equals( b.get( key ) ))
@@ -43,10 +43,10 @@ public final class MapUtils
      * iteration order, and pairs with Map.equals(Object). Use it instead.
      */
     @Deprecated
-    public static int hashContentsDisregardingSort(Map m)
+    public static int hashContentsDisregardingSort(Map<?,?> m)
     {
 	int out = 0;
-	for (Iterator ii = m.keySet().iterator(); ii.hasNext(); )
+	for (Iterator<?> ii = m.keySet().iterator(); ii.hasNext(); )
 	    {
 		Object key = ii.next();
 		Object val = m.get( key );

@@ -2,14 +2,14 @@ package com.mchange.v1.util;
 
 import java.util.*;
 
-public class JoinedIterator implements Iterator
+public class JoinedIterator<T> implements Iterator<T>
 {
-    Iterator[] its;
-    Iterator   removeIterator = null;
+    Iterator<? extends T>[] its;
+    Iterator<? extends T>   removeIterator = null;
     boolean    permit_removes;
     int        cur = 0;
 
-    public JoinedIterator(Iterator[] its, boolean permit_removes)
+    public JoinedIterator(Iterator<? extends T>[] its, boolean permit_removes)
     {
 	this.its = its;
 	this.permit_removes = permit_removes;
@@ -30,7 +30,7 @@ public class JoinedIterator implements Iterator
     }
 
     @Override
-    public Object next()
+    public T next()
     {
 	if (! this.hasNext())
 	    throw new NoSuchElementException();

@@ -7,12 +7,12 @@ import java.util.HashSet;
 
 public final class SetUtils
 {
-    public static Set oneElementUnmodifiableSet(final Object elem)
+    public static <T> Set<T> oneElementUnmodifiableSet(final T elem)
     {
-	return new AbstractSet()
+	return new AbstractSet<T>()
 	    {
 		@Override
-		public Iterator iterator()
+		public Iterator<T> iterator()
 		{ return IteratorUtils.oneElementUnmodifiableIterator( elem ); }
 
 		@Override
@@ -29,9 +29,9 @@ public final class SetUtils
 	    };
     }
 
-    public static Set setFromArray(Object[] array)
+    public static <T> Set<T> setFromArray(T[] array)
     {
-	HashSet out = new HashSet();
+	HashSet<T> out = new HashSet<T>();
 	for (int i = 0, len = array.length; i < len; ++i)
 	    out.add( array[i] );
 	return out;
@@ -47,7 +47,7 @@ public final class SetUtils
      *  set's own membership tests already disagree with equals.
      */
     @Deprecated
-    public static boolean equivalentDisregardingSort(Set a, Set b)
+    public static boolean equivalentDisregardingSort(Set<?> a, Set<?> b)
     {
 	return 
 	    a.containsAll( b ) &&
@@ -64,10 +64,10 @@ public final class SetUtils
      * iteration order, and pairs with Set.equals(Object). Use it instead.
      */
     @Deprecated
-    public static int hashContentsDisregardingSort(Set s)
+    public static int hashContentsDisregardingSort(Set<?> s)
     {
 	int out = 0;
-	for (Iterator ii = s.iterator(); ii.hasNext(); )
+	for (Iterator<?> ii = s.iterator(); ii.hasNext(); )
 	    {
 		Object o = ii.next();
 		if (o != null) out ^= o.hashCode();

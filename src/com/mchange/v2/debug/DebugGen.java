@@ -44,7 +44,7 @@ public final class DebugGen implements DebugConstants
     static boolean  recursive;
     static String   classname;
     static boolean  clobber;
-    static Set      skipDirs;
+    static Set<String> skipDirs;
     
     public synchronized static final void main(String[] argv)
     {
@@ -126,7 +126,7 @@ public final class DebugGen implements DebugConstants
 		    }
 		else
 		    {
-			skipDirs = new HashSet();
+			skipDirs = new HashSet<String>();
 			skipDirs.add("CVS");
 		    }
 

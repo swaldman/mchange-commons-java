@@ -8,7 +8,7 @@ import java.util.LinkedList;
  */
 public class SimpleRunnableQueue implements RunnableQueue
 {
-    private List   taskList = new LinkedList();
+    private List<Runnable> taskList = new LinkedList<Runnable>();
     private Thread t        = new TaskThread();
 
     public SimpleRunnableQueue(boolean daemon)
@@ -36,7 +36,7 @@ public class SimpleRunnableQueue implements RunnableQueue
 
     private synchronized Runnable dequeueRunnable()
     {
-	Runnable r = (Runnable) taskList.get(0);
+	Runnable r = taskList.get(0);
 	taskList.remove(0);
 	return r;
     }

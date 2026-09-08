@@ -4,12 +4,12 @@ import java.util.*;
 
 public final class ListUtils
 {
-    public static List oneElementUnmodifiableList(final Object elem)
+    public static <T> List<T> oneElementUnmodifiableList(final T elem)
     {
-	return new AbstractList()
+	return new AbstractList<T>()
 	    {
 		@Override
-		public Iterator iterator()
+		public Iterator<T> iterator()
 		{ return IteratorUtils.oneElementUnmodifiableIterator( elem ); }
 		
 		@Override
@@ -24,7 +24,7 @@ public final class ListUtils
 		{ return o == elem; }
 
 		@Override
-		public Object get(int index)
+		public T get(int index)
 		{
 		    if (index != 0)
 			throw new IndexOutOfBoundsException("One element list has no element index " + 
@@ -37,14 +37,14 @@ public final class ListUtils
 
     //we could improve performance here by delegating to a method
     //that didn't recheck size...
-    public static boolean equivalent(List a, List b)
+    public static boolean equivalent(List<?> a, List<?> b)
     {
 	if (a.size() != b.size())
 	    return false;
 	else
 	    {
-		Iterator ii = a.iterator();
-		Iterator jj = b.iterator();
+		Iterator<?> ii = a.iterator();
+		Iterator<?> jj = b.iterator();
 		return IteratorUtils.equivalent(ii, jj);
 	    }
     }
@@ -55,11 +55,11 @@ public final class ListUtils
      * for which equivalent(a, b) returns
      * true will hashContents() to the same value
      */
-    public static int hashContents(List l)
+    public static int hashContents(List<?> l)
     {
 	int out = 0;
 	int count = 0;
-	for (Iterator ii = l.iterator(); ii.hasNext(); ++count)
+	for (Iterator<?> ii = l.iterator(); ii.hasNext(); ++count)
 	    {
 		Object o = ii.next();
 		if (o != null) out ^= (o.hashCode() ^ count);

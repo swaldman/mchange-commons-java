@@ -5,7 +5,7 @@ import java.util.*;
 public class SomethingChangedEventSupport
 {
     Object source;
-    Vector listeners = new Vector();
+    Vector<SomethingChangedListener> listeners = new Vector<SomethingChangedListener>();
 
     public SomethingChangedEventSupport(Object source)
     {this.source = source;}
@@ -22,9 +22,9 @@ public class SomethingChangedEventSupport
     public synchronized void fireSomethingChanged()
     {
 	SomethingChangedEvent ae = new SomethingChangedEvent(source);
-	for (Enumeration e = listeners.elements(); e.hasMoreElements();)
+	for (Enumeration<SomethingChangedListener> e = listeners.elements(); e.hasMoreElements();)
 	    {
-		SomethingChangedListener al = (SomethingChangedListener) e.nextElement();
+		SomethingChangedListener al = e.nextElement();
 		al.somethingChanged(ae);
 	    }
     }
