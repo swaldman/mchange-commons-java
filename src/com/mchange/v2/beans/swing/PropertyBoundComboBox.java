@@ -8,7 +8,7 @@ import java.util.*;
 import javax.swing.*;
 import com.mchange.v2.beans.BeansUtils;
 
-public class PropertyBoundComboBox extends JComboBox
+public class PropertyBoundComboBox extends JComboBox<Object>
 {
     PropertyComponentBindingUtility pcbu;
 
@@ -36,6 +36,18 @@ public class PropertyBoundComboBox extends JComboBox
     public Object getItemsSrc()
     { return itemsSrc; }
 
+    /**
+
+     *  itemsSrc is an Object that has just passed instanceof ComboBoxModel; its element
+
+     *  type cannot be checked, only assumed, and this component treats its items as
+
+     *  Objects throughout.
+
+     */
+
+    @SuppressWarnings("unchecked")
+
     public void setItemsSrc(Object itemsSrc)
     {
 	// we added this suspend/resume logic because we were seeing spurious "selections"
@@ -51,12 +63,12 @@ public class PropertyBoundComboBox extends JComboBox
 	    }
 	else if (itemsSrc instanceof Collection)
 	    {
-		Collection c = (Collection) itemsSrc;
-		for (Iterator ii = c.iterator(); ii.hasNext(); )
+		Collection<?> c = (Collection<?>) itemsSrc;
+		for (Iterator<?> ii = c.iterator(); ii.hasNext(); )
 		    this.addItem( ii.next() );
 	    }
 	else if (itemsSrc instanceof ComboBoxModel)
-	    { this.setModel( (ComboBoxModel) itemsSrc ); }
+	    { this.setModel( (ComboBoxModel<Object>) itemsSrc ); }
 	else
 	    throw new IllegalArgumentException("itemsSrc must be an Object[], a Collection, or a ComboBoxModel");
 
@@ -137,7 +149,7 @@ public class PropertyBoundComboBox extends JComboBox
 		    };
 		tb.addPropertyChangeListener( pcl );
 		
-		JComboBox jcb1 = new PropertyBoundComboBox( tb, "theString", new String[] {"SELECT", "Frog", "Fish", "Puppy"}, "SELECT" );
+		JComboBox<Object> jcb1 = new PropertyBoundComboBox( tb, "theString", new String[] {"SELECT", "Frog", "Fish", "Puppy"}, "SELECT" );
 		JTextField jt2 = new PropertyBoundTextField( tb, "theInt", 5);
 		JTextField jt3 = new PropertyBoundTextField( tb, "theFloat", 5 );
 		JFrame frame = new JFrame();

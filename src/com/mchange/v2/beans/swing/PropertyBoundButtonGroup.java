@@ -14,8 +14,8 @@ class PropertyBoundButtonGroup extends ButtonGroup
 
     WeChangedListener wcl = new WeChangedListener();
 
-    Map buttonsModelsToValues = new HashMap();
-    Map valuesToButtonModels  = new HashMap();
+    Map<ButtonModel,Object> buttonsModelsToValues = new HashMap<ButtonModel,Object>();
+    Map<Object,ButtonModel> valuesToButtonModels  = new HashMap<Object,ButtonModel>();
     JButton fakeButton = new JButton();
 
     public PropertyBoundButtonGroup( Object bean, String propName )

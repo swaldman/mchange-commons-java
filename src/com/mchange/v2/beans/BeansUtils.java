@@ -14,10 +14,12 @@ public final class BeansUtils
 
     final static Object[] EMPTY_ARGS = new Object[0];
 
+    final static Set<String> EMPTY_STRING_SET = Collections.<String>emptySet();
+
     public static PropertyEditor findPropertyEditor( PropertyDescriptor pd )
     {
         PropertyEditor out = null;
-        Class editorClass = null;
+        Class<?> editorClass = null;
         try
         {
             editorClass = pd.getPropertyEditorClass();
@@ -40,17 +42,17 @@ public final class BeansUtils
 
     public static boolean equalsByAccessibleProperties( Object bean0, Object bean1 )
     throws IntrospectionException
-    { return equalsByAccessibleProperties( bean0, bean1, Collections.EMPTY_SET ); }
+    { return equalsByAccessibleProperties( bean0, bean1, EMPTY_STRING_SET ); }
 
-    public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection ignoreProps )
+    public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection<String> ignoreProps )
 	throws IntrospectionException
     { return equalsByAccessibleProperties( bean0, bean1, ignoreProps, false ); }
 
-    public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection ignoreProps, boolean ignoreReadOnly )
+    public static boolean equalsByAccessibleProperties( Object bean0, Object bean1, Collection<String> ignoreProps, boolean ignoreReadOnly )
 	throws IntrospectionException
     {
-        Map m0 = new HashMap();
-        Map m1 = new HashMap();
+        Map<String,Object> m0 = new HashMap<String,Object>();
+        Map<String,Object> m1 = new HashMap<String,Object>();
         extractAccessiblePropertiesToMap( m0, bean0, ignoreProps, ignoreReadOnly );
         extractAccessiblePropertiesToMap( m1, bean1, ignoreProps, ignoreReadOnly );
         //System.err.println("Map0 -> " + m0);
@@ -58,48 +60,48 @@ public final class BeansUtils
         return m0.equals(m1);
     }
 
-    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection ignoreProps )
+    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection<String> ignoreProps )
 	throws IntrospectionException
     { return equalsByAccessiblePropertiesVerbose( bean0, bean1, ignoreProps, false ); }
 
-    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection ignoreProps, boolean ignoreReadOnly )
+    public static boolean equalsByAccessiblePropertiesVerbose( Object bean0, Object bean1, Collection<String> ignoreProps, boolean ignoreReadOnly )
 	throws IntrospectionException
     {
-        Map m0 = new HashMap();
-        Map m1 = new HashMap();
+        Map<String,Object> m0 = new HashMap<String,Object>();
+        Map<String,Object> m1 = new HashMap<String,Object>();
         extractAccessiblePropertiesToMap( m0, bean0, ignoreProps, ignoreReadOnly );
         extractAccessiblePropertiesToMap( m1, bean1, ignoreProps, ignoreReadOnly );
 
 	boolean out = true;
 
 	//System.err.println("m0 keys:");
-	//for ( Iterator ii = m0.keySet().iterator(); ii.hasNext(); )
+	//for ( Iterator<String> ii = m0.keySet().iterator(); ii.hasNext(); )
 	//    System.err.println( ii.next() );
 
 	if ( m0.size() != m1.size() )
 	{
 	    System.err.println( "Unequal sizes --> Map0: " + m0.size() + "; m1: " + m1.size() );
-	    Set s0extras = m0.keySet();
+	    Set<String> s0extras = m0.keySet();
 	    s0extras.removeAll( m1.keySet() );
 
-	    Set s1extras = m1.keySet();
+	    Set<String> s1extras = m1.keySet();
 	    s1extras.removeAll( m0.keySet() );
 
 	    if (s0extras.size() > 0)
 	    {
 		System.err.println("Map0 extras:");
-		for (Iterator ii = s0extras.iterator(); ii.hasNext(); )
+		for ( Iterator<String> ii = s0extras.iterator(); ii.hasNext(); )
 		    System.err.println( '\t' + ii.next().toString() );
 	    }
 	    if (s1extras.size() > 0)
 	    {
 		System.err.println("Map1 extras:");
-		for (Iterator ii = s1extras.iterator(); ii.hasNext(); )
+		for ( Iterator<String> ii = s1extras.iterator(); ii.hasNext(); )
 		    System.err.println( '\t' + ii.next().toString() );
 	    }
 	    out = false;
 	}
-	for ( Iterator ii = m0.keySet().iterator(); ii.hasNext(); )
+	for ( Iterator<String> ii = m0.keySet().iterator(); ii.hasNext(); )
 	{
 	    String key = (String) ii.next();
 	    Object val0 = m0.get( key );
@@ -116,9 +118,9 @@ public final class BeansUtils
 
     public static void overwriteAccessibleProperties( Object sourceBean, Object destBean )
 	throws IntrospectionException
-    { overwriteAccessibleProperties( sourceBean, destBean, Collections.EMPTY_SET ); }
+    { overwriteAccessibleProperties( sourceBean, destBean, EMPTY_STRING_SET ); }
 
-    public static void overwriteAccessibleProperties( Object sourceBean, Object destBean, Collection ignoreProps )
+    public static void overwriteAccessibleProperties( Object sourceBean, Object destBean, Collection<String> ignoreProps )
 	throws IntrospectionException
     {
         try
@@ -175,11 +177,11 @@ public final class BeansUtils
         }
     }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map sourceMap, Object destBean, boolean skip_nulls )
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, Object destBean, boolean skip_nulls )
     throws IntrospectionException
-    { overwriteAccessiblePropertiesFromMap( sourceMap, destBean, skip_nulls, Collections.EMPTY_SET ); }
+    { overwriteAccessiblePropertiesFromMap( sourceMap, destBean, skip_nulls, EMPTY_STRING_SET ); }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map sourceMap, Object destBean, boolean skip_nulls, Collection ignoreProps )
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, Object destBean, boolean skip_nulls, Collection<String> ignoreProps )
     throws IntrospectionException
     {
         overwriteAccessiblePropertiesFromMap( sourceMap, 
@@ -192,10 +194,10 @@ public final class BeansUtils
                         true);
     }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map sourceMap, 
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, 
                     Object destBean, 
                     boolean skip_nulls, 
-                    Collection ignoreProps, 
+                    Collection<String> ignoreProps, 
                     boolean coerce_strings,
                     MLevel cantWriteLevel,
                     MLevel cantCoerceLevel,
@@ -207,7 +209,7 @@ public final class BeansUtils
         if (cantCoerceLevel == null)
             cantCoerceLevel = MLevel.WARNING;
 
-        Set sourceMapProps = sourceMap.keySet();
+        Set<?> sourceMapProps = sourceMap.keySet();
 
         String propName = null;
         BeanInfo beanInfo = Introspector.getBeanInfo( destBean.getClass(), Object.class ); //so we don't see message about getClass()
@@ -239,7 +241,7 @@ public final class BeansUtils
             Method setter = pd.getWriteMethod();
             boolean rethrow = false;
 
-            Class propType = pd.getPropertyType();;
+            Class<?> propType = pd.getPropertyType();;
 
 //          try
 //          {
@@ -356,12 +358,12 @@ public final class BeansUtils
         }
     }
 
-    public static void appendPropNamesAndValues(StringBuffer appendIntoMe, Object bean, Collection ignoreProps) throws IntrospectionException
+    public static void appendPropNamesAndValues(StringBuffer appendIntoMe, Object bean, Collection<String> ignoreProps) throws IntrospectionException
     {
-        Map tmp = new TreeMap( String.CASE_INSENSITIVE_ORDER );
+        Map<String,Object> tmp = new TreeMap<String,Object>( String.CASE_INSENSITIVE_ORDER );
         extractAccessiblePropertiesToMap( tmp, bean, ignoreProps );
         boolean first = true;
-        for (Iterator ii = tmp.keySet().iterator(); ii.hasNext(); )
+        for ( Iterator<String> ii = tmp.keySet().iterator(); ii.hasNext(); )
         {
             String key = (String) ii.next();
             Object val = tmp.get( key );
@@ -376,13 +378,13 @@ public final class BeansUtils
     }
 
 
-    public static void extractAccessiblePropertiesToMap( Map fillMe, Object bean ) throws IntrospectionException
-    { extractAccessiblePropertiesToMap( fillMe, bean, Collections.EMPTY_SET ); }
+    public static void extractAccessiblePropertiesToMap( Map<String,Object> fillMe, Object bean ) throws IntrospectionException
+    { extractAccessiblePropertiesToMap( fillMe, bean, EMPTY_STRING_SET ); }
 
-    public static void extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps ) throws IntrospectionException
+    public static void extractAccessiblePropertiesToMap( Map<String,Object> fillMe, Object bean, Collection<String> ignoreProps ) throws IntrospectionException
     { extractAccessiblePropertiesToMap( fillMe, bean, ignoreProps, false ); }
 
-    public static void extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps, boolean ignoreReadOnly ) throws IntrospectionException
+    public static void extractAccessiblePropertiesToMap( Map<String,Object> fillMe, Object bean, Collection<String> ignoreProps, boolean ignoreReadOnly ) throws IntrospectionException
     {
         String propName = null;
         try
@@ -413,7 +415,7 @@ public final class BeansUtils
             if (Debug.DEBUG && Debug.TRACE >= Debug.TRACE_MED && logger.isLoggable( MLevel.FINE ))
                 logger.logp( MLevel.FINE, 
                                 BeansUtils.class.getName(),
-                                "extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps )",
+                                "extractAccessiblePropertiesToMap( Map<String,Object> fillMe, Object bean, Collection<String> ignoreProps )",
                                 (propName != null ? "Problem occurred while reading and overwriting property: " + propName : "") + " throwing...",
                                 e );
             throw e; 
@@ -424,7 +426,7 @@ public final class BeansUtils
             if (Debug.DEBUG && Debug.TRACE >= Debug.TRACE_MED && logger.isLoggable( MLevel.FINE ))
                 logger.logp( MLevel.FINE,
                                 BeansUtils.class.getName(),
-                                "extractAccessiblePropertiesToMap( Map fillMe, Object bean, Collection ignoreProps )",
+                                "extractAccessiblePropertiesToMap( Map<String,Object> fillMe, Object bean, Collection<String> ignoreProps )",
                                 "Caught unexpected Exception; Converting to IntrospectionException.",
                                 e );
             throw new IntrospectionException( e.toString() + (propName == null ? "" : " [" + propName + ']') );
@@ -455,12 +457,12 @@ public final class BeansUtils
     }
 
 
-    public static void overwriteSpecificAccessibleProperties( Object sourceBean, Object destBean, Collection props )
+    public static void overwriteSpecificAccessibleProperties( Object sourceBean, Object destBean, Collection<String> props )
     throws IntrospectionException
     {
         try
         {
-            Set _props = new HashSet(props);
+            Set<String> _props = new HashSet<String>(props);
 
             BeanInfo beanInfo = Introspector.getBeanInfo( sourceBean.getClass(), Object.class ); //so we don't see message about getClass()
             PropertyDescriptor[] pds = beanInfo.getPropertyDescriptors();
@@ -504,7 +506,7 @@ public final class BeansUtils
             }
             if ( logger.isLoggable( MLevel.WARNING ) )
             {
-                for (Iterator ii = _props.iterator(); ii.hasNext(); )
+                for (Iterator<String> ii = _props.iterator(); ii.hasNext(); )
                     logger.warning("failed to find expected property: " + ii.next());
                 //System.err.println("failed to find expected property: " + ii.next());
             }

@@ -146,16 +146,16 @@ class SetPropertyElementBoundButtonModel implements ButtonModel
 	    @Override
 	    public Object fetchUserModification( PropertyEditor editor, Object oldValue )
 	    {
-		Set modSet;
+		Set<Object> modSet;
 		if (oldValue == null)
 		    {
 			if (! isSelected())
 			    return null;
 			else
-			    modSet = new HashSet();
+			    modSet = new HashSet<Object>();
 		    }
 		else
-		    modSet = new HashSet((Set) oldValue);
+		    modSet = new HashSet<Object>((Set<?>) oldValue);
 
 		if ( isSelected() )
 		    modSet.add( putativeElement );

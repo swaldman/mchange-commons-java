@@ -75,7 +75,7 @@ class PropertyComponentBindingUtility
 	if (propGetter == null || propSetter == null)
 	    throw new IntrospectionException("The specified property '" + propName + "' must be both readdable and writable, but it is not!");
 
-	Class propType = pd.getPropertyType();
+	Class<?> propType = pd.getPropertyType();
 	if (propType.isPrimitive())
 	    {
 		if (propType == boolean.class)
