@@ -13,9 +13,9 @@ class SimpleWritableCachedStore implements WritableCachedStore
     TweakableCachedStore        readOnlyCache;
     WritableCachedStore.Manager manager;
 
-    HashMap writeCache = new HashMap();
+    HashMap<Object,Object> writeCache = new HashMap<Object,Object>();
 
-    Set failedWrites = null;
+    Set<Object> failedWrites = null;
 
     /** the readOnlyCache MUST use manager for its CachedStore.Manager... */
     SimpleWritableCachedStore( TweakableCachedStore readOnlyCache, 
@@ -45,8 +45,9 @@ class SimpleWritableCachedStore implements WritableCachedStore
     @Override
     public void flushWrites() throws CacheFlushException
     {
-	HashMap writeCacheCopy = (HashMap) writeCache.clone();
-	for (Iterator ii = writeCacheCopy.keySet().iterator(); ii.hasNext(); )
+	@SuppressWarnings("unchecked") // HashMap.clone() is declared to return Object
+	HashMap<Object,Object> writeCacheCopy = (HashMap<Object,Object>) writeCache.clone();
+	for (Iterator<Object> ii = writeCacheCopy.keySet().iterator(); ii.hasNext(); )
 	    { 
 		Object key = ii.next();
 		Object val = writeCacheCopy.get( key );
@@ -81,7 +82,7 @@ class SimpleWritableCachedStore implements WritableCachedStore
 		catch (Exception e)
 		    {
 			if (failedWrites == null)
-			    failedWrites = new HashSet();
+			    failedWrites = new HashSet<Object>();
 			failedWrites.add( key );
 		    }
 	    }
@@ -92,8 +93,8 @@ class SimpleWritableCachedStore implements WritableCachedStore
 
     /** @return an unmodifiable snapshot of current failedWrites set, or null if there have been no failed writes. */
     @Override
-    public Set getFailedWrites()
-    { return (failedWrites == null ? null : Collections.unmodifiableSet( new HashSet(failedWrites) ) ); }
+    public Set<Object> getFailedWrites()
+    { return (failedWrites == null ? null : Collections.unmodifiableSet( new HashSet<Object>(failedWrites) ) ); }
 
     @Override
     public void clearPendingWrites()

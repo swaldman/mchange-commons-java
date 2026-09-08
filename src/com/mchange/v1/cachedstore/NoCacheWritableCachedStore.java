@@ -51,7 +51,7 @@ class NoCacheWritableCachedStore implements WritableCachedStore, Autoflushing
     {}
 
     @Override
-    public Set  getFailedWrites() throws CachedStoreException
+    public Set<Object>  getFailedWrites() throws CachedStoreException
     { return null; }
 
     @Override

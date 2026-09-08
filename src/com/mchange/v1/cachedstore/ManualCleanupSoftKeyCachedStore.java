@@ -4,7 +4,7 @@ import java.lang.ref.ReferenceQueue;
 
 class ManualCleanupSoftKeyCachedStore extends KeyTransformingCachedStore implements Vacuumable
 {
-    ReferenceQueue queue = new ReferenceQueue();
+    ReferenceQueue<Object> queue = new ReferenceQueue<Object>();
 
     public ManualCleanupSoftKeyCachedStore(CachedStore.Manager manager)
     { super( manager ); }

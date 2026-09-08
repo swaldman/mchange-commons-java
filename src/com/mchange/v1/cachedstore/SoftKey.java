@@ -2,11 +2,11 @@ package com.mchange.v1.cachedstore;
 
 import java.lang.ref.*;
 
-final class SoftKey extends SoftReference
+final class SoftKey extends SoftReference<Object>
 {
     int hash_code;
     
-    SoftKey(Object o, ReferenceQueue queue)
+    SoftKey(Object o, ReferenceQueue<Object> queue)
     {
 	super( o , queue );
 	this.hash_code = o.hashCode();

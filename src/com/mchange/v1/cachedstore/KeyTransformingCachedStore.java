@@ -28,9 +28,9 @@ abstract class KeyTransformingCachedStore extends NoCleanupCachedStore
     }
 
     @Override
-    public Iterator cachedKeys() throws CachedStoreException
+    public Iterator<Object> cachedKeys() throws CachedStoreException
     { 
-	return new WrapperIterator( cache.keySet().iterator(), false )
+	return new WrapperIterator<Object>( cache.keySet().iterator(), false )
 	    {
 		@Override
 		public Object transformObject( Object o )

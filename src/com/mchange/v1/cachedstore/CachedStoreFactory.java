@@ -63,7 +63,7 @@ public final class CachedStoreFactory
             }
 
             @Override
-            public Iterator cachedKeys() throws CachedStoreException
+            public Iterator<Object> cachedKeys() throws CachedStoreException
             {
                 inner.vacuum();
                 return inner.cachedKeys();

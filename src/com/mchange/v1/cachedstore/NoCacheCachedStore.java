@@ -2,7 +2,6 @@ package com.mchange.v1.cachedstore;
 
 import java.util.Collections;
 import java.util.Iterator;
-import com.mchange.v1.util.IteratorUtils;
 
 class NoCacheCachedStore implements TweakableCachedStore
 {
@@ -39,6 +38,6 @@ class NoCacheCachedStore implements TweakableCachedStore
     {}
 
     @Override
-    public Iterator cachedKeys() 
-    { return IteratorUtils.EMPTY_ITERATOR; }
+    public Iterator<Object> cachedKeys() 
+    { return Collections.emptyIterator(); }
 }

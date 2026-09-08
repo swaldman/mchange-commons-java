@@ -52,13 +52,13 @@ public final class CachedStoreUtils
             { orig.setCachedValue(key, value); }
 
             @Override
-            public synchronized Iterator cachedKeys() throws CachedStoreException
+            public synchronized Iterator<Object> cachedKeys() throws CachedStoreException
             {
-                ArrayList al = new ArrayList();
-                Iterator csIter = orig.cachedKeys();
+                ArrayList<Object> al = new ArrayList<Object>();
+                Iterator<Object> csIter = orig.cachedKeys();
                 while( csIter.hasNext() ) al.add(csIter.next());
-                final Iterator inner = al.iterator();
-                return new Iterator()
+                final Iterator<Object> inner = al.iterator();
+                return new Iterator<Object>()
                 {
                     @Override
                     public boolean hasNext() { return inner.hasNext(); }
@@ -97,7 +97,7 @@ public final class CachedStoreUtils
             { orig.flushWrites(); }
 
             @Override
-            public synchronized Set  getFailedWrites() throws CachedStoreException
+            public synchronized Set<Object>  getFailedWrites() throws CachedStoreException
             { return orig.getFailedWrites(); }
 
             @Override

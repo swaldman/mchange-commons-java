@@ -11,10 +11,10 @@ public class DirectoryDescendingFileFinderImpl implements IOEnumeration, FileEnu
 {
     private final static Object dummy = new Object();
 
-    Hashtable markedDirex  = new Hashtable();
+    Hashtable<String,Object> markedDirex  = new Hashtable<String,Object>();
 
-    Stack direx   = new Stack();
-    Stack files   = new Stack();
+    Stack<File> direx   = new Stack<File>();
+    Stack<File> files   = new Stack<File>();
 
     FilenameFilter filter;
 
@@ -29,7 +29,7 @@ public class DirectoryDescendingFileFinderImpl implements IOEnumeration, FileEnu
 	this.canonical = canonical;
 	blossomDirectory(root);
 	while (files.empty() && !direx.empty())
-	    blossomDirectory((File) direx.pop());
+	    blossomDirectory(direx.pop());
     }
 
     public DirectoryDescendingFileFinderImpl(File root) throws IOException
@@ -43,9 +43,9 @@ public class DirectoryDescendingFileFinderImpl implements IOEnumeration, FileEnu
     public File nextFile() throws IOException
     {
 	if (files.empty()) throw new NoSuchElementException();
-	File out = (File) files.pop();
+	File out = files.pop();
 	while (files.empty() && !direx.empty())
-	    blossomDirectory((File) direx.pop());
+	    blossomDirectory(direx.pop());
 	return out;
     }
 

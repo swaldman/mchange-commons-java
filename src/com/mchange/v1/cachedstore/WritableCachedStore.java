@@ -30,7 +30,7 @@ public interface WritableCachedStore extends CachedStore
      *  the write to storage failed. A failed write may be
      *  any of an attempted first write, overwrite, or remove.
      */
-    public Set  getFailedWrites() throws CachedStoreException;
+    public Set<Object>  getFailedWrites() throws CachedStoreException;
 
     /**
      * Clears any pending (unflushed or failed) writes and removes.

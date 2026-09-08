@@ -23,20 +23,20 @@ public final class DirectoryDescentUtils
 						      boolean canonical) 
 	throws IOException
     { 
-	List list = new LinkedList();
-	Set  seenDirex = new HashSet();
+	List<File> list = new LinkedList<File>();
+	Set<String>  seenDirex = new HashSet<String>();
 	depthFirstEagerDescend(root, filter, canonical, list, seenDirex);
 	return new IteratorFileIterator( list.iterator() );
     }
 
-    public static void addSubtree( File root, FileFilter filter, boolean canonical, Collection addToMe ) throws IOException
+    public static void addSubtree( File root, FileFilter filter, boolean canonical, Collection<? super File> addToMe ) throws IOException
     {
-	Set  seenDirex = new HashSet();
+	Set<String>  seenDirex = new HashSet<String>();
 	depthFirstEagerDescend(root, filter, canonical, addToMe, seenDirex);
     }
 
     private static void depthFirstEagerDescend(File dir, FileFilter filter, boolean canonical, 
-					       Collection addToMe, Set seenDirex)
+					       Collection<? super File> addToMe, Set<String> seenDirex)
 	throws IOException
     {
 	String canonicalPath = dir.getCanonicalPath();
@@ -60,15 +60,15 @@ public final class DirectoryDescentUtils
 
     private static class IteratorFileIterator implements FileIterator
     {
-	Iterator ii;
-	Object last;
+	Iterator<File> ii;
+	File last;
 
-	IteratorFileIterator(Iterator ii)
+	IteratorFileIterator(Iterator<File> ii)
 	{ this.ii = ii; }
 
 	@Override
 	public File nextFile() throws IOException
-	{ return (File) next(); }
+	{ return (last = ii.next()); }
 
 	@Override
 	public boolean hasNext() throws IOException
@@ -76,14 +76,14 @@ public final class DirectoryDescentUtils
 
 	@Override
 	public Object next() throws IOException
-	{ return (last = ii.next()); }
+	{ return nextFile(); }
 
 	@Override
 	public void remove() throws IOException
 	{
 	    if (last != null)
 		{
-		    ((File) last).delete();
+		    last.delete();
 		    last = null;
 		}
 	    else

@@ -8,7 +8,7 @@ class NoCleanupCachedStore implements TweakableCachedStore
 {
     final static boolean DEBUG = true;
 
-    protected Map cache = new HashMap();
+    protected Map<Object,Object> cache = new HashMap<Object,Object>();
     
     CachedStore.Manager manager;
 
@@ -61,7 +61,7 @@ class NoCleanupCachedStore implements TweakableCachedStore
 
     //overridden by subclasses!
     @Override
-    public Iterator cachedKeys() throws CachedStoreException
+    public Iterator<Object> cachedKeys() throws CachedStoreException
     { return cache.keySet().iterator(); }
 
     @Override

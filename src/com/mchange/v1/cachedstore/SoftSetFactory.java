@@ -5,7 +5,7 @@ import java.lang.reflect.*;
 
 public final class SoftSetFactory
 {
-    public static Set createSynchronousCleanupSoftSet()
+    public static Set<Object> createSynchronousCleanupSoftSet()
     {
 	final ManualCleanupSoftSet inner = new ManualCleanupSoftSet(); 
 	InvocationHandler handler = new InvocationHandler()
@@ -18,9 +18,11 @@ public final class SoftSetFactory
 		    return m.invoke( inner, args ); 
 		}
 	    };
-	return (Set) Proxy.newProxyInstance( SoftSetFactory.class.getClassLoader(),
-					     new Class[] { Set.class },
+	@SuppressWarnings("unchecked") // the proxy implements Set, and the set it fronts holds Objects
+	Set<Object> out = (Set<Object>) Proxy.newProxyInstance( SoftSetFactory.class.getClassLoader(),
+					     new Class<?>[] { Set.class },
 					     handler );
+	return out;
     }
 
     private SoftSetFactory()

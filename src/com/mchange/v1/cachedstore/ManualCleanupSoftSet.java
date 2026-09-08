@@ -4,15 +4,15 @@ import java.util.*;
 import java.lang.ref.*;
 import com.mchange.v1.util.WrapperIterator;
 
-class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
+class ManualCleanupSoftSet extends AbstractSet<Object> implements Vacuumable
 {
-    HashSet inner = new HashSet();
-    ReferenceQueue queue = new ReferenceQueue();
+    HashSet<SoftKey> inner = new HashSet<SoftKey>();
+    ReferenceQueue<Object> queue = new ReferenceQueue<Object>();
 
     @Override
-    public Iterator iterator()
+    public Iterator<Object> iterator()
     {
-	return new WrapperIterator( inner.iterator(), true )
+	return new WrapperIterator<Object>( inner.iterator(), true )
 	    {
 		@Override
 		protected Object transformObject(Object o)
@@ -38,10 +38,10 @@ class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
     public boolean contains(Object o)
     { return inner.contains( new SoftKey( o, null ) ); }
 
-    private ArrayList toArrayList()
+    private ArrayList<Object> toArrayList()
     {
-	ArrayList out = new ArrayList( this.size() );
-	for (Iterator ii = this.iterator(); ii.hasNext();)
+	ArrayList<Object> out = new ArrayList<Object>( this.size() );
+	for (Iterator<Object> ii = this.iterator(); ii.hasNext();)
 	    out.add( ii.next() );
 	return out;
     }
@@ -51,7 +51,7 @@ class ManualCleanupSoftSet extends AbstractSet implements Vacuumable
     { return this.toArrayList().toArray(); }
 
     @Override
-    public Object[] toArray(Object[] a) 
+    public <T> T[] toArray(T[] a) 
     { return this.toArrayList().toArray(a); }
 
     @Override

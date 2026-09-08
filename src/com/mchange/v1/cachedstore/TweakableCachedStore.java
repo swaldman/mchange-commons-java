@@ -14,7 +14,7 @@ public interface TweakableCachedStore extends CachedStore
     public void setCachedValue(Object key, Object value) 
 	throws CachedStoreException;
 
-    public Iterator cachedKeys() 
+    public Iterator<Object> cachedKeys() 
 	throws CachedStoreException;
 }
 

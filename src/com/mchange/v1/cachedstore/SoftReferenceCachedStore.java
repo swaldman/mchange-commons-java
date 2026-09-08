@@ -20,11 +20,11 @@ class SoftReferenceCachedStore extends ValueTransformingCachedStore
 
     @Override
     protected Object toUserValue( Object cacheValue )
-    { return cacheValue == null ? null : ((SoftReference) cacheValue).get(); }
+    { return cacheValue == null ? null : ((SoftReference<?>) cacheValue).get(); }
 
     @Override
     protected Object toCacheValue( Object userValue )
-    { return userValue == null ? null : new SoftReference( userValue ); }
+    { return userValue == null ? null : new SoftReference<Object>( userValue ); }
 
 }
 
