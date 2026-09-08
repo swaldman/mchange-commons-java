@@ -3,27 +3,27 @@ package com.mchange.v2.collection;
 import java.util.*;
 import com.mchange.v2.lang.ObjectUtils;
 
-public class MapEntry implements Map.Entry
+public class MapEntry<K,V> implements Map.Entry<K,V>
 {
-    Object key;
-    Object value;
+    K key;
+    V value;
 
-    public MapEntry( Object key, Object value )
+    public MapEntry( K key, V value )
     { 
 	this.key = key;
 	this.value = value;
     }
 
     @Override
-    public Object getKey()
+    public K getKey()
     { return key; }
 
     @Override
-    public Object getValue()
+    public V getValue()
     { return value;  }
 
     @Override
-    public Object setValue(Object o)
+    public V setValue(V o)
     { throw new UnsupportedOperationException(); }
 
     @Override
@@ -31,7 +31,7 @@ public class MapEntry implements Map.Entry
     {
 	if (o instanceof Map.Entry)
 	    {
-		Map.Entry other = (Map.Entry) o;
+		Map.Entry<?,?> other = (Map.Entry<?,?>) o;
 		return 
 		    ObjectUtils.eqOrBothNull( this.key   , other.getKey() ) &&
 		    ObjectUtils.eqOrBothNull( this.value , other.getValue() );

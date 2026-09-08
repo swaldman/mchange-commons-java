@@ -11,5 +11,5 @@ import com.mchange.v2.util.WeakIdentityHashMapFactory;
 public class IdentityEncounterCounter extends AbstractEncounterCounter
 {
     public IdentityEncounterCounter()
-    { super( WeakIdentityHashMapFactory.create() ); }
+    { super( WeakIdentityHashMapFactory.<Object,Long>create() ); }
 }

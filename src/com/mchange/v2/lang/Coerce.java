@@ -4,11 +4,11 @@ import java.util.*;
 
 public final class Coerce
 {
-    final static Set CAN_COERCE;
+    final static Set<Class<?>> CAN_COERCE;
     
     static
     {
-	Class[] classes =
+	Class<?>[] classes =
 	    {
 		byte.class,
 		boolean.class,
@@ -28,12 +28,12 @@ public final class Coerce
 		Float.class,
 		Double.class
 	    };
-	Set tmp = new HashSet();
+	Set<Class<?>> tmp = new HashSet<Class<?>>();
 	tmp.addAll( Arrays.asList( classes ) );
 	CAN_COERCE = Collections.unmodifiableSet( tmp );
     }
 
-    public static boolean canCoerce( Class cl )
+    public static boolean canCoerce( Class<?> cl )
     { return CAN_COERCE.contains( cl ); }
 
     public static boolean canCoerce( Object o )
@@ -77,7 +77,7 @@ public final class Coerce
 	    return (char) toInt(s);
     }
 
-    public static Object toObject( String s, Class type )
+    public static Object toObject( String s, Class<?> type )
     {
 	if ( type == byte.class) type = Byte.class;
 	else if ( type == boolean.class) type = Boolean.class;

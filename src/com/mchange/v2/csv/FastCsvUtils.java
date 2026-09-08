@@ -188,11 +188,11 @@ public final class FastCsvUtils
     {
 	int[] upshifted = upshiftQuoteString( csvLine );
 	//debugPrint( upshifted );
-	List upshiftedSplit = splitShifted( upshifted );
+	List<int[]> upshiftedSplit = splitShifted( upshifted );
 	int len = upshiftedSplit.size();
 	String[] out = new String[ len ];
 	for (int i = 0; i < len; ++i)
-	    out[i] = downshift( (int[]) upshiftedSplit.get(i) );
+	    out[i] = downshift( upshiftedSplit.get(i) );
 	return out;
     }
 
@@ -208,9 +208,9 @@ public final class FastCsvUtils
     // here we just split on commas and trim around them.
     // we don't have to worry about quoted commas or whitespace, because
     // that has already been shifted
-    private static List splitShifted(int[] shiftedQuoteString)
+    private static List<int[]> splitShifted(int[] shiftedQuoteString)
     {
-	List out = new ArrayList();
+	List<int[]> out = new ArrayList<int[]>();
 	
 	int sstart = 0;
 	for (int finger = 0, len = shiftedQuoteString.length; finger <= len; ++finger)

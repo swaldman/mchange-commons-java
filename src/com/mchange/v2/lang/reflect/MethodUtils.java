@@ -5,13 +5,11 @@ import java.util.Comparator;
 
 public final class MethodUtils
 {
-    public final static Comparator METHOD_COMPARATOR = new Comparator()
+    public final static Comparator<Method> METHOD_COMPARATOR = new Comparator<Method>()
     {
         @Override
-        public int compare(Object a, Object b)
+        public int compare(Method aa, Method bb)
         {
-            Method aa = (Method) a;
-            Method bb = (Method) b;
             String aName = aa.getName();
             String bName = bb.getName();
             int out = String.CASE_INSENSITIVE_ORDER.compare(aName, bName);
@@ -19,8 +17,8 @@ public final class MethodUtils
             {
                 if (aName.equals(bName))
                 {
-                    Class[] aParams = aa.getParameterTypes();
-                    Class[] bParams = bb.getParameterTypes();
+                    Class<?>[] aParams = aa.getParameterTypes();
+                    Class<?>[] bParams = bb.getParameterTypes();
                     if (aParams.length < bParams.length)
                         out = -1;
                     else if (aParams.length > bParams.length)

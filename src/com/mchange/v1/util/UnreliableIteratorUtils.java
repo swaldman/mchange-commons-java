@@ -5,23 +5,23 @@ import java.util.Iterator;
 
 public class UnreliableIteratorUtils
 {
-    public static void addToCollection(Collection c, UnreliableIterator uii) 
+    public static <T> void addToCollection(Collection<? super T> c, UnreliableIterator<? extends T> uii) 
 				throws UnreliableIteratorException
     {
 	while (uii.hasNext())
 	    c.add( uii.next() );
     }
 
-    public static UnreliableIterator unreliableIteratorFromIterator(final Iterator ii)
+    public static <T> UnreliableIterator<T> unreliableIteratorFromIterator(final Iterator<T> ii)
     {
-	return new UnreliableIterator()
+	return new UnreliableIterator<T>()
 	    {
 		@Override
 		public boolean hasNext()
 		{ return ii.hasNext(); }
 
 		@Override
-		public Object  next()
+		public T  next()
 		{ return ii.next(); }
 
 		@Override

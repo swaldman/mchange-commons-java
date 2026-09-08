@@ -5,9 +5,9 @@ import java.util.Map;
 class AbstractEncounterCounter implements EncounterCounter
 {
     final static Long ONE = Long.valueOf(1);
-    Map m;
+    Map<Object,Long> m;
 
-    AbstractEncounterCounter(Map m)
+    AbstractEncounterCounter(Map<Object,Long> m)
     { this.m = m; }
 
     /**
@@ -16,7 +16,7 @@ class AbstractEncounterCounter implements EncounterCounter
     @Override
     public long encounter(Object o)
     {
-	Long oldLong = (Long) m.get(o);
+	Long oldLong = m.get(o);
 	Long newLong;
 	long out;
 	if (oldLong == null)

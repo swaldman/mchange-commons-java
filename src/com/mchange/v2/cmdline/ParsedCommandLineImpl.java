@@ -11,7 +11,7 @@ class ParsedCommandLineImpl implements ParsedCommandLine
 
     //we are relying upon the fact that
     //HashMaps are null-accepting collections
-    HashMap  foundSwitches = new HashMap(); 
+    HashMap<String,String>  foundSwitches = new HashMap<String,String>(); 
     
     ParsedCommandLineImpl(String[] argv, 
 			  String switchPrefix, 
@@ -23,7 +23,7 @@ class ParsedCommandLineImpl implements ParsedCommandLine
 	this.argv = argv;
 	this.switchPrefix = switchPrefix;
 
-	List unswitchedArgsList = new LinkedList();
+	List<String> unswitchedArgsList = new LinkedList<String>();
 	int sp_len = switchPrefix.length();
 
 	for (int i = 0; i < argv.length; ++i)

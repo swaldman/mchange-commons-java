@@ -97,7 +97,7 @@ public final class DomParseUtils
     public static NodeList getImmediateChildElementsByTagName( Element parent, String tagName )
 	throws DOMException
     {
-	final List nodes = new ArrayList();
+	final List<Node> nodes = new ArrayList<Node>();
 	for (Node child = parent.getFirstChild(); child != null; child = child.getNextSibling())
 	    if (child instanceof Element && ((Element) child).getTagName().equals(tagName))
 		nodes.add(child);

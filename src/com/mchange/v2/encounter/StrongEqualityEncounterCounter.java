@@ -10,5 +10,5 @@ import java.util.HashMap;
 public class StrongEqualityEncounterCounter extends AbstractEncounterCounter
 {
     public StrongEqualityEncounterCounter()
-    { super( new HashMap() ); }
+    { super( new HashMap<Object,Long>() ); }
 }

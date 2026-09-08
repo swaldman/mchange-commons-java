@@ -13,7 +13,7 @@ public final class ThreadUtils
     {
 	Method _holdsLock;
 	try
-	    { _holdsLock = Thread.class.getMethod("holdsLock", new Class[] { Object.class }); }
+	    { _holdsLock = Thread.class.getMethod("holdsLock", new Class<?>[] { Object.class }); }
 	catch (NoSuchMethodException e)
 	    { _holdsLock = null; }
 

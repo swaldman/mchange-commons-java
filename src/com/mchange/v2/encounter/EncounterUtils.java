@@ -5,10 +5,10 @@ import com.mchange.v1.identicator.*;
 public final class EncounterUtils
 {
     public static EncounterCounter createStrong( Identicator id )
-    { return new GenericEncounterCounter( new IdHashMap( id ) ); }
+    { return new GenericEncounterCounter( new IdHashMap<Object,Long>( id ) ); }
 
     public static EncounterCounter createWeak( Identicator id )
-    { return new GenericEncounterCounter( new IdWeakHashMap( id ) ); }
+    { return new GenericEncounterCounter( new IdWeakHashMap<Object,Long>( id ) ); }
 
     /**
      * returns the inner EncounterCounter wrapped so that all

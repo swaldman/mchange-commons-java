@@ -4,7 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import com.mchange.v1.util.UIterator;
 
-public abstract class SimpleCursor implements UIterator
+public abstract class SimpleCursor implements UIterator<Object>
 {
     ResultSet rs;
     int       available = -1; //1 true, 0 false, -1 unchecked

@@ -5,13 +5,11 @@ import java.util.Comparator;
 
 public class ManagementUtils
 {
-    public final static Comparator PARAM_INFO_COMPARATOR = new Comparator()
+    public final static Comparator<MBeanParameterInfo> PARAM_INFO_COMPARATOR = new Comparator<MBeanParameterInfo>()
     {
         @Override
-        public int compare(Object a, Object b)
+        public int compare(MBeanParameterInfo aa, MBeanParameterInfo bb)
         {
-            MBeanParameterInfo aa = (MBeanParameterInfo) a;
-            MBeanParameterInfo bb = (MBeanParameterInfo) b;
             int out = aa.getType().compareTo(bb.getType());
             if (out == 0)
             {
@@ -34,13 +32,11 @@ public class ManagementUtils
         }
     };
     
-    public final static Comparator OP_INFO_COMPARATOR = new Comparator()
+    public final static Comparator<MBeanOperationInfo> OP_INFO_COMPARATOR = new Comparator<MBeanOperationInfo>()
     {
         @Override
-        public int compare(Object a, Object b)
+        public int compare(MBeanOperationInfo aa, MBeanOperationInfo bb)
         {
-            MBeanOperationInfo aa = (MBeanOperationInfo) a;
-            MBeanOperationInfo bb = (MBeanOperationInfo) b;
             String aName = aa.getName();
             String bName = bb.getName();
             int out = String.CASE_INSENSITIVE_ORDER.compare(aName, bName);

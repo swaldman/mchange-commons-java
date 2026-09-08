@@ -51,7 +51,17 @@ public final class SystemUtils
     }
 
     private static Map<String,String> propsMap()
-    { return Collections.checkedMap( (Map) System.getProperties(), String.class, String.class ); }
+    { return Collections.checkedMap( castToStringMap( System.getProperties() ), String.class, String.class ); }
+
+    /**
+     *  Properties is a Hashtable&lt;Object,Object&gt;, and nothing stops a caller from
+     *  putting a non-String in it. checkedMap is exactly the guard against that, but it
+     *  needs a Map&lt;String,String&gt; to wrap, so the unchecked step is unavoidable and is
+     *  confined here.
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String,String> castToStringMap( java.util.Properties props )
+    { return (Map<String,String>) (Map<?,?>) props; }
 
     /**
      *  Use $${....} as escapes for ${....}

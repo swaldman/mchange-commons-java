@@ -48,7 +48,7 @@ public final class DecodeUtils
 	    if ( encoded instanceof Map )
 		{
 		    String className = null;
-		    Map<String,Object> map = (Map<String,Object>) encoded;
+		    Map<?,?> map = (Map<?,?>) encoded;
 		    className = (String) map.get( DECODER_CLASS_DOT_KEY );
 		    if ( className == null )
 			className = (String) map.get( DECODER_CLASS_NO_DOT_KEY );

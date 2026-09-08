@@ -112,7 +112,7 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
 	    else
 	    {
 		String dottedPfx = pfx + '.';
-		for ( Map.Entry entry : props.entrySet() )
+		for ( Map.Entry<Object,Object> entry : props.entrySet() )
 		{
 		    String key = (String) entry.getKey();
 		    if ( key.startsWith( dottedPfx ) )
@@ -130,7 +130,7 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     { return (String) props.get( key ); }
 
     @Override
-    public List getDelayedLogItems()
+    public List<DelayedLogItem> getDelayedLogItems()
     { return delayedLogItems; }
 
     @Override
@@ -142,12 +142,12 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
     @Override
     public boolean wasFault(String resourcePath)     { return false; }
     @Override
-    public Set getAllRead()                          { return qrpSet; }
+    public Set<String> getAllRead()                          { return qrpSet; }
     @Override
-    public Set getAllVetoed()                        { return Collections.emptySet(); }
+    public Set<String> getAllVetoed()                        { return Collections.emptySet(); }
     @Override
-    public Set getAllNotFound()                      { return Collections.emptySet(); }
+    public Set<String> getAllNotFound()                      { return Collections.emptySet(); }
     @Override
-    public Set getAllFaults()                        { return Collections.emptySet(); }
+    public Set<String> getAllFaults()                        { return Collections.emptySet(); }
 }
 

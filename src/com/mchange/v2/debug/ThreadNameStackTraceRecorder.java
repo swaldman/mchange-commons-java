@@ -8,7 +8,7 @@ public class ThreadNameStackTraceRecorder
 {
     final static String NL = System.getProperty("line.separator", "\r\n");
 
-    Set set = new HashSet();
+    Set<Record> set = new HashSet<Record>();
 
     String dumpHeader;
     String stackTraceHeader;
@@ -54,7 +54,7 @@ public class ThreadNameStackTraceRecorder
 		sb.append( NL );
 	    }
 	boolean first = true;
-	for (Iterator ii = set.iterator(); ii.hasNext(); )
+	for (Iterator<Record> ii = set.iterator(); ii.hasNext(); )
 	    {
 		if (first) 
 		    first = false;
@@ -77,7 +77,7 @@ public class ThreadNameStackTraceRecorder
 	return sb.toString();	
     }
 
-    private final static class Record implements Comparable
+    private final static class Record implements Comparable<Object>
     {
 	long time;
 	String threadName;

@@ -5,9 +5,9 @@ import com.mchange.v1.identicator.*;
 
 public final class WeakIdentityHashMapFactory
 {
-    public static Map create()
+    public static <K,V> Map<K,V> create()
     {
 	Identicator id = new StrongIdentityIdenticator();
-	return new IdWeakHashMap( id );
+	return new IdWeakHashMap<K,V>( id );
     }
 }

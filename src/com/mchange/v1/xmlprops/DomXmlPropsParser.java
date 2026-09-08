@@ -78,7 +78,7 @@ public class DomXmlPropsParser
 		InputStream is = new BufferedInputStream( new FileInputStream( argv[0] ) );
 		DomXmlPropsParser parser = new DomXmlPropsParser();
 		Properties props = parser.parseXmlProps( is );
-		for (Iterator ii = props.keySet().iterator(); ii.hasNext(); )
+		for (Iterator<Object> ii = props.keySet().iterator(); ii.hasNext(); )
 		    {
 			String key = (String) ii.next();
 			String value = props.getProperty(key);

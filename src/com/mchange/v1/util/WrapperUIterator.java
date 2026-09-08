@@ -7,24 +7,24 @@ import com.mchange.v1.util.DebugUtils;
  *  This implementation does not yet support removes once hasNext() has
  *  been called... will add if necessary.
  */
-public abstract class WrapperUIterator implements UIterator
+public abstract class WrapperUIterator<T> implements UIterator<T>
 {
     protected final static Object SKIP_TOKEN = new Object();
 
     final static boolean DEBUG = true;
 
-    UIterator inner;
+    UIterator<?> inner;
     boolean  supports_remove;
     Object   lastOut = null;
     Object   nextOut = SKIP_TOKEN;
     
-    public WrapperUIterator(UIterator inner, boolean supports_remove)
+    public WrapperUIterator(UIterator<?> inner, boolean supports_remove)
     { 
 	this.inner = inner; 
 	this.supports_remove = supports_remove;
     }
 
-    public WrapperUIterator(UIterator inner)
+    public WrapperUIterator(UIterator<?> inner)
     { this( inner, false ); }
 
     @Override
@@ -43,8 +43,15 @@ public abstract class WrapperUIterator implements UIterator
 	    }
     }
 
+    /**
+     *  nextOut and lastOut hold either an element or the SKIP_TOKEN sentinel, so they
+     *  cannot be typed T. transformObject's contract is to return a T or the sentinel,
+     *  and the sentinel is never what gets returned from here, so the cast holds; the
+     *  compiler cannot see that through a field typed Object.
+     */
     @Override
-    public Object next() throws NoSuchElementException, Exception
+    @SuppressWarnings("unchecked")
+    public T next() throws NoSuchElementException, Exception
     {
 	findNext();
 	if (nextOut != SKIP_TOKEN)
@@ -61,7 +68,7 @@ public abstract class WrapperUIterator implements UIterator
 
 	assert( nextOut == SKIP_TOKEN && lastOut != SKIP_TOKEN );
 
-	return lastOut;
+	return (T) lastOut;
     }
     
     @Override

@@ -4,6 +4,6 @@ import java.util.Map;
 
 final class GenericEncounterCounter extends AbstractEncounterCounter 
 {
-    GenericEncounterCounter(Map m)
+    GenericEncounterCounter(Map<Object,Long> m)
     { super( m ); }
 }

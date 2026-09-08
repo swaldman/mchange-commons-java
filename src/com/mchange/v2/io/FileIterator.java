@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.NoSuchElementException;
 import com.mchange.v1.util.UIterator;
 
-public interface FileIterator extends UIterator
+public interface FileIterator extends UIterator<Object>
 {
     public File nextFile() throws IOException;
 

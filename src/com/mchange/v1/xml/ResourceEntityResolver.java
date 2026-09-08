@@ -18,7 +18,7 @@ public class ResourceEntityResolver implements EntityResolver
 	this.prefix = rsrcPrefix;
     }
 
-    public ResourceEntityResolver(Class loadSibling)
+    public ResourceEntityResolver(Class<?> loadSibling)
     { this(loadSibling.getClassLoader(), classToPrefix(loadSibling)); }
 
     @Override
@@ -37,7 +37,7 @@ public class ResourceEntityResolver implements EntityResolver
 	return (is == null ? null : new InputSource(is));
     }
 
-    private static String classToPrefix(Class c)
+    private static String classToPrefix(Class<?> c)
     {
 	String className = c.getName();
 	int last_dot = className.lastIndexOf('.');

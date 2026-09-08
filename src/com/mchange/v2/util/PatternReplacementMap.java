@@ -6,7 +6,7 @@ import com.mchange.v1.util.WrapperIterator;
 
 public final class PatternReplacementMap
 {
-    List mappings = new LinkedList();
+    List<Mapping> mappings = new LinkedList<Mapping>();
 
     public synchronized void addMapping( Pattern pattern, String replacement )
     { mappings.add( new Mapping( pattern, replacement) ); }
@@ -14,13 +14,13 @@ public final class PatternReplacementMap
     public synchronized void removeMapping( Pattern pattern )
     {
 	for (int i = 0, len = mappings.size(); i < len; ++i)
-	    if ( ((Mapping) mappings.get(i)).getPattern().equals( pattern ) )
+	    if ( mappings.get(i).getPattern().equals( pattern ) )
 		mappings.remove( i );
     }
 
-    public synchronized Iterator patterns()
+    public synchronized Iterator<Pattern> patterns()
     {
-	return new WrapperIterator( mappings.iterator(), true )
+	return new WrapperIterator<Pattern>( mappings.iterator(), true )
 	    {
 		@Override
 		protected Object transformObject(Object o)
@@ -40,9 +40,9 @@ public final class PatternReplacementMap
     public synchronized String attemptReplace( String testString )
     {
 	String out = null;
-	for (Iterator ii = mappings.iterator(); ii.hasNext(); )
+	for (Iterator<Mapping> ii = mappings.iterator(); ii.hasNext(); )
 	    {
-		Mapping mapping = (Mapping) ii.next();
+		Mapping mapping = ii.next();
 // 		System.err.println(this + " trying: pattern -- " + mapping.getPattern() + 
 // 				   " ; replacement -- " + mapping.getReplacement() + 
 // 				   " ; testString -- " + testString );

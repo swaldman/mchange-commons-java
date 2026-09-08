@@ -123,7 +123,7 @@ public class XmlProperties extends Properties
 
 	Element xmlPropsElem = doc.createElement("xml-properties");
 	
-	for( Iterator ii = this.keySet().iterator(); ii.hasNext(); )
+	for( Iterator<Object> ii = this.keySet().iterator(); ii.hasNext(); )
 	    {
 		Element propsElem = doc.createElement("property");
 		String key = (String) ii.next();

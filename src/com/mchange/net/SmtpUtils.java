@@ -63,7 +63,7 @@ public final class SmtpUtils
 	  dout.flush();
 	  ensureResponse(br, 300, 400);
 
-	  for (Enumeration e = headers.keys(); e.hasMoreElements();)
+	  for (Enumeration<?> e = headers.keys(); e.hasMoreElements();)
 	    {
 	      String key = (String) e.nextElement();
 	      String value = headers.getProperty(key);

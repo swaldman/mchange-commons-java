@@ -4,10 +4,10 @@ import java.util.Iterator;
 
 public final class IterableUtils
 {
-    public static String joinAsString(String delimiter, Iterable i)
+    public static String joinAsString(String delimiter, Iterable<?> i)
     {
         StringBuilder sb = new StringBuilder();
-        Iterator ii = i.iterator();
+        Iterator<?> ii = i.iterator();
         boolean hn = ii.hasNext();
         while (hn)
         {

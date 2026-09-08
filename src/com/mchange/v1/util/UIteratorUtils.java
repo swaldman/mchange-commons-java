@@ -5,22 +5,22 @@ import java.util.Iterator;
 
 public class UIteratorUtils
 {
-    public static void addToCollection(Collection c, UIterator uii) throws Exception
+    public static <T> void addToCollection(Collection<? super T> c, UIterator<? extends T> uii) throws Exception
     {
 	while (uii.hasNext())
 	    c.add( uii.next() );
     }
 
-    public static UIterator uiteratorFromIterator(final Iterator ii)
+    public static <T> UIterator<T> uiteratorFromIterator(final Iterator<T> ii)
     {
-	return new UIterator()
+	return new UIterator<T>()
 	    {
 		@Override
 		public boolean hasNext()
 		{ return ii.hasNext(); }
 
 		@Override
-		public Object  next()
+		public T  next()
 		{ return ii.next(); }
 
 		@Override

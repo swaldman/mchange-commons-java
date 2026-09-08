@@ -9,10 +9,10 @@ package com.mchange.v1.util;
  * directly, but to be extended by subinterfaces
  * that narrow the exceptions reasonably.
  */
-public interface UIterator extends ClosableResource
+public interface UIterator<T> extends ClosableResource
 {
     public boolean hasNext() throws Exception;
-    public Object  next()    throws Exception;
+    public T       next()    throws Exception;
     public void    remove()  throws Exception;
     @Override
     public void    close() throws Exception;
