@@ -59,9 +59,9 @@ public final class MLogConfig
 	{
 	    if ( delayedDumpToLogger == null )
 	    {
-		Class mConfigClass = Class.forName( "com.mchange.v2.cfg.MConfig" );
-		Class delayedLogItemClass = Class.forName( "com.mchange.v2.cfg.DelayedLogItem" );
-		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class[] { delayedLogItemClass, MLogger.class } );
+		Class<?> mConfigClass = Class.forName( "com.mchange.v2.cfg.MConfig" );
+		Class<?> delayedLogItemClass = Class.forName( "com.mchange.v2.cfg.DelayedLogItem" );
+		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class<?>[] { delayedLogItemClass, MLogger.class } );
 	    }
 	}
 	catch ( RuntimeException e )

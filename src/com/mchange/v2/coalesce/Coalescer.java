@@ -6,5 +6,5 @@ public interface Coalescer
 {
     public Object coalesce( Object o );
     public int countCoalesced();
-    public Iterator iterator();
+    public Iterator<Object> iterator();
 }

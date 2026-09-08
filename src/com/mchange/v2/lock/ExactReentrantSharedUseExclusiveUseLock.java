@@ -18,10 +18,10 @@ import java.util.*;
  */
 public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusiveUseLock
 {
-    Set  waitingShared = new HashSet();    //can't reenter this set, 'cuz once a thread enters, it waits
-    List activeShared  = new LinkedList(); //can reenter this, so we are duplicate-holding Collection
+    Set<Thread>  waitingShared = new HashSet<Thread>();    //can't reenter this set, 'cuz once a thread enters, it waits
+    List<Thread> activeShared  = new LinkedList<Thread>(); //can reenter this, so we are duplicate-holding Collection
 
-    Set waitingExclusive   = new HashSet();
+    Set<Thread> waitingExclusive   = new HashSet<Thread>();
     Thread activeExclusive = null;
 
     int exclusive_shared_reentries    = 0;
@@ -153,7 +153,7 @@ public class ExactReentrantSharedUseExclusiveUseLock implements SharedUseExclusi
 	    return (activeShared.get(0) == t);
 	else
 	    {
-		Set activeSharedNoDups = new HashSet( activeShared );
+		Set<Thread> activeSharedNoDups = new HashSet<Thread>( activeShared );
 		return (activeSharedNoDups.size() == 1 && activeSharedNoDups.contains( t ));
 	    }
     }

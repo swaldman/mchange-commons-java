@@ -6,7 +6,7 @@ import java.util.Hashtable;
 @Deprecated
 public abstract class NoGCObjectCache implements com.mchange.util.ObjectCache
 {
-  Hashtable store = new Hashtable();
+  Hashtable<Object,Object> store = new Hashtable<Object,Object>();
   
   @Override
   public Object find(Object key) throws Exception

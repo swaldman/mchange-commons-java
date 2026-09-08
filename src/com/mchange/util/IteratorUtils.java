@@ -4,16 +4,16 @@ import java.util.Iterator;
 
 public class IteratorUtils
 {
-  public static Iterator unmodifiableIterator(final Iterator ii)
+  public static <T> Iterator<T> unmodifiableIterator(final Iterator<T> ii)
     {
-      return new Iterator()
+      return new Iterator<T>()
 	{
 	  @Override
 	  public boolean hasNext()
 	    {return ii.hasNext();}
 	  
 	  @Override
-	  public Object next()
+	  public T next()
 	    {return ii.next();}
 
 	  @Override

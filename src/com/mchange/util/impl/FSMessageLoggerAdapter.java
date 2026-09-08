@@ -10,7 +10,7 @@ import com.mchange.util.FailSuppressedMessageLogger;
 public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
 {
   MessageLogger inner;
-  List          failures = null;
+  List<IOException> failures = null;
 
   public FSMessageLoggerAdapter(MessageLogger wrapMe)
     {this.inner = wrapMe;}
@@ -34,7 +34,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
     }
 
   @Override
-  public synchronized Iterator getFailures()
+  public synchronized Iterator<IOException> getFailures()
     {
       if (inner instanceof FailSuppressedMessageLogger)
 	return ((FailSuppressedMessageLogger) inner).getFailures();
@@ -52,7 +52,7 @@ public class FSMessageLoggerAdapter implements FailSuppressedMessageLogger
   private synchronized void addFailure(IOException e)
     {
       if (failures == null)
-	failures = new LinkedList();
+	failures = new LinkedList<IOException>();
       failures.add(e);
     }
 }

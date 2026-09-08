@@ -7,7 +7,7 @@ final class StrongCcCoalescer extends AbstractStrongCoalescer
     implements Coalescer
 {
     StrongCcCoalescer( CoalesceChecker cc )
-    { super( new IdHashMap( new CoalesceIdenticator( cc ) ) ); }
+    { super( new IdHashMap<Object,Object>( new CoalesceIdenticator( cc ) ) ); }
 }
 
 

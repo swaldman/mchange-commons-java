@@ -5,9 +5,9 @@ import java.lang.ref.WeakReference;
 
 class AbstractWeakCoalescer implements Coalescer
 {
-    Map wcoalesced;
+    Map<Object,WeakReference<Object>> wcoalesced;
 
-    AbstractWeakCoalescer( Map wcoalesced )
+    AbstractWeakCoalescer( Map<Object,WeakReference<Object>> wcoalesced )
     { this.wcoalesced = wcoalesced; }
 
     @Override
@@ -16,13 +16,13 @@ class AbstractWeakCoalescer implements Coalescer
 	//System.err.println("AbstractWeakCoalescer.coalesce( " + o + " )");
 	Object out = null;
 
-	WeakReference wr = (WeakReference) wcoalesced.get( o );
+	WeakReference<Object> wr = wcoalesced.get( o );
 	if ( wr != null ) 
 	    out = wr.get(); //there is a conceivable race that would
     	                    //permit wr be cleared
 	if ( out == null )
 	    {
-		wcoalesced.put( o , new WeakReference(o) );
+		wcoalesced.put( o , new WeakReference<Object>(o) );
 		out = o;
 	    }
 	return out;
@@ -33,7 +33,7 @@ class AbstractWeakCoalescer implements Coalescer
     { return wcoalesced.size(); }
 
     @Override
-    public Iterator iterator()
+    public Iterator<Object> iterator()
     { return new CoalescerIterator( wcoalesced.keySet().iterator() ); }
 }
 

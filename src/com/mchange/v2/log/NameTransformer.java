@@ -13,6 +13,6 @@ package com.mchange.v2.log;
 public interface NameTransformer
 {
     public String transformName( String name );
-    public String transformName( Class cl );
+    public String transformName( Class<?> cl );
     public String transformName();
 }

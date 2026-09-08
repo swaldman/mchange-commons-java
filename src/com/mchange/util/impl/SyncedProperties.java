@@ -49,7 +49,7 @@ public class SyncedProperties
 		{
 		  br = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
 
-		  List list = new LinkedList();
+		  List<String> list = new LinkedList<String>();
 		  String line = br.readLine();
 		  while (line.trim().equals(""))
 		    line = br.readLine();
@@ -128,13 +128,13 @@ public class SyncedProperties
       return props.containsKey(key);
     }
 
-  public synchronized Enumeration elements() throws IOException
+  public synchronized Enumeration<Object> elements() throws IOException
     {
       ensureUpToDate();
       return props.elements();
     }
 
-  public synchronized Enumeration keys() throws IOException
+  public synchronized Enumeration<Object> keys() throws IOException
     {
       ensureUpToDate();
       return props.keys();

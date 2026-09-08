@@ -7,7 +7,7 @@ import com.mchange.v1.identicator.IdWeakHashMap;
 final class WeakCcCoalescer extends AbstractWeakCoalescer implements Coalescer
 {
     WeakCcCoalescer(CoalesceChecker cc)
-    { super( new IdWeakHashMap( new CoalesceIdenticator( cc ) ) ); }
+    { super( new IdWeakHashMap<Object,WeakReference<Object>>( new CoalesceIdenticator( cc ) ) ); }
 }
 
 

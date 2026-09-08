@@ -9,17 +9,17 @@ import java.util.Map;
 @Deprecated
 public abstract class SoftReferenceObjectCache implements com.mchange.util.ObjectCache
 {
-  Map store = new HashMap();
+  Map<Object,Reference<Object>> store = new HashMap<Object,Reference<Object>>();
   
   @Override
   public synchronized Object find(Object key) throws Exception
     {
-      Reference ref = (Reference) store.get(key);
+      Reference<Object> ref = store.get(key);
       Object out;
       if (ref == null || (out = ref.get()) == null || isDirty(key, out))
 	{
 	  out = createFromKey(key);
-	  store.put(key, new SoftReference(out));
+	  store.put(key, new SoftReference<Object>(out));
 	}
       return out;
     }

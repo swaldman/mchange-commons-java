@@ -4,9 +4,9 @@ import java.util.*;
 
 class AbstractStrongCoalescer implements Coalescer
 {
-    Map coalesced;
+    Map<Object,Object> coalesced;
 
-    AbstractStrongCoalescer( Map coalesced )
+    AbstractStrongCoalescer( Map<Object,Object> coalesced )
     { this.coalesced = coalesced; }
 
     @Override
@@ -26,7 +26,7 @@ class AbstractStrongCoalescer implements Coalescer
     { return coalesced.size(); }
 
     @Override
-    public Iterator iterator()
+    public Iterator<Object> iterator()
     { return new CoalescerIterator( coalesced.keySet().iterator() ); }
 }
 

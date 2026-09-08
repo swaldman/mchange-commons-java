@@ -140,13 +140,13 @@ public class CircularList extends Object implements Cloneable
 
 
 
-  public Enumeration elements(boolean forward, boolean terminated)
+  public Enumeration<Object> elements(boolean forward, boolean terminated)
   {return new CircularListEnumeration(this, forward, terminated);}
 
-  public Enumeration elements(boolean forward)
+  public Enumeration<Object> elements(boolean forward)
   {return elements(forward, true);}
 
-  public Enumeration elements()
+  public Enumeration<Object> elements()
   {return elements(true, true);}
 
   public int size()
@@ -173,12 +173,12 @@ public class CircularList extends Object implements Cloneable
     list.appendElement("Hello");
     list.appendElement("There");
     list.appendElement("Joe.");
-    for (Enumeration e = list.elements(); e.hasMoreElements();)
+    for (Enumeration<Object> e = list.elements(); e.hasMoreElements();)
       System.out.println("x " + e.nextElement());
   }
 }
 
-class CircularListEnumeration extends Object implements Enumeration
+class CircularListEnumeration extends Object implements Enumeration<Object>
 {
   boolean forward;
   boolean terminated;

@@ -5,27 +5,27 @@ import java.util.*;
 
 public class LocalHostManager
 {
-    Set localAddresses;
-    Set knownGoodNames;
-    Set knownBadNames;
+    Set<InetAddress> localAddresses;
+    Set<String> knownGoodNames;
+    Set<String> knownBadNames;
 
     public synchronized void update() throws SocketException
     {
-	Set tmp = new HashSet();
-	Enumeration netintfcs = NetworkInterface.getNetworkInterfaces();
+	Set<InetAddress> tmp = new HashSet<InetAddress>();
+	Enumeration<NetworkInterface> netintfcs = NetworkInterface.getNetworkInterfaces();
 	while (netintfcs.hasMoreElements())
 	    {
-		NetworkInterface ni = (NetworkInterface) netintfcs.nextElement();
-		Enumeration addresses = ni.getInetAddresses();
+		NetworkInterface ni = netintfcs.nextElement();
+		Enumeration<InetAddress> addresses = ni.getInetAddresses();
 		while (addresses.hasMoreElements())
 		    tmp.add( addresses.nextElement() );
 	    }
 	this.localAddresses = Collections.unmodifiableSet( tmp );
-	this.knownGoodNames = new HashSet();
-	this.knownBadNames = new HashSet();
+	this.knownGoodNames = new HashSet<String>();
+	this.knownBadNames = new HashSet<String>();
     }
 
-    public synchronized Set getLocalAddresses()
+    public synchronized Set<InetAddress> getLocalAddresses()
     { return localAddresses; }
 
     public synchronized boolean isLocalAddress(InetAddress addr)

@@ -187,7 +187,7 @@ public abstract class MLog
     // does not require statics to be initialized
     public static MLog findByClassnames( String[] classnames, boolean log_attempts_to_stderr )
     {
-	List attempts = null;
+	List<String> attempts = null;
 	for (int i = 0, len = classnames.length; i < len; ++i)
 	    {
 		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).getDeclaredConstructor().newInstance(); }
@@ -201,7 +201,7 @@ public abstract class MLog
 			    System.err.println("MLog initialization issue: " + t.getMessage());
  
 			if (attempts == null)
-			    attempts = new ArrayList();
+			    attempts = new ArrayList<String>();
 			attempts.add( classnames[i] );
 			if ( log_attempts_to_stderr )
 			{
@@ -247,7 +247,7 @@ public abstract class MLog
 	return rdl ? RedirectableMLogger.wrap(out) : out;
     }
 
-    public static MLogger getLogger(Class cl)
+    public static MLogger getLogger(Class<?> cl)
     {
 	NameTransformer xformer = null;
 	MLog            insty   = null;
@@ -379,7 +379,7 @@ public abstract class MLog
     { instance().getLogger().finest( msg ); }
 
     // convenience implementation, may be overridden
-    public MLogger getMLogger(Class cl)
+    public MLogger getMLogger(Class<?> cl)
     { return getMLogger( cl.getName() ); }
 
     public abstract MLogger getMLogger(String name);

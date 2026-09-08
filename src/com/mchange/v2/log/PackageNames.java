@@ -7,7 +7,7 @@ public class PackageNames implements NameTransformer
     { return null; }
 
     @Override
-    public String transformName( Class cl )
+    public String transformName( Class<?> cl )
     {
 	String fqcn = cl.getName();
 	int i = fqcn.lastIndexOf('.');

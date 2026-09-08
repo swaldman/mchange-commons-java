@@ -6,7 +6,7 @@ import com.mchange.util.*;
 public class QuotesAndWhitespaceTokenizer extends StringEnumerationHelperBase
 {
   Object     current;
-  LinkedList list = new LinkedList();
+  LinkedList<Object> list = new LinkedList<Object>(); // holds StringTokenizers and Strings alike
 
   public QuotesAndWhitespaceTokenizer(String string) throws IllegalArgumentException
     {

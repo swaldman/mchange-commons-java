@@ -43,7 +43,7 @@ public final class Log4j2MLog extends MLog
     }
 
     @Override
-    public MLogger getMLogger(Class cl)
+    public MLogger getMLogger(Class<?> cl)
     {
         Logger lg = LogManager.getLogger(cl);
         if(lg == null)
@@ -373,7 +373,7 @@ public final class Log4j2MLog extends MLog
         @Deprecated
         public Object[] getHandlers()
         {
-            List tmp = new LinkedList();
+            List<Object> tmp = new LinkedList<Object>();
 
             LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
             Configuration config = ctx.getConfiguration();

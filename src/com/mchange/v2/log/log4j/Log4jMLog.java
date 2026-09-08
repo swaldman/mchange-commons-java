@@ -30,7 +30,7 @@ public final class Log4jMLog extends MLog
     }
 
     @Override
-    public MLogger getMLogger(Class cl)
+    public MLogger getMLogger(Class<?> cl)
     { 
         Logger lg = Logger.getLogger(cl);
         if (lg == null)
@@ -301,8 +301,8 @@ public final class Log4jMLog extends MLog
         @Deprecated
         public Object[] getHandlers()
         {
-            List tmp = new LinkedList();
-            for (Enumeration e = logger.getAllAppenders(); e.hasMoreElements(); )
+            List<Object> tmp = new LinkedList<Object>();
+            for (Enumeration<?> e = logger.getAllAppenders(); e.hasMoreElements(); )
                 tmp.add( e.nextElement() );
             return tmp.toArray();
         }

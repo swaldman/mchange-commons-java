@@ -6,22 +6,23 @@ import java.util.*;
 final class RedirectableMLogger implements MLogger
 {
     // MT: protected by class' lock
-    private static HashSet weakRefSet = new HashSet();
+    private static HashSet<WeakReference<RedirectableMLogger>> weakRefSet = new HashSet<WeakReference<RedirectableMLogger>>();
 
     synchronized static RedirectableMLogger wrap( MLogger mlogger )
     {
 	RedirectableMLogger out = new RedirectableMLogger( mlogger );
-	weakRefSet.add( new WeakReference( out ) );
+	weakRefSet.add( new WeakReference<RedirectableMLogger>( out ) );
 	return out;
     }
 
     synchronized static void resetAll()
     {
-	HashSet cloneSet = (HashSet) weakRefSet.clone();
-	for ( Iterator ii = cloneSet.iterator(); ii.hasNext(); )
+	@SuppressWarnings("unchecked") // HashSet.clone() is declared to return Object
+	HashSet<WeakReference<RedirectableMLogger>> cloneSet = (HashSet<WeakReference<RedirectableMLogger>>) weakRefSet.clone();
+	for ( Iterator<WeakReference<RedirectableMLogger>> ii = cloneSet.iterator(); ii.hasNext(); )
 	{
-	    WeakReference wr = (WeakReference) ii.next();
-	    RedirectableMLogger registered = (RedirectableMLogger) wr.get();
+	    WeakReference<RedirectableMLogger> wr = ii.next();
+	    RedirectableMLogger registered = wr.get();
 	    if ( registered == null ) weakRefSet.remove( wr );
 	    else registered.reset();
 	}

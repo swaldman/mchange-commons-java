@@ -2,11 +2,11 @@ package com.mchange.v2.coalesce;
 
 import java.util.*;
 
-class CoalescerIterator implements Iterator
+class CoalescerIterator implements Iterator<Object>
 {
-    Iterator inner;
+    Iterator<?> inner;
 
-    CoalescerIterator(Iterator inner)
+    CoalescerIterator(Iterator<?> inner)
     { this.inner = inner; }
 
     @Override

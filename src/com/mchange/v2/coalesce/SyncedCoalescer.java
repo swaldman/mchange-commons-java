@@ -18,6 +18,6 @@ class SyncedCoalescer implements Coalescer
     { return inner.countCoalesced(); }
 
     @Override
-    public synchronized Iterator iterator()
+    public synchronized Iterator<Object> iterator()
     { return inner.iterator(); }
 }

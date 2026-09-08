@@ -6,7 +6,7 @@ import java.lang.ref.WeakReference;
 class WeakEqualsCoalescer extends AbstractWeakCoalescer
 {
     WeakEqualsCoalescer()
-    { super( new WeakHashMap() ); }
+    { super( new WeakHashMap<Object,WeakReference<Object>>() ); }
 }
 
 

@@ -7,7 +7,7 @@ final class StrongEqualsCoalescer extends AbstractStrongCoalescer
     implements Coalescer
 {
     StrongEqualsCoalescer()
-    { super( new HashMap() ); }
+    { super( new HashMap<Object,Object>() ); }
 }
 
 

@@ -38,7 +38,7 @@ public final class MLevel
 
     static
     {
-	Class lvlClass;
+	Class<?> lvlClass;
 	boolean jdk14api;  //not just jdk14 -- it is possible for the api to be present with older vms
 	try
 	    { 
