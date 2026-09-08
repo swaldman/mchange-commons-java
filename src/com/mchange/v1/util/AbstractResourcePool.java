@@ -17,8 +17,8 @@ public abstract class AbstractResourcePool
 
     private static RunnableQueue sharedQueue = new SimpleRunnableQueue();
 
-    Set<Object>  managed = new HashSet<Object>();
-    List<Object> unused  = new LinkedList<Object>();
+    HashSet<Object>  managed = new HashSet<Object>();
+    LinkedList<Object> unused  = new LinkedList<Object>();
 
     int start;
     int max;
@@ -119,13 +119,15 @@ public abstract class AbstractResourcePool
     protected synchronized void markBad(Object resc) throws Exception
     { removeResource( resc ); }
 
+    @SuppressWarnings("unchecked")
     protected synchronized void close() throws Exception
     {
 				//we permit closes when we are already broken, so
 				//that resources that were checked out when the break
 				//occured can still be cleaned up
 	this.broken = true;
-	for (Iterator<Object> ii = managed.iterator(); ii.hasNext();)
+        HashSet<Object> managedSnapshot = (HashSet<Object>) managed.clone();
+	for (Iterator<Object> ii = managedSnapshot.iterator(); ii.hasNext();)
 	    {
 		try
 		    {removeResource(ii.next());}
@@ -182,10 +184,12 @@ public abstract class AbstractResourcePool
 
     //same as close, but we do not destroy checked out
     //resources
+    @SuppressWarnings("unchecked")
     private synchronized void unexpectedBreak()
     {
 	this.broken = true;
-	for (Iterator<Object> ii = unused.iterator(); ii.hasNext();)
+        LinkedList<Object> unusedSnapshot = (LinkedList<Object>) unused.clone();
+	for (Iterator<Object> ii = unusedSnapshot.iterator(); ii.hasNext();)
 	    {
 		try
 		    {removeResource(ii.next());}

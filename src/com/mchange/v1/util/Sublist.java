@@ -30,7 +30,7 @@ public class Sublist<T> extends AbstractList<T>
 						" end_index: " + end_index +
 						" parent.size(): " + parent.size());
 	this.parent = parent;
-	this.start_index  = end_index;
+	this.start_index  = start_index;
 	this.end_index  = end_index;
     }
 
