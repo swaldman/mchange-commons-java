@@ -6,23 +6,23 @@ import com.mchange.v1.util.ListUtils;
 public class TableRepImpl implements TableRep
 {
     String tableName;
-    List   colNameList;
-    Map    namesToColReps;
-    Set    primaryKeyColNames;
-    Set    foreignKeyReps;
-    Set    uniqConstrReps;
+    List<String>   colNameList;
+    Map<String,ColumnRep>    namesToColReps;
+    Set<String>    primaryKeyColNames;
+    Set<ForeignKeyRep>    foreignKeyReps;
+    Set<UniquenessConstraintRep>    uniqConstrReps;
     
-    public TableRepImpl(String tableName, List colReps, 
-			Collection primaryKeyColNames, 
-			Collection foreignKeyReps,
-			Collection uniqConstrReps)
+    public TableRepImpl(String tableName, List<ColumnRep> colReps, 
+			Collection<String> primaryKeyColNames, 
+			Collection<ForeignKeyRep> foreignKeyReps,
+			Collection<UniquenessConstraintRep> uniqConstrReps)
     {
 	this.tableName = tableName;
-	List tempColNameList = new ArrayList();
-	Map tempNamesToColReps = new HashMap();
+	List<String> tempColNameList = new ArrayList<String>();
+	Map<String,ColumnRep> tempNamesToColReps = new HashMap<String,ColumnRep>();
 	for (int i = 0, len = colReps.size(); i < len; ++i)
 	    {
-		ColumnRep colRep = (ColumnRep) colReps.get(i);
+		ColumnRep colRep = colReps.get(i);
 		String colName = colRep.getColumnName();
 		tempColNameList.add( colName );
 		tempNamesToColReps.put( colName, colRep );
@@ -30,14 +30,14 @@ public class TableRepImpl implements TableRep
 	this.colNameList = Collections.unmodifiableList( tempColNameList );
 	this.namesToColReps = Collections.unmodifiableMap ( tempNamesToColReps );
 	this.primaryKeyColNames = (primaryKeyColNames == null ?
-				   Collections.EMPTY_SET :
-				   Collections.unmodifiableSet( new HashSet( primaryKeyColNames ) ) );
+				   Collections.<String>emptySet() :
+				   Collections.unmodifiableSet( new HashSet<String>( primaryKeyColNames ) ) );
 	this.foreignKeyReps = (foreignKeyReps == null ?
-			       Collections.EMPTY_SET :
-			       Collections.unmodifiableSet( new HashSet( foreignKeyReps ) ) );
+			       Collections.<ForeignKeyRep>emptySet() :
+			       Collections.unmodifiableSet( new HashSet<ForeignKeyRep>( foreignKeyReps ) ) );
 	this.uniqConstrReps = (uniqConstrReps == null ?
-			       Collections.EMPTY_SET :
-			       Collections.unmodifiableSet( new HashSet( uniqConstrReps ) ) );
+			       Collections.<UniquenessConstraintRep>emptySet() :
+			       Collections.unmodifiableSet( new HashSet<UniquenessConstraintRep>( uniqConstrReps ) ) );
     }
 
     @Override
@@ -45,7 +45,7 @@ public class TableRepImpl implements TableRep
     { return tableName; }
 
     @Override
-    public Iterator getColumnNames()
+    public Iterator<String> getColumnNames()
     { return colNameList.iterator(); }
 
     @Override
@@ -53,15 +53,15 @@ public class TableRepImpl implements TableRep
     { return (ColumnRep) namesToColReps.get( name ); }
 
     @Override
-    public Set getPrimaryKeyColumnNames()
+    public Set<String> getPrimaryKeyColumnNames()
     { return primaryKeyColNames; }
 
     @Override
-    public Set getForeignKeyReps()
+    public Set<ForeignKeyRep> getForeignKeyReps()
     { return foreignKeyReps; }
 
     @Override
-    public Set getUniquenessConstraintReps()
+    public Set<UniquenessConstraintRep> getUniquenessConstraintReps()
     { return uniqConstrReps; }
 
     @Override

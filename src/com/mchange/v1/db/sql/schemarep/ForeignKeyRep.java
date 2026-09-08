@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface ForeignKeyRep
 {
-    public List getLocalColumnNames();
+    public List<String> getLocalColumnNames();
     public String getReferencedTableName();
-    public List getReferencedColumnNames();
+    public List<String> getReferencedColumnNames();
 }

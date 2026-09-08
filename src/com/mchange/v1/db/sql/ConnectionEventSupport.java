@@ -10,7 +10,7 @@ import javax.sql.*;
 public class ConnectionEventSupport
 {
     PooledConnection source;
-    Set              mlisteners = new HashSet();
+    Set<ConnectionEventListener>              mlisteners = new HashSet<ConnectionEventListener>();
 
     public ConnectionEventSupport(PooledConnection source)
     { this.source = source; }
@@ -24,7 +24,7 @@ public class ConnectionEventSupport
     public synchronized void fireConnectionClosed()
     {
 	ConnectionEvent evt = new ConnectionEvent(source);
-	for (Iterator i = mlisteners.iterator(); i.hasNext();)
+	for (Iterator<ConnectionEventListener> i = mlisteners.iterator(); i.hasNext();)
 	    {
 		ConnectionEventListener cl = (ConnectionEventListener) i.next();
 		cl.connectionClosed(evt);
@@ -34,7 +34,7 @@ public class ConnectionEventSupport
     public synchronized void fireConnectionErrorOccurred(SQLException error)
     {
 	ConnectionEvent evt = new ConnectionEvent(source, error);
-	for (Iterator i = mlisteners.iterator(); i.hasNext();)
+	for (Iterator<ConnectionEventListener> i = mlisteners.iterator(); i.hasNext();)
 	    {
 		ConnectionEventListener cl = (ConnectionEventListener) i.next();
 		cl.connectionErrorOccurred(evt);

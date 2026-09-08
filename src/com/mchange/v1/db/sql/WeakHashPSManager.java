@@ -11,22 +11,22 @@ import java.util.*;
  */
 public class WeakHashPSManager implements PSManager
 {
-    WeakHashMap wmap = new WeakHashMap();
+    WeakHashMap<Connection,Map<String,PreparedStatement>> wmap = new WeakHashMap<Connection,Map<String,PreparedStatement>>();
 
     @Override
     public PreparedStatement getPS(Connection con, String stmt_name)
     {
-	Map nameMap = (Map) wmap.get(con);
-	return (nameMap == null ? null : (PreparedStatement) nameMap.get(stmt_name));
+	Map<String,PreparedStatement> nameMap = wmap.get(con);
+	return (nameMap == null ? null : nameMap.get(stmt_name));
     }
 
     @Override
     public void putPS(Connection con, String name, PreparedStatement stmt)
     {
-	Map nameMap = (Map) wmap.get(con);
+	Map<String,PreparedStatement> nameMap = wmap.get(con);
 	if (nameMap == null)
 	    {
-		nameMap = new HashMap();
+		nameMap = new HashMap<String,PreparedStatement>();
 		wmap.put(con, nameMap);
 	    }
 	nameMap.put(name, stmt);

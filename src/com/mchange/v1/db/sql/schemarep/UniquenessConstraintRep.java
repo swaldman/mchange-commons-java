@@ -4,5 +4,5 @@ import java.util.Set;
 
 public interface UniquenessConstraintRep
 {
-    public Set getUniqueColumnNames();
+    public Set<String> getUniqueColumnNames();
 }

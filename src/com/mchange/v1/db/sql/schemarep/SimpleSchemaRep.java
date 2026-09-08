@@ -4,6 +4,6 @@ import java.util.*;
 
 public interface SimpleSchemaRep
 {
-    public Set getTableNames();
+    public Set<String> getTableNames();
     public TableRep tableRepForName(String name);
 }

@@ -7,19 +7,19 @@ import com.mchange.v1.util.ListUtils;
 
 public class ForeignKeyRepImpl implements ForeignKeyRep
 {
-    List locColNames;
+    List<String> locColNames;
     String refTableName;
-    List refColNames;
+    List<String> refColNames;
 
-    public ForeignKeyRepImpl(List locColNames, String refTableName, List refColNames)
+    public ForeignKeyRepImpl(List<String> locColNames, String refTableName, List<String> refColNames)
     {
-	this.locColNames = Collections.unmodifiableList( new ArrayList( locColNames ) );
+	this.locColNames = Collections.unmodifiableList( new ArrayList<String>( locColNames ) );
 	this.refTableName = refTableName;
-	this.refColNames = Collections.unmodifiableList( new ArrayList( refColNames ) );
+	this.refColNames = Collections.unmodifiableList( new ArrayList<String>( refColNames ) );
     }
 
     @Override
-    public List getLocalColumnNames()
+    public List<String> getLocalColumnNames()
     { return locColNames; }
 
     @Override
@@ -27,7 +27,7 @@ public class ForeignKeyRepImpl implements ForeignKeyRep
     { return refTableName; }
 
     @Override
-    public List getReferencedColumnNames()
+    public List<String> getReferencedColumnNames()
     { return refColNames; }
 
     @Override

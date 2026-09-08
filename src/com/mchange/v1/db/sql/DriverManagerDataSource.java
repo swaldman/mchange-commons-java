@@ -139,7 +139,7 @@ public class DriverManagerDataSource implements DataSource, Serializable, Refere
     public static class DmdsObjectFactory implements ObjectFactory
     {
 	@Override
-	public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable env)
+	public Object getObjectInstance(Object refObj, Name name, Context nameCtx, Hashtable<?,?> env)
 	    throws Exception
 	{
 	    Reference ref;

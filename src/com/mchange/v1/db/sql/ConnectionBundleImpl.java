@@ -9,7 +9,7 @@ import java.util.HashMap;
 public class ConnectionBundleImpl implements ConnectionBundle
 {
     Connection con;
-    Map map = new HashMap();
+    Map<String,PreparedStatement> map = new HashMap<String,PreparedStatement>();
 
     public ConnectionBundleImpl(Connection con)
     {this.con = con;}
@@ -20,7 +20,7 @@ public class ConnectionBundleImpl implements ConnectionBundle
 
     @Override
     public PreparedStatement getStatement(String stmt_name)
-    {return (PreparedStatement) map.get(stmt_name);}
+    {return map.get(stmt_name);}
 
     @Override
     public void putStatement(String stmt_name, PreparedStatement stmt)

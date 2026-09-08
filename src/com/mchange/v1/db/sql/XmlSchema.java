@@ -13,9 +13,9 @@ public class XmlSchema implements Schema
     private final static int CREATE = 0;
     private final static int DROP   = 1;
 
-    List createStmts;
-    List dropStmts;
-    Map  appMap;
+    List<String> createStmts;
+    List<String> dropStmts;
+    Map<String,SqlApp>  appMap;
 
     public XmlSchema(URL xmlSchema) throws SAXException, IOException, ParserConfigurationException
     {parse(xmlSchema.openStream());}
@@ -28,9 +28,9 @@ public class XmlSchema implements Schema
 
     public void parse(InputStream is) throws SAXException, IOException, ParserConfigurationException
     {
-	createStmts = new ArrayList();
-	dropStmts   = new ArrayList();
-	appMap      = new HashMap();
+	createStmts = new ArrayList<String>();
+	dropStmts   = new ArrayList<String>();
+	appMap      = new HashMap<String,SqlApp>();
 
 	InputSource isrc = new InputSource();
 	isrc.setByteStream(is);
@@ -53,7 +53,7 @@ public class XmlSchema implements Schema
 	sp.parse(isrc, testHandler);
     }
 
-    private void doStatementList(List stmtList, Connection con)
+    private void doStatementList(List<String> stmtList, Connection con)
 	throws SQLException
     {
 	if (stmtList != null)
@@ -62,7 +62,7 @@ public class XmlSchema implements Schema
 		try
 		    {
 			stmt = con.createStatement();
-			for (Iterator ii = stmtList.iterator(); ii.hasNext();)
+			for (Iterator<String> ii = stmtList.iterator(); ii.hasNext();)
 			    stmt.executeUpdate((String) ii.next());
 			con.commit();
 		    }
@@ -80,7 +80,7 @@ public class XmlSchema implements Schema
     @Override
     public String getStatementText(String appName, String stmtName)
     {
-	SqlApp app = (SqlApp) appMap.get(appName);
+	SqlApp app = appMap.get(appName);
 	String out = null;
 	if (app != null)
 	    out = app.getStatementText(stmtName);
@@ -151,7 +151,7 @@ public class XmlSchema implements Schema
 			    if (attr.equals("name"))
 				{
 				    String appName = attributes.getValue(i);
-				    currentApp     = (SqlApp) appMap.get(appName);
+				    currentApp     = appMap.get(appName);
 				    if (currentApp == null)
 					{
 					    currentApp = new SqlApp();
@@ -225,12 +225,12 @@ public class XmlSchema implements Schema
 
     class SqlApp
     {
-	Map stmtMap = new HashMap();
+	Map<String,String> stmtMap = new HashMap<String,String>();
 
 	public void setStatementText(String name, String sql)
 	{stmtMap.put(name, sql);}
 
 	public String getStatementText(String name)
-	{return (String) stmtMap.get(name);}
+	{return stmtMap.get(name);}
     }
 }

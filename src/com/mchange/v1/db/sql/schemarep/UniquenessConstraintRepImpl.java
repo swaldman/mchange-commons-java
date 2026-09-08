@@ -7,13 +7,13 @@ import java.util.Collections;
 
 public class UniquenessConstraintRepImpl implements UniquenessConstraintRep
 {
-    Set uniqueColNames;
+    Set<String> uniqueColNames;
 
-    public UniquenessConstraintRepImpl(Collection colNames)
-    { uniqueColNames = Collections.unmodifiableSet( new HashSet( colNames ) ); }
+    public UniquenessConstraintRepImpl(Collection<String> colNames)
+    { uniqueColNames = Collections.unmodifiableSet( new HashSet<String>( colNames ) ); }
 	
     @Override
-    public Set getUniqueColumnNames()
+    public Set<String> getUniqueColumnNames()
     { return uniqueColNames; }
 
     @Override
