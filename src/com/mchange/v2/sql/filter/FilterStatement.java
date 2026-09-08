@@ -287,13 +287,13 @@ public abstract class FilterStatement implements Statement
 	}
 	
 	@Override
-	public boolean isWrapperFor(Class a) throws SQLException
+	public boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public Object unwrap(Class a) throws SQLException
+	public <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}

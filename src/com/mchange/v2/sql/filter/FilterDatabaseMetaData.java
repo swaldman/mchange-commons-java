@@ -1079,13 +1079,13 @@ public abstract class FilterDatabaseMetaData implements DatabaseMetaData
 	}
 	
 	@Override
-	public boolean isWrapperFor(Class a) throws SQLException
+	public boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public Object unwrap(Class a) throws SQLException
+	public <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}

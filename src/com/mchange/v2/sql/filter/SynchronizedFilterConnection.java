@@ -168,7 +168,7 @@ public abstract class SynchronizedFilterConnection implements Connection
 	}
 	
 	@Override
-	public synchronized Map getTypeMap() throws SQLException
+	public synchronized Map<String, Class<?>> getTypeMap() throws SQLException
 	{
 		return inner.getTypeMap();
 	}
@@ -324,7 +324,7 @@ public abstract class SynchronizedFilterConnection implements Connection
 	}
 	
 	@Override
-	public synchronized void setTypeMap(Map a) throws SQLException
+	public synchronized void setTypeMap(Map<String, Class<?>> a) throws SQLException
 	{
 		inner.setTypeMap(a);
 	}
@@ -360,13 +360,13 @@ public abstract class SynchronizedFilterConnection implements Connection
 	}
 	
 	@Override
-	public synchronized boolean isWrapperFor(Class a) throws SQLException
+	public synchronized boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public synchronized Object unwrap(Class a) throws SQLException
+	public synchronized <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}

@@ -78,13 +78,13 @@ public abstract class SynchronizedFilterDataSource implements DataSource
 	}
 	
 	@Override
-	public synchronized boolean isWrapperFor(Class a) throws SQLException
+	public synchronized boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public synchronized Object unwrap(Class a) throws SQLException
+	public synchronized <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}

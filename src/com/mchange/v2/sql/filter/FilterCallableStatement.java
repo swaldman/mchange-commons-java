@@ -414,13 +414,13 @@ public abstract class FilterCallableStatement implements CallableStatement
 	}
 	
 	@Override
-	public Object getObject(String a, Map b) throws SQLException
+	public Object getObject(String a, Map<String, Class<?>> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
 	
 	@Override
-	public Object getObject(int a, Class b) throws SQLException
+	public <T> T getObject(int a, Class<T> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
@@ -432,13 +432,13 @@ public abstract class FilterCallableStatement implements CallableStatement
 	}
 	
 	@Override
-	public Object getObject(int a, Map b) throws SQLException
+	public Object getObject(int a, Map<String, Class<?>> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
 	
 	@Override
-	public Object getObject(String a, Class b) throws SQLException
+	public <T> T getObject(String a, Class<T> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
@@ -1315,13 +1315,13 @@ public abstract class FilterCallableStatement implements CallableStatement
 	}
 	
 	@Override
-	public boolean isWrapperFor(Class a) throws SQLException
+	public boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public Object unwrap(Class a) throws SQLException
+	public <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}

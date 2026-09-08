@@ -9,8 +9,8 @@ import javax.sql.DataSource;
 
 public final class RecreatePackage
 {
-    final static Class[] intfcs 
-	= new Class[] 
+    final static Class<?>[] intfcs 
+	= new Class<?>[] 
 	{ 
 	    Connection.class, 
 	    ResultSet.class, 
@@ -30,7 +30,7 @@ public final class RecreatePackage
 		String pkg = thisClassName.substring(0, thisClassName.lastIndexOf('.'));
 		for (int i = 0; i < intfcs.length; ++i)
 		    {
-			Class intfcl = intfcs[i];
+			Class<?> intfcl = intfcs[i];
 			String sin   = ClassUtils.simpleClassName( intfcl );
 			String sgenclass1 = "Filter" + sin;
 			String sgenclass2 = "SynchronizedFilter" + sin;

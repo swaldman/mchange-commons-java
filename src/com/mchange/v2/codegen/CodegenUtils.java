@@ -4,6 +4,7 @@ import java.lang.reflect.*;
 import java.io.File;
 import java.io.Writer;
 import java.util.Comparator;
+import java.util.Set;
 import com.mchange.v1.lang.ClassUtils;
 import com.mchange.v2.io.IndentedWriter;
 
@@ -83,21 +84,22 @@ public final class CodegenUtils
 	StringBuffer sb = new StringBuffer(256);
         sb.append(getModifierString(modifiers));
 	sb.append(' ');
-	sb.append( ClassUtils.simpleClassName( m.getReturnType() ) );
+	sb.append( typeParameterDeclaration( m ) );
+	sb.append( typeString( m.getGenericReturnType() ) );
 	sb.append(' ');
 	sb.append( m.getName() );
 	sb.append('(');
-        Class<?>[] cls = m.getParameterTypes();
+        Type[] cls = m.getGenericParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)
         {
            if (i != 0)
              sb.append(", ");
-           sb.append( ClassUtils.simpleClassName( cls[i] ) );
+           sb.append( typeString( cls[i] ) );
 	   sb.append(' ');
            sb.append( argNames == null ? String.valueOf((char) ('a' + i)) : argNames[i] );
         }
         sb.append(')');
-	Class<?>[] excClasses = m.getExceptionTypes();
+	Type[] excClasses = m.getGenericExceptionTypes();
 	if (excClasses.length > 0)
         {
            sb.append(" throws ");
@@ -105,10 +107,200 @@ public final class CodegenUtils
            {
              if (i != 0)
                sb.append(", ");
-             sb.append( ClassUtils.simpleClassName( excClasses[i] ) );
+             sb.append( typeString( excClasses[i] ) );
            }   
         }
         return sb.toString();
+    }
+
+    /**
+     *  Renders a reflected {@link Type} as Java source, using simple (unqualified) class
+     *  names, so that generated code carries the generic signatures of what it implements
+     *  rather than their erasures.
+     *
+     *  Type variables declared by the <i>method</i> are rendered by name, because a
+     *  generated method can redeclare them. Type variables declared by a <i>class</i> or
+     *  interface are rendered as their erasure, because generators here emit raw
+     *  implementing classes, so a class-level variable would not be in scope in the
+     *  generated source. That substitution reproduces exactly what this class emitted
+     *  before it understood generics.
+     */
+    public static String typeString( Type t )
+    {
+	StringBuffer sb = new StringBuffer(64);
+	appendTypeString( sb, t );
+	return sb.toString();
+    }
+
+    private static void appendTypeString( StringBuffer sb, Type t )
+    {
+	if ( t instanceof Class )
+	    sb.append( ClassUtils.simpleClassName( (Class<?>) t ) );
+	else if ( t instanceof ParameterizedType )
+	    {
+		ParameterizedType pt = (ParameterizedType) t;
+		appendTypeString( sb, pt.getRawType() );
+		Type[] args = pt.getActualTypeArguments();
+		if (args.length > 0)
+		    {
+			sb.append('<');
+			for (int i = 0; i < args.length; ++i)
+			    {
+				if (i != 0) sb.append(", ");
+				appendTypeString( sb, args[i] );
+			    }
+			sb.append('>');
+		    }
+	    }
+	else if ( t instanceof GenericArrayType )
+	    {
+		appendTypeString( sb, ((GenericArrayType) t).getGenericComponentType() );
+		sb.append("[]");
+	    }
+	else if ( t instanceof WildcardType )
+	    {
+		WildcardType wt = (WildcardType) t;
+		Type[] lower = wt.getLowerBounds();
+		Type[] upper = wt.getUpperBounds();
+		if (lower.length > 0)
+		    {
+			sb.append("? super ");
+			appendTypeString( sb, lower[0] );
+		    }
+		else if (upper.length > 0 && upper[0] != Object.class)
+		    {
+			sb.append("? extends ");
+			appendTypeString( sb, upper[0] );
+		    }
+		else
+		    sb.append('?');
+	    }
+	else if ( t instanceof TypeVariable )
+	    {
+		TypeVariable<?> tv = (TypeVariable<?>) t;
+		if ( tv.getGenericDeclaration() instanceof Class )
+		    sb.append( ClassUtils.simpleClassName( erasure( tv ) ) ); // not in scope in a raw generated class
+		else
+		    sb.append( tv.getName() );
+	    }
+	else // no other Type kinds exist, but do not silently emit nothing
+	    throw new IllegalArgumentException("Cannot render an unexpected java.lang.reflect.Type as source: " + t);
+    }
+
+    /**
+     *  @return the method's type parameters as a source declaration with a trailing space
+     *          (for example <code>"&lt;T&gt; "</code>), or the empty String if it declares none.
+     */
+    public static String typeParameterDeclaration( Method m )
+    {
+	TypeVariable<Method>[] tvs = m.getTypeParameters();
+	if (tvs.length == 0)
+	    return "";
+
+	StringBuffer sb = new StringBuffer(32);
+	sb.append('<');
+	for (int i = 0; i < tvs.length; ++i)
+	    {
+		if (i != 0) sb.append(", ");
+		sb.append( tvs[i].getName() );
+		Type[] bounds = tvs[i].getBounds();
+		if (bounds.length > 0 && bounds[0] != Object.class)
+		    {
+			sb.append(" extends ");
+			for (int j = 0; j < bounds.length; ++j)
+			    {
+				if (j != 0) sb.append(" & ");
+				appendTypeString( sb, bounds[j] );
+			    }
+		    }
+	    }
+	sb.append("> ");
+	return sb.toString();
+    }
+
+    /**
+     *  @return whether rendering this Type as source would mention a method-level type
+     *          variable, so that a cast to it would be an unchecked cast.
+     */
+    public static boolean mentionsMethodTypeVariable( Type t )
+    {
+	if ( t instanceof TypeVariable )
+	    return ! (((TypeVariable<?>) t).getGenericDeclaration() instanceof Class);
+	else if ( t instanceof ParameterizedType )
+	    {
+		for ( Type arg : ((ParameterizedType) t).getActualTypeArguments() )
+		    if ( mentionsMethodTypeVariable( arg ) ) return true;
+		return false;
+	    }
+	else if ( t instanceof GenericArrayType )
+	    return mentionsMethodTypeVariable( ((GenericArrayType) t).getGenericComponentType() );
+	else if ( t instanceof WildcardType )
+	    {
+		WildcardType wt = (WildcardType) t;
+		for ( Type b : wt.getLowerBounds() )
+		    if ( mentionsMethodTypeVariable( b ) ) return true;
+		for ( Type b : wt.getUpperBounds() )
+		    if ( mentionsMethodTypeVariable( b ) ) return true;
+		return false;
+	    }
+	else
+	    return false;
+    }
+
+    /**
+     *  Adds to <code>accum</code> every Class a source rendering of <code>t</code> would
+     *  name, so that callers can build an import set covering generic signatures. Array
+     *  types contribute their component type; primitives, <code>void</code>, and type
+     *  variables contribute nothing nameable.
+     */
+    public static void collectNamedClasses( Type t, Set<Class<?>> accum )
+    {
+	if ( t instanceof Class )
+	    {
+		Class<?> cl = unarrayClass( (Class<?>) t );
+		if (! cl.isPrimitive() )
+		    accum.add( cl );
+	    }
+	else if ( t instanceof ParameterizedType )
+	    {
+		ParameterizedType pt = (ParameterizedType) t;
+		collectNamedClasses( pt.getRawType(), accum );
+		for ( Type arg : pt.getActualTypeArguments() )
+		    collectNamedClasses( arg, accum );
+	    }
+	else if ( t instanceof GenericArrayType )
+	    collectNamedClasses( ((GenericArrayType) t).getGenericComponentType(), accum );
+	else if ( t instanceof WildcardType )
+	    {
+		WildcardType wt = (WildcardType) t;
+		for ( Type b : wt.getLowerBounds() )
+		    collectNamedClasses( b, accum );
+		for ( Type b : wt.getUpperBounds() )
+		    if ( b != Object.class )
+			collectNamedClasses( b, accum );
+	    }
+	else if ( t instanceof TypeVariable )
+	    {
+		// A class-level variable is rendered as its erasure, so that must be importable.
+		// A method-level variable is rendered by name, and names nothing.
+		TypeVariable<?> tv = (TypeVariable<?>) t;
+		if ( tv.getGenericDeclaration() instanceof Class )
+		    accum.add( erasure( tv ) );
+	    }
+    }
+
+    private static Class<?> erasure( TypeVariable<?> tv )
+    {
+	Type[] bounds = tv.getBounds();
+	Type   bound  = (bounds.length > 0 ? bounds[0] : Object.class);
+	while ( bound instanceof ParameterizedType )
+	    bound = ((ParameterizedType) bound).getRawType();
+	if ( bound instanceof Class )
+	    return unarrayClass( (Class<?>) bound );
+	else if ( bound instanceof TypeVariable )
+	    return erasure( (TypeVariable<?>) bound );
+	else
+	    return Object.class;
     }
 
     public static String methodCall( Method m )
@@ -152,7 +344,7 @@ public final class CodegenUtils
     public static String reflectiveMethodParameterTypeArray( Method m )
     {
        StringBuffer sb = new StringBuffer(256);
-       sb.append( "new Class[] " );
+       sb.append( "new Class<?>[] " );
        sb.append('{');
         Class<?>[] cls = m.getParameterTypes();
         for(int i = 0, len = cls.length; i < len; ++i)

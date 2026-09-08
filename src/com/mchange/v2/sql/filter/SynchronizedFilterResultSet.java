@@ -913,7 +913,7 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 	}
 	
 	@Override
-	public synchronized Object getObject(int a, Class b) throws SQLException
+	public synchronized <T> T getObject(int a, Class<T> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
@@ -925,19 +925,19 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 	}
 	
 	@Override
-	public synchronized Object getObject(String a, Class b) throws SQLException
+	public synchronized <T> T getObject(String a, Class<T> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
 	
 	@Override
-	public synchronized Object getObject(int a, Map b) throws SQLException
+	public synchronized Object getObject(int a, Map<String, Class<?>> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
 	
 	@Override
-	public synchronized Object getObject(String a, Map b) throws SQLException
+	public synchronized Object getObject(String a, Map<String, Class<?>> b) throws SQLException
 	{
 		return inner.getObject(a, b);
 	}
@@ -1189,13 +1189,13 @@ public abstract class SynchronizedFilterResultSet implements ResultSet
 	}
 	
 	@Override
-	public synchronized boolean isWrapperFor(Class a) throws SQLException
+	public synchronized boolean isWrapperFor(Class<?> a) throws SQLException
 	{
 		return inner.isWrapperFor(a);
 	}
 	
 	@Override
-	public synchronized Object unwrap(Class a) throws SQLException
+	public synchronized <T> T unwrap(Class<T> a) throws SQLException
 	{
 		return inner.unwrap(a);
 	}
