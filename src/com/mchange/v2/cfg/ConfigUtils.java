@@ -344,7 +344,7 @@ final class ConfigUtils
     private static List<String> configuredOrHardcodedDefaultClassloaderResourcePathList( List<DelayedLogItem> delayedLogItemsOut )
     {
 	List<String> pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
-	List rps;
+	List<String> rps;
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;
 	else
@@ -397,11 +397,11 @@ final class ConfigUtils
     public static void dumpByPrefix( MultiPropertiesConfig mpc, String pfx )
     {
 	Properties props = mpc.getPropertiesByPrefix(pfx);
-	Map m = new TreeMap();
+	Map<Object,Object> m = new TreeMap<Object,Object>();
 	m.putAll( props );
-	for ( Iterator ii = m.entrySet().iterator(); ii.hasNext(); )
+	for ( Iterator<Map.Entry<Object,Object>> ii = m.entrySet().iterator(); ii.hasNext(); )
 	{
-	    Map.Entry entry = (Map.Entry) ii.next();
+	    Map.Entry<Object,Object> entry = ii.next();
 	    System.err.println( entry.getKey() + " --> " + entry.getValue() );
 	}
     }

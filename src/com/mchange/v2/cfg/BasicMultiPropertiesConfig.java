@@ -184,7 +184,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 
     private void firstInit( MConfig.Kind kind, String[] resourcePaths, List<DelayedLogItem> delayedLogItems ) throws ConfigVetoedException
     {
-        Map  pbrp = new HashMap();
+        Map<String,Properties>  pbrp = new HashMap<String,Properties>();
         List<String> goodPaths = new ArrayList<String>();
 
         Set<String> _historyVetoed       = new HashSet<>();
@@ -316,7 +316,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     public Set<String> getAllFaults()
     { return historyOtherFailure; }
 
-    private static void dumpToSysErr( List delayedLogMessages )
+    private static void dumpToSysErr( List<DelayedLogItem> delayedLogMessages )
     {
 	for (Object o : delayedLogMessages)
 	    System.err.println( o );
@@ -377,7 +377,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			//System.err.println("Could not find loaded properties for resource path: " + rp);
 			continue;
 		    }
-		for (Iterator ii = p.keySet().iterator(); ii.hasNext(); )
+		for (Iterator<Object> ii = p.keySet().iterator(); ii.hasNext(); )
 		    {
 			Object kObj = ii.next();
 			if (!(kObj instanceof String))
@@ -451,7 +451,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			delayedLogItems.add( new DelayedLogItem( Level.WARNING, message) );
 			continue;
 		    }
-		for (Iterator jj = p.keySet().iterator(); jj.hasNext(); )
+		for (Iterator<Object> jj = p.keySet().iterator(); jj.hasNext(); )
 		    {
 			Object kObj = jj.next();
 			if (! (kObj instanceof String))

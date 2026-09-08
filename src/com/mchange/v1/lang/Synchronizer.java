@@ -7,7 +7,7 @@ import java.util.HashSet;
 //Java 1.5+ ONLY!!!
 public final class Synchronizer
 {
-    private final static Class[] EMPTY_CLASS_ARRAY = new Class[0];
+    private final static Class<?>[] EMPTY_CLASS_ARRAY = new Class<?>[0];
     private final static Method OBJECT_EQUALS;
     private final static Method OBJECT_HASHCODE;
     private final static Method OBJECT_TO_STRING;
@@ -16,7 +16,7 @@ public final class Synchronizer
     {
         try
         {
-            OBJECT_EQUALS = Object.class.getMethod("equals", new Class[]{ Object.class });
+            OBJECT_EQUALS = Object.class.getMethod("equals", new Class<?>[]{ Object.class });
             OBJECT_HASHCODE = Object.class.getMethod("hashCode", EMPTY_CLASS_ARRAY);
             OBJECT_TO_STRING = Object.class.getMethod("toString", EMPTY_CLASS_ARRAY);
         }
@@ -67,7 +67,7 @@ public final class Synchronizer
                     }
 		}
 	    };
-	Class cl = o.getClass();
+	Class<?> cl = o.getClass();
 	return Proxy.newProxyInstance( cl.getClassLoader(), 
 				       recurseFindInterfaces(cl),
 				       handler );
@@ -78,16 +78,16 @@ public final class Synchronizer
     // we could try to make those calls succeed by calling m.setAccessible(true) before
     // invoking the methods, but we don't want to try to create circumventions of
     // java's ordinary accessibility rules here.
-    private static Class[] recurseFindInterfaces(final Class cl)
+    private static Class<?>[] recurseFindInterfaces(final Class<?> cl)
     {
-        Class scl = cl;
-	Set s = new HashSet();
+        Class<?> scl = cl;
+	Set<Class<?>> s = new HashSet<Class<?>>();
 	while( scl != null )
 	    {
-		Class[] interfaces = scl.getInterfaces();
+		Class<?>[] interfaces = scl.getInterfaces();
 		for (int i = 0, len = interfaces.length; i < len; ++i)
                 {
-                    Class intfc = interfaces[i];
+                    Class<?> intfc = interfaces[i];
                     if ((intfc.getModifiers() & Modifier.PUBLIC) != 0)
                         s.add(intfc);
                 }
@@ -95,7 +95,7 @@ public final class Synchronizer
 	    }
         if (s.size() == 0)
             throw new IllegalArgumentException("Cannot create a synchronizing proxy, " + cl.getName() + " implements no public interfaces.");
-	Class[] out = new Class[ s.size() ];
+	Class<?>[] out = new Class<?>[ s.size() ];
 	s.toArray( out );
 	return out;
     }

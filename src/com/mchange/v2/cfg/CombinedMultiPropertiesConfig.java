@@ -123,9 +123,9 @@ class CombinedMultiPropertiesConfig extends MultiPropertiesConfig
                 entries.addAll( 0, check.entrySet() );
         }
         Properties out = new Properties();
-        for (Iterator ii = entries.iterator(); ii.hasNext(); )
+        for (Iterator<Map.Entry<Object,Object>> ii = entries.iterator(); ii.hasNext(); )
             {
-                Map.Entry entry = (Map.Entry) ii.next();
+                Map.Entry<Object,Object> entry = ii.next();
                 out.put( entry.getKey(), entry.getValue() );
             }
         return out;
