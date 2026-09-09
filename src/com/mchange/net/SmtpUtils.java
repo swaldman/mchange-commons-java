@@ -27,6 +27,23 @@ public final class SmtpUtils
 
   public final static int DEFAULT_SMTP_PORT = 25;
 
+    /**
+     *  This is a very simple, very low-level utility.
+     *
+     *  No effort is made to sanity-check or sanitize inputs.
+     *  If you are collecting addresses or other information from
+     *  untrusted sources, it is the caller's responsibility to
+     *  ensure the addresses are reasonable, that they don't embed
+     *  injections or permit other forms of mischief.
+     *
+     *  For safer, more full-featured e-mailing, consider
+     *  the Jakarta Mail API. https://github.com/jakartaee/mail-api
+     *
+     *  Thanks to chennbnbnb on github for calling attention to this issue
+     *
+     *  @deprecated Prefer Jakarta Mail API
+     */
+  @Deprecated
   public static void sendMail(InetAddress smtpHost, int smtpPort, 
 			      String mailFrom, String[] rcptTo,
 			      Properties headers,
