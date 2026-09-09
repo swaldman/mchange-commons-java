@@ -177,14 +177,22 @@ public final class BeansUtils
         }
     }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, Object destBean, boolean skip_nulls )
+    /**
+     * if anySourceMap is a java.util.Properties instance, the defaults chain will be followed
+     * when reading the map.
+     */
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> anySourceMap, Object destBean, boolean skip_nulls )
     throws IntrospectionException
-    { overwriteAccessiblePropertiesFromMap( sourceMap, destBean, skip_nulls, EMPTY_STRING_SET ); }
+    { overwriteAccessiblePropertiesFromMap( anySourceMap, destBean, skip_nulls, EMPTY_STRING_SET ); }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, Object destBean, boolean skip_nulls, Collection<String> ignoreProps )
+    /**
+     * if anySourceMap is a java.util.Properties instance, the defaults chain will be followed
+     * when reading the map.
+     */
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> anySourceMap, Object destBean, boolean skip_nulls, Collection<String> ignoreProps )
     throws IntrospectionException
     {
-        overwriteAccessiblePropertiesFromMap( sourceMap, 
+        overwriteAccessiblePropertiesFromMap( anySourceMap, 
                         destBean, 
                         skip_nulls, 
                         ignoreProps, 
@@ -194,7 +202,11 @@ public final class BeansUtils
                         true);
     }
 
-    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> sourceMap, 
+    /**
+     * if anySourceMap is a java.util.Properties instance, the defaults chain will be followed
+     * when reading the map.
+     */
+    public static void overwriteAccessiblePropertiesFromMap( Map<?,?> anySourceMap, 
                     Object destBean, 
                     boolean skip_nulls, 
                     Collection<String> ignoreProps, 
@@ -208,6 +220,24 @@ public final class BeansUtils
             cantWriteLevel = MLevel.WARNING;
         if (cantCoerceLevel == null)
             cantCoerceLevel = MLevel.WARNING;
+
+        Map<?,?> sourceMap;
+
+        // carry in defaults if anySourceMap is a
+        // java.util.Properties instance
+        if (anySourceMap instanceof Properties)
+        {
+            Properties props = (Properties) anySourceMap;
+            Set<String> asps = props.stringPropertyNames();
+            Map<Object,Object> _sourceMap = new HashMap<Object,Object>();
+            for (String prop : asps)
+                _sourceMap.put(prop, props.getProperty(prop));
+            for (Object k : props.keySet())
+                _sourceMap.put(k, props.get(k));
+            sourceMap = _sourceMap;
+        }
+        else
+            sourceMap = anySourceMap;
 
         Set<?> sourceMapProps = sourceMap.keySet();
 
