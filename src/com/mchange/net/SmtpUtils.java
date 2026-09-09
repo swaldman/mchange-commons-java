@@ -18,6 +18,31 @@ import com.mchange.net.SocketUtils;
 import com.mchange.v1.io.OutputStreamUtils;
 
 
+/**
+ *  This is a very simple, very low-level utility.
+ *
+ *  No effort is made to sanity-check or sanitize inputs.
+ *  If you are collecting addresses or other information from
+ *  untrusted sources, it is the caller's responsibility to
+ *  ensure the addresses are reasonable, that they don't embed
+ *  injections or permit other forms of mischief.
+ *
+ *  Concretely: addresses and header values are written into the
+ *  SMTP dialogue verbatim, each terminated by CRLF, so a CRLF
+ *  embedded in any of them injects whatever follows it as a further
+ *  SMTP command or message header. Message bodies are written
+ *  without the dot-stuffing RFC 5321 section 4.5.2 requires, so a
+ *  body containing a line consisting only of '.' ends the message
+ *  early.
+ *
+ *  For safer, more full-featured e-mailing, consider
+ *  the Jakarta Mail API. https://github.com/jakartaee/mail-api
+ *
+ *  Thanks to chennbnbnb on github for calling attention to this issue
+ *
+ *  @deprecated Prefer Jakarta Mail API
+ */
+@Deprecated
 public final class SmtpUtils 
 {
   private final static String ENC         = "8859_1";
