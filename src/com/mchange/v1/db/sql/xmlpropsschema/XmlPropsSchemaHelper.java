@@ -7,6 +7,20 @@ import java.io.InputStream;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
+
+/**
+ *  This represents a now disused approach to deal with ugliness
+ *  of defining database schemas in string literals.
+ *
+ *  But that's gotten less ugly now that modern versions of Java
+ *  and other languages support multiline Strings, and XML may be
+ *  overkill in complexity and potential security hazard for this
+ *  sort of application.
+ *
+ *  @deprecated represents an abandoned, disused approach to
+ *              managing database schemas.
+ */
+@Deprecated
 public class XmlPropsSchemaHelper
 {
     Properties props;

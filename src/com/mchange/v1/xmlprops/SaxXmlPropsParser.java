@@ -6,14 +6,31 @@ import java.sql.*;
 import java.util.*;
 import org.xml.sax.*;
 
+import com.mchange.v1.xml.ResourceEntityResolver;
 import com.mchange.v1.xml.StdErrErrorHandler;
 import com.mchange.v1.util.StringTokenizerUtils;
 
+/**
+ *  This implementation supports full flexibility in entity resolution,
+ *  which means it is not suitable for parsing untrusted XML.
+ *
+ *  Unrestricted entity resolution can provoke the loading of arbitrary
+ *  files, loading of external URLs, or result in endless recursion and
+ *  denial of service attacks.
+ *
+ *  Thanks to chennbnbnb on github for calling attention to this issue.
+ *
+ *  @deprecated we know of no current users, so are maintaining this very lightly
+ */
+@Deprecated
 public class SaxXmlPropsParser
 {
     final static String DEFAULT_XML_READER = "org.apache.xerces.parsers.SAXParser";
     final static String XMLPROPS_NAMESPACE_URI = "http://www.mchange.com/namespaces/xmlprops";
 
+    /**
+     *  Not suitable for parsing untrusted XML. See the class documentation.
+     */
     public static Properties parseXmlProps(InputStream istr) throws XmlPropsException
     {
 	try
@@ -23,7 +40,7 @@ public class SaxXmlPropsParser
 		String readerClass = DEFAULT_XML_READER;
 		XMLReader reader = (XMLReader) Class.forName( readerClass ).getDeclaredConstructor().newInstance();
 		InputSource is = new InputSource( istr );
-		return parseXmlProps( is, reader, null, null);
+		return parseXmlProps( is, reader, new ResourceEntityResolver(SaxXmlPropsParser.class), new StdErrErrorHandler());
 	    }
 	catch (XmlPropsException e)
 	    { throw e; }

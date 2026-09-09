@@ -6,6 +6,16 @@ import org.xml.sax.InputSource;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.SAXException;
 
+/**
+ *  Resolves an entity's system ID to a classpath resource: everything before the last
+ *  '/' is discarded, and the remaining file name is sought under a package-derived
+ *  prefix. It exists to find DTDs shipped alongside the classes that use them.
+ *
+ *  It is <i>not</i> a defense against external entity attacks. resolveEntity returns
+ *  null when the resource is not found, and per the SAX EntityResolver contract a null
+ *  return tells the parser to resolve the system ID itself -- opening the URL or file
+ *  named there. Anything not shipped on the classpath is fetched normally.
+ */
 public class ResourceEntityResolver implements EntityResolver
 {
     ClassLoader cl;

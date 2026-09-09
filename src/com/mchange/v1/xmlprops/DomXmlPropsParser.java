@@ -9,19 +9,42 @@ import org.w3c.dom.*;
 import com.mchange.v1.xml.ResourceEntityResolver;
 import com.mchange.v1.xml.StdErrErrorHandler;
 
+/**
+ *  This implementation supports full flexibility in entity resolution,
+ *  which means it is not suitable for parsing untrusted XML.
+ *
+ *  Unrestricted entity resolution can provoke the loading of arbitrary
+ *  files, loading of external URLs, or result in endless recursion and
+ *  denial of service attacks.
+ *
+ *  Thanks to chennbnbnb on github for calling attention to this issue.
+ *
+ *  @deprecated we know of no current users, so are maintaining this very lightly
+ */
+@Deprecated
 public class DomXmlPropsParser
 {
     final static String XMLPROPS_NAMESPACE_URI = "http://www.mchange.com/namespaces/xmlprops";
 
-    static DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    final static DocumentBuilderFactory _factory = DocumentBuilderFactory.newInstance();
 
     static
     {
-	factory.setNamespaceAware(true);
-  	factory.setValidating(true);
-  	//factory.setValidating(false);
+	_factory.setNamespaceAware(true);
+
+        // we haven't defined a DTD to validate against.
+        // But note an external DTD and its entities will
+        // still get resolved.
+        //
+  	//_factory.setValidating(true);
     }
 
+    static synchronized DocumentBuilder newDocumentBuilder() throws ParserConfigurationException
+    { return _factory.newDocumentBuilder(); }
+
+    /**
+     *  Not suitable for parsing untrusted XML. See the class documentation.
+     */
     public Properties parseXmlProps(InputStream istr) throws XmlPropsException
     {
 	return parseXmlProps( new InputSource(istr), 
@@ -36,7 +59,7 @@ public class DomXmlPropsParser
 	    {
 		Properties props = new Properties();
 		
-		DocumentBuilder dbuilder = factory.newDocumentBuilder();
+		DocumentBuilder dbuilder = newDocumentBuilder();
 		dbuilder.setEntityResolver( eresolv );
 		dbuilder.setErrorHandler( grrr );
 		
