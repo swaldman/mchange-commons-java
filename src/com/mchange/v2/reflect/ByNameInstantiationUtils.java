@@ -22,16 +22,16 @@ public final class ByNameInstantiationUtils
     public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
     {
-        checkWarnThrowForInstantiateByName(fqcn, pcfg);
+        checkWarnThrowForInstantiateByNameGated(fqcn, pcfg);
         return doInstantiate(fqcn);
     }
 
     /**
      * In some contexts, instantiation by name doesn't happen in a single step.
      * This does all the whitelist-checking and warning we want to support, and throws if we would not
-     * permit the operation. You can safely instantiateNyNameUnguarded(...) if this function succeeds.
+     * permit the operation. You can safely instantiateNyNameUngated(...) if this function succeeds.
      */
-    public static void checkWarnThrowForInstantiateByName(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
+    public static void checkWarnThrowForInstantiateByNameGated(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
     {
         Set<String> whitelist = collectWhitelistSyspropsPropertiesConfig(pcfg);
         boolean nameOkay;
