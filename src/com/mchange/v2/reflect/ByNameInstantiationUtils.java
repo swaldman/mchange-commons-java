@@ -95,7 +95,7 @@ public final class ByNameInstantiationUtils
             }
 
             if (enforce) // we already know fqcn is not in the whitelist
-                throw new InstantiationNotPermittedException("By-name instantiation of '" + fqcn + "' vetoed. The class is not in whitelist: " + whitelist);
+                throw new InstantiationNotPermittedException("By-name instantiation of '" + fqcn + "' not permitted. The class is not in the enforced whitelist defined by '" + BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX + "' and its subkeys. Whitelist: " + whitelist);
             else
             {
                 if (!explicit && logger.isLoggable(MLevel.WARNING))
