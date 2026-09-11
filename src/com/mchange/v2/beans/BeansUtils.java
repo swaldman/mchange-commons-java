@@ -8,8 +8,6 @@ import com.mchange.v2.log.*;
 
 import com.mchange.v2.lang.Coerce;
 
-import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByName;
-
 public final class BeansUtils
 {
     final static MLogger logger = MLog.getLogger( BeansUtils.class );

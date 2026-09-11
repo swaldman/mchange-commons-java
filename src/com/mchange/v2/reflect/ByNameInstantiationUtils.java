@@ -19,7 +19,7 @@ public final class ByNameInstantiationUtils
 
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
 
-    public static Object instantiateByName(String fqcn, PropertiesConfig pcfg)
+    public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
     {
         checkWarnThrowForInstantiateByName(fqcn, pcfg);
@@ -110,11 +110,11 @@ public final class ByNameInstantiationUtils
         }
     }
 
-    public static Object instantiateByNameUnguarded(String fqcn)
+    public static Object instantiateByNameUngated(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     { return doInstantiate(fqcn); }
 
-    public static Object instantiateByNameUnguarded(String fqcn, Class<?> preloaded)
+    public static Object instantiateByNameUngated(String fqcn, Class<?> preloaded)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IllegalArgumentException
     { return doInstantiate(fqcn, preloaded); }
 

@@ -5,7 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.*;
 import com.mchange.v2.log.*;
 
-import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByName;
+import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByNameGated;
 
 public final class DecodeUtils
 {
@@ -29,7 +29,7 @@ public final class DecodeUtils
 	tmp.add( new JavaMapDecoderFinder() );
 	for ( int i = 0, len = finderClassNames.length; i < len; ++i )
 	    {
-		try { tmp.add( (DecoderFinder) instantiateByName( finderClassNames[i], null ) ); }
+		try { tmp.add( (DecoderFinder) instantiateByNameGated( finderClassNames[i], null ) ); }
 		catch( Exception e )
 		    {
 			// reflective construction wraps whatever the constructor threw; report the cause
@@ -78,7 +78,7 @@ public final class DecodeUtils
     {
 	try 
 	    {
-		Decoder decoder = (Decoder) instantiateByName( decoderClassFqcn, null );
+		Decoder decoder = (Decoder) instantiateByNameGated( decoderClassFqcn, null );
 		return decoder.decode( encoded );
 	    }
 	catch ( Exception e )

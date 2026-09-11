@@ -7,7 +7,7 @@ import com.mchange.v2.cmdline.BadCommandLineException;
 import com.mchange.v2.cmdline.CommandLineUtils;
 import com.mchange.v2.cmdline.ParsedCommandLine;
 
-import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByNameUnguarded;
+import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByNameUngated;
 
 public class SchemaManager
 {
@@ -45,7 +45,7 @@ public class SchemaManager
 
                 // unguarded because this is intended to be invoked as an explicit command line argument,
                 // there should be no surprise in it
-		Schema s = (Schema) instantiateByNameUnguarded(unswitched[unswitched.length - 1]);
+		Schema s = (Schema) instantiateByNameUngated(unswitched[unswitched.length - 1]);
 		if (create)
 		    {
 			s.createSchema(con);
