@@ -20,7 +20,18 @@ public final class ByNameInstantiationUtils
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
 
     public static Object instantiateByName(String fqcn, PropertiesConfig pcfg)
-        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationVetoedException
+        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
+    {
+        checkWarnThrowForInstantiateByName(fqcn, pcfg);
+        return doInstantiate(fqcn);
+    }
+
+    /**
+     * In some contexts, instantiation by name doesn't happen in a single step.
+     * This does all the whitelist-checking and warning we want to support, and throws if we would not
+     * permit the operation. You can safely instantiateNyNameUnguarded(...) if this function succeeds.
+     */
+    public static void checkWarnThrowForInstantiateByName(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
     {
         Set<String> whitelist = collectWhitelistSyspropsPropertiesConfig(pcfg);
         boolean nameOkay;
@@ -31,9 +42,7 @@ public final class ByNameInstantiationUtils
         else
             nameOkay = false;
 
-        if (nameOkay)
-            return instantiate(fqcn);
-        else
+        if (!nameOkay)
         {
             String pcfgEnforceWhitelistStr = pcfg == null ? null : pcfg.getProperty(BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY);
             String syspropsEnforceWhitelistStr = System.getProperty(BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY);
@@ -86,7 +95,7 @@ public final class ByNameInstantiationUtils
             }
 
             if (enforce) // we already know fqcn is not in the whitelist
-                throw new InstantiationVetoedException("By-name instantiation of '" + fqcn + "' vetoed. The class is not in whitelist: " + whitelist);
+                throw new InstantiationNotPermittedException("By-name instantiation of '" + fqcn + "' vetoed. The class is not in whitelist: " + whitelist);
             else
             {
                 if (!explicit && logger.isLoggable(MLevel.WARNING))
@@ -97,18 +106,32 @@ public final class ByNameInstantiationUtils
                        "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
                        "or else explicitly suppress enforcement of the whitelist."
                     );
-                return instantiate(fqcn);
             }
         }
     }
 
     public static Object instantiateByNameUnguarded(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
-    { return instantiate(fqcn); }
+    { return doInstantiate(fqcn); }
 
-    private static Object instantiate(String fqcn)
+    public static Object instantiateByNameUnguarded(String fqcn, Class<?> preloaded)
+        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IllegalArgumentException
+    { return doInstantiate(fqcn, preloaded); }
+
+    private static Object doInstantiate(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     { return Class.forName(fqcn).getDeclaredConstructor().newInstance(); }
+
+    /**
+     * For where a class is already loaded, clz.getName() must equal fqcn
+     */
+    private static Object doInstantiate(String fqcn, Class<?> clz)
+        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    {
+        if (!clz.getName().equals(fqcn))
+            throw new IllegalArgumentException("Class " + clz + " must share a fully-qualified name with given fqcn: " + fqcn);
+        return Class.forName(fqcn).getDeclaredConstructor().newInstance();
+    }
 
     private static Boolean parseEnforceWhitelist(String val)
     {
