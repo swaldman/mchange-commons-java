@@ -37,7 +37,7 @@ public final class ByNameInstantiationUtils
         boolean nameOkay;
         if (whitelist.contains(fqcn))
             nameOkay = true;
-        if (whitelist.size() == 1 && whitelist.contains("*"))
+        else if (whitelist.size() == 1 && whitelist.contains("*"))
             nameOkay = true;
         else
             nameOkay = false;
@@ -55,7 +55,7 @@ public final class ByNameInstantiationUtils
             if (pcfgEnforceWhitelist == null && syspropsEnforceWhitelist == null)
             {
                 if (logger.isLoggable(MLevel.WARNING))
-                    logger.log(MLevel.WARNING, "No interpretable '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "' set, currently defaulting to '" + DEFAULT_ENFORCE_WHITELIST +"'. THIS MAY CHANGE IN FUTURE RELEASES.");
+                    logger.log(MLevel.WARNING, "No interpretable value set for '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "' set, currently defaulting to '" + DEFAULT_ENFORCE_WHITELIST +"'. THIS MAY CHANGE IN FUTURE RELEASES.");
                 enforce = DEFAULT_ENFORCE_WHITELIST;
                 explicit = false;
             }
@@ -104,7 +104,7 @@ public final class ByNameInstantiationUtils
                        "Instantiating '" + fqcn + "' by name despite its absence from '" + BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX + "' or a subkey, " +
                        "and despite no explicit suppression of whitelist enforcement via '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "=false'. " +
                        "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
-                       "or else explicitly suppress enforcement of the whitelist."
+                       "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
                     );
             }
         }
