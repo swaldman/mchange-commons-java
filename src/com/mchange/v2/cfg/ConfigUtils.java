@@ -43,6 +43,9 @@ final class ConfigUtils
             PropertiesConfigSource out = pcsInstances.get(clz);
             if ( out == null )
             {
+                // we don't wrap this in com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByName because
+                // we fully control what fqcn this package private method gets called on, and we worry about
+                // circular dependencies between this package and com.mchange.v2.log classes
                 out = (PropertiesConfigSource) clz.getDeclaredConstructor().newInstance();
                 pcsInstances.put(clz, out);
             }

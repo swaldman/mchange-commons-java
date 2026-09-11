@@ -5,6 +5,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.*;
 import com.mchange.v2.log.*;
 
+import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByName;
+
 public final class DecodeUtils
 {
     public final static String DECODER_CLASS_DOT_KEY    = ".decoderClass";
@@ -27,7 +29,7 @@ public final class DecodeUtils
 	tmp.add( new JavaMapDecoderFinder() );
 	for ( int i = 0, len = finderClassNames.length; i < len; ++i )
 	    {
-		try { tmp.add( (DecoderFinder) Class.forName( finderClassNames[i] ).getDeclaredConstructor().newInstance() ); }
+		try { tmp.add( (DecoderFinder) instantiateByName( finderClassNames[i], null ) ); }
 		catch( Exception e )
 		    {
 			// reflective construction wraps whatever the constructor threw; report the cause
@@ -76,8 +78,7 @@ public final class DecodeUtils
     {
 	try 
 	    {
-		Class<?> clz = Class.forName( decoderClassFqcn );
-		Decoder decoder = (Decoder) clz.getDeclaredConstructor().newInstance();
+		Decoder decoder = (Decoder) instantiateByName( decoderClassFqcn, null );
 		return decoder.decode( encoded );
 	    }
 	catch ( Exception e )

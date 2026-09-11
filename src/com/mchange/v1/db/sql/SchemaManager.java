@@ -7,6 +7,8 @@ import com.mchange.v2.cmdline.BadCommandLineException;
 import com.mchange.v2.cmdline.CommandLineUtils;
 import com.mchange.v2.cmdline.ParsedCommandLine;
 
+import static com.mchange.v2.reflect.ByNameInstantiationUtils.instantiateByNameUnguarded;
+
 public class SchemaManager
 {
     final static String[] VALID = new String[] {"create", "drop"};
@@ -41,7 +43,9 @@ public class SchemaManager
 
 		con.setAutoCommit(false);
 
-		Schema s = (Schema) (Class.forName(unswitched[unswitched.length - 1]).getDeclaredConstructor().newInstance());
+                // unguarded because this is intended to be invoked as an explicit command line argument,
+                // there should be no surprise in it
+		Schema s = (Schema) instantiateByNameUnguarded(unswitched[unswitched.length - 1]);
 		if (create)
 		    {
 			s.createSchema(con);
