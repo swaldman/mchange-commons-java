@@ -11,10 +11,10 @@ public final class ObjectUtils
 	else
 	    return a.equals(b);
     }
-	
+
     /**
      *  Note -- if you are using Arrays.equals( ... ) or similar
-     *  and want a compatible hash method, see methods in 
+     *  and want a compatible hash method, see methods in
      * {@link com.mchange.v1.util.ArrayUtils#hashOrZeroArray ArrayUtils}.
      */
     public static int hashOrZero(Object o)
