@@ -68,6 +68,10 @@ public final class ByNameInstantiationUtils
         }
     }
 
+    public static Object instantiateByNameUnguarded(String fqcn)
+        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    { return instantiate(fqcn); }
+
     private static Object instantiate(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     { return Class.forName(fqcn).getDeclaredConstructor().newInstance(); }
