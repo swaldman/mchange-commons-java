@@ -12,9 +12,13 @@ import com.mchange.v2.log.MLogger;
 import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
+import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestStringSetFromStringListSyspropsPropertiesConfig;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListToSet;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListToModifiableSet;
+
 public final class ReferenceableUtils
 {
-
     final static MLogger logger = MLog.getLogger( ReferenceableUtils.class );
 
     /* don't worry -- References can have duplicate RefAddrs (I think!) */
@@ -249,74 +253,16 @@ public final class ReferenceableUtils
     }
 
     public static boolean allowIndirectSerializationViaReference( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, pcfg, "Creating or decoding dangerous Java-Serialized References when objects are Referenceable but not Serializable, or ordinary Serialization fails." ); }
+    { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, pcfg, "Creating or decoding dangerous Java-Serialized References when objects are Referenceable but not Serializable, or ordinary Serialization fails.", logger ); }
 
     public static boolean generateSerializedObjectBinaryRefAddr( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, pcfg, "Serializing, via dangerous Java Serialization, objects into references (as BinaryRefAddr)" ); }
+    { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, pcfg, "Serializing, via dangerous Java Serialization, objects into references (as BinaryRefAddr)", logger ); }
 
     public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances" ); }
+    { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, pcfg, "Loading of remote factory classes when resolving javax.naming.Reference instances", logger ); }
 
     public static boolean acceptDeserializedInitialContextEnvironment( PropertiesConfig pcfg )
-    { return falseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, pcfg, "Acceptance of deserialized InitialContext environment"); }
-
-    private static boolean falseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled )
-    {
-        String systemPropertiesBasedShouldSupportStr = System.getProperty( propStyleKey );
-        Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
-
-        Boolean pcfgBasedShouldSupport;
-        if ( pcfg != null )
-        {
-            String pcfgBasedShouldSupportStr = pcfg.getProperty( propStyleKey );
-            pcfgBasedShouldSupport = pcfgBasedShouldSupportStr == null ? null : Boolean.valueOf( pcfgBasedShouldSupportStr );
-        }
-        else
-            pcfgBasedShouldSupport = null;
-
-        boolean out;
-        if ( Boolean.FALSE.equals( systemPropertiesBasedShouldSupport ) )
-        {
-            if (Boolean.TRUE.equals(pcfgBasedShouldSupport))
-            {
-                if ( logger.isLoggable( MLevel.WARNING ) )
-                    logger.log(
-                       MLevel.WARNING,
-                       "Security-sensitive property '" + propStyleKey +
-                       "' has been set to 'false' in System properties. Disabling this functionality in System properties conservatively " +
-                       "OVERRIDES any configuration of this property set elsewhere, regardless of any alternative prioritization of system properties you may have configured. " +
-                       "Please resolve the inconsistency of configuration." +
-                       whatWillBeDisabled + " will be disabled!"
-                    );
-            }
-            out = false;
-        }
-        else if ( Boolean.TRUE.equals( systemPropertiesBasedShouldSupport ) )
-        {
-            if ( Boolean.FALSE.equals( pcfgBasedShouldSupport ) )
-            {
-                if ( logger.isLoggable( MLevel.WARNING ) )
-                    logger.log(
-                       MLevel.WARNING,
-                       "Security-sensitive property '" + propStyleKey +
-                       "' has been set to 'true' in System properties, however it has been set to 'false' in other configuration supplied. Disabling this functionality in  " +
-                       "supplied configuration overrides permission granted in System properties. " +
-                       "Please resolve the inconsistency of configuration." +
-                       whatWillBeDisabled + " will be disabled!"
-                    );
-                out = false;
-            }
-            else // System prop is explicitly set to true, MConfig value is either unset or set to true
-            {
-                out = true;
-            }
-        }
-        else // property unset in System properties, defer to pcfg, only support if explicitly set to true there
-        {
-            out = Boolean.TRUE.equals( pcfgBasedShouldSupport );
-        }
-        return out;
-    }
+    { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, pcfg, "Acceptance of deserialized InitialContext environment", logger ); }
 
     /**
      * @deprecated nesting references seemed useful until I realized that
@@ -376,15 +322,6 @@ public final class ReferenceableUtils
 		throw new NamingException("Version or size nested reference was not a number!!!");
 	    }
     }
-
-    private static Set<String> commaSeparatedStringListToModifiableSet( String csList )
-    {
-        String[] items = csList.split("\\s*,\\s*");
-        return new HashSet<String>(Arrays.asList(items));
-    }
-
-    private static Set<String> commaSeparatedStringListToSet( String csList )
-    { return Collections.unmodifiableSet(commaSeparatedStringListToModifiableSet(csList)); }
 
     /* intentionally package-scope, accessed by JavaBeanReferenceMaker */
     /* pcfg can be null */
@@ -460,7 +397,7 @@ public final class ReferenceableUtils
 
     private static Set<String> referenceableJavaBeanClassWhiteList( PropertiesConfig pcfg )
     {
-        Set<String> out = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg );
+        Set<String> out = narrowestStringSetFromStringListSyspropsPropertiesConfig( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg, logger );
         if (out != null && out.size() == 0) return null;
         else return out;
     }
@@ -468,7 +405,7 @@ public final class ReferenceableUtils
     // pcfg can be null
     private static Set<String> findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
     {
-        Set<String> narrowest = narrowestStringListPropertiesConfigSystemProperties( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg );
+        Set<String> narrowest = narrowestStringSetFromStringListSyspropsPropertiesConfig( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg, logger );
         if (narrowest == null)
             throw new NamingException(
                 "No ObjectFactory whitelist found. " +
@@ -481,46 +418,6 @@ public final class ReferenceableUtils
         else
             return narrowest;
     }
-
-    // pcfg can be null
-    private static Set<String> narrowestStringListPropertiesConfigSystemProperties( String propStyleKey, PropertiesConfig pcfg )
-    {
-        String rawSysProp = System.getProperty( propStyleKey );
-        String rawPropsConfigProp = pcfg == null ? null : pcfg.getProperty( propStyleKey );
-
-        if (rawSysProp == null && rawPropsConfigProp == null)
-            return null;
-        else if (rawSysProp != null && rawPropsConfigProp == null)
-            return commaSeparatedStringListToSet( rawSysProp );
-        else if (rawSysProp == null && rawPropsConfigProp != null)
-            return commaSeparatedStringListToSet( rawPropsConfigProp );
-        else
-        {
-            Set<String> sysPropSet = commaSeparatedStringListToModifiableSet( rawSysProp );
-            Set<String> propsConfigSet = commaSeparatedStringListToModifiableSet( rawPropsConfigProp );
-
-            if (sysPropSet.equals(propsConfigSet))
-                return Collections.unmodifiableSet(sysPropSet);
-            else
-            {
-                sysPropSet.retainAll(propsConfigSet);
-                Set<String> out = Collections.unmodifiableSet(sysPropSet);
-
-                if ( logger.isLoggable( MLevel.WARNING ) )
-                    logger.log(
-                        MLevel.WARNING,
-                        "Inconsistent values of '" + propStyleKey + "' were found in System properties and the provided configuration. " +
-                        "We are conservatively using the *intersection* of those values. " +
-                        "Value in System properties: '" + rawSysProp + "'; Value in PropertiesConfig: '" + rawPropsConfigProp + "'; " +
-                        "Value of intersection: '" + IterableUtils.joinAsString(",",out)
-                    );
-
-                return out;
-            }
-        }
-    }
-
-    
 
     /**
      * @deprecated nesting references seemed useful until I realized that

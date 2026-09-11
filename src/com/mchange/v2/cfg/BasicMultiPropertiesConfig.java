@@ -480,7 +480,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 			    }
 
 			String key = (String) kObj;
-			String prefix = extractPrefix( key );
+			String prefix = key;
 			while (prefix != null)
 			    {
 				Properties byPfx = (Properties) out.get( prefix );

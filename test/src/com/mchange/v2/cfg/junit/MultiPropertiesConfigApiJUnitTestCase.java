@@ -32,14 +32,16 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
             props( "x.y.z.key", "deep",
                    "x.y.other",  "mid",
                    "x.top",      "shallow",
-                   "dotless",    "flat" ) );
+                   "dotless",    "flat",
+                   "x.y.z",      "abc")
+        );
     }
 
     /** The special prefix "" returns all the Properties, as documented. */
     public void testEmptyPrefixReturnsEverything()
     {
         Properties all = prefixFixture().getPropertiesByPrefix( "" );
-        assertEquals( 4, all.size() );
+        assertEquals( 5, all.size() );
         assertEquals( "deep",    all.getProperty( "x.y.z.key" ) );
         assertEquals( "flat",    all.getProperty( "dotless" ) );
         assertEquals( "shallow", all.getProperty( "x.top" ) );
@@ -56,10 +58,10 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
 
         // "x.y" also carries its own direct child
         assertEquals( "mid", mpc.getPropertiesByPrefix( "x.y" ).getProperty( "x.y.other" ) );
-        assertEquals( 2, mpc.getPropertiesByPrefix( "x.y" ).size() );
+        assertEquals( 3, mpc.getPropertiesByPrefix( "x.y" ).size() );
 
         // "x" carries everything beneath it, but nothing outside it
-        assertEquals( 3, mpc.getPropertiesByPrefix( "x" ).size() );
+        assertEquals( 4, mpc.getPropertiesByPrefix( "x" ).size() );
         assertNull( mpc.getPropertiesByPrefix( "x" ).getProperty( "dotless" ) );
     }
 
@@ -69,7 +71,16 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
         MultiPropertiesConfig mpc = prefixFixture();
         assertEquals( "flat", mpc.getPropertiesByPrefix( "" ).getProperty( "dotless" ) );
         assertEquals( "an unknown prefix yields empty Properties, not null",
-                      0, mpc.getPropertiesByPrefix( "dotless" ).size() );
+                      0, mpc.getPropertiesByPrefix( "unknown" ).size() );
+    }
+
+    /** A dotless key lives only under the "" prefix. */
+    public void testKeyIsItsOwnPrefix()
+    {
+        MultiPropertiesConfig mpc = prefixFixture();
+        assertEquals( "a key that is prefix to nothing else yields its own entry and nothing else",
+                      1, mpc.getPropertiesByPrefix( "dotless" ).size() );
+        assertEquals( "a key that is a prefix to other keys becomes a Properties object holding the prefix-key itself and any keys nexted beneath it.", 2, mpc.getPropertiesByPrefix( "x.y.z" ).size() );
     }
 
     /** An unknown prefix yields empty Properties rather than null. */
