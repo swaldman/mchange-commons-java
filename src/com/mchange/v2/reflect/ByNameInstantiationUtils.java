@@ -118,6 +118,9 @@ public final class ByNameInstantiationUtils
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IllegalArgumentException
     { return doInstantiate(fqcn, preloaded); }
 
+    public static Set<String> currentWhitelist(PropertiesConfig pcfg)
+    { return Collections.unmodifiableSet( collectWhitelistSyspropsPropertiesConfig(pcfg) ); }
+
     private static Object doInstantiate(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     { return Class.forName(fqcn).getDeclaredConstructor().newInstance(); }
