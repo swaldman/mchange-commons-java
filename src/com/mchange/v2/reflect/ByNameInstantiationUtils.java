@@ -35,7 +35,7 @@ public final class ByNameInstantiationUtils
             return instantiate(fqcn);
         else
         {
-            String pcfgEnforceWhitelistStr = pcfg.getProperty(BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY);
+            String pcfgEnforceWhitelistStr = pcfg == null ? null : pcfg.getProperty(BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY);
             String syspropsEnforceWhitelistStr = System.getProperty(BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY);
 
             Boolean pcfgEnforceWhitelist = parseEnforceWhitelist(pcfgEnforceWhitelistStr);
@@ -75,7 +75,7 @@ public final class ByNameInstantiationUtils
     private static Boolean parseEnforceWhitelist(String val)
     {
         if (val == null)
-            return DEFAULT_ENFORCE_WHITELIST;
+            return null;
         else
         {
             if (val.equalsIgnoreCase("true"))
@@ -93,8 +93,13 @@ public final class ByNameInstantiationUtils
 
     private static Set<String> collectWhitelistSyspropsPropertiesConfig(PropertiesConfig pcfg)
     {
-        Properties allWhitelistProperties = pcfg.getPropertiesByPrefix(BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX);
-        return narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistProperties.stringPropertyNames(), pcfg, logger );
+        Set<String> allWhitelistKeys = new HashSet<>();
+        if (pcfg != null) allWhitelistKeys.addAll( pcfg.getPropertiesByPrefix(BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX).stringPropertyNames() );
+        for (String k : System.getProperties().stringPropertyNames())
+            if (k.startsWith(BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX))
+                allWhitelistKeys.add(k);
+
+        return narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistKeys, pcfg, logger );
     }
 
     private ByNameInstantiationUtils()
