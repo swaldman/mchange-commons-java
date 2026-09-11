@@ -7,17 +7,49 @@ import com.mchange.v2.log.*;
 
 import com.mchange.v2.cfg.PropertiesConfig;
 
-import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.WarnedOn;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestStringSetFromStringListSyspropsPropertiesConfig;
 import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig;
 
 public final class ByNameInstantiationUtils
 {
     final static MLogger logger = MLog.getLogger( ByNameInstantiationUtils.class );
 
-    public final static String BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX     = "com.mchange.v2.reflect.by-name-instantiation.whitelist";
-    public final static String BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY = "com.mchange.v2.reflect.by-name-instantiation.enforce-whitelist";
+
+    private final static String BY_NAME_INSTANTIATION_COMMON_KEY_PFX         = "com.mchange.v2.reflect.by-name-instantiation";
+    private final static String BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX      = "com.mchange.v2.reflect.by-name-instantiation.whitelist";
+    private final static String BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY  = "com.mchange.v2.reflect.by-name-instantiation.enforce-whitelist";
+    private final static String BY_NAME_INSTANTIATION_OVERRIDE_WHITELIST_KEY = "com.mchange.v2.reflect.by-name-instantiation.override-whitelist";
 
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
+
+    //MT: protected by class' monitor
+    private static WarnedOn warnedOverride   = null;
+    private static WarnedOn warnedStraySplat = null;
+
+    private synchronized static boolean warnOnOverride(PropertiesConfig pcfg)
+    {
+        WarnedOn check = new WarnedOn(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
+        if (check.equals(warnedOverride))
+            return false;
+        else
+        {
+            warnedOverride = check;
+            return true;
+        }
+    }
+
+    private synchronized static boolean warnOnStraySplat(PropertiesConfig pcfg)
+    {
+        WarnedOn check = new WarnedOn(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
+        if (check.equals(warnedStraySplat))
+            return false;
+        else
+        {
+            warnedStraySplat = check;
+            return true;
+        }
+    }
 
     public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
@@ -129,11 +161,11 @@ public final class ByNameInstantiationUtils
      * For where a class is already loaded, clz.getName() must equal fqcn
      */
     private static Object doInstantiate(String fqcn, Class<?> clz)
-        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+        throws NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     {
         if (!clz.getName().equals(fqcn))
             throw new IllegalArgumentException("Class " + clz + " must share a fully-qualified name with given fqcn: " + fqcn);
-        return Class.forName(fqcn).getDeclaredConstructor().newInstance();
+        return clz.getDeclaredConstructor().newInstance();
     }
 
     private static Boolean parseEnforceWhitelist(String val)
@@ -157,13 +189,38 @@ public final class ByNameInstantiationUtils
 
     private static Set<String> collectWhitelistSyspropsPropertiesConfig(PropertiesConfig pcfg)
     {
+        Set<String> override = narrowestStringSetFromStringListSyspropsPropertiesConfig( BY_NAME_INSTANTIATION_OVERRIDE_WHITELIST_KEY, pcfg, logger);
+
         Set<String> allWhitelistKeys = new HashSet<>();
         if (pcfg != null) allWhitelistKeys.addAll( pcfg.getPropertiesByPrefix(BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX).stringPropertyNames() );
         for (String k : System.getProperties().stringPropertyNames())
             if (k.startsWith(BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX))
                 allWhitelistKeys.add(k);
 
-        return narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistKeys, pcfg, logger );
+        Set<String> noOverride = narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistKeys, pcfg, logger );
+
+        Set<String> out;
+        String whitelistModifier;
+        if (override != null)
+        {
+            if (logger.isLoggable(MLevel.WARNING) && warnOnOverride(pcfg))
+                logger.log(MLevel.WARNING,
+                           "The whitelist that would have been built from '" + BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX +
+                           "' and its subkeys has been overridden by '" + BY_NAME_INSTANTIATION_OVERRIDE_WHITELIST_KEY +
+                           "'. The overridden whitelist that will be in effect is " + override +
+                           ". The whitelist that is overridden and will now be ignored would have been " + noOverride);
+            out = override;
+            whitelistModifier = "override ";
+        }
+        else
+        {
+            out = noOverride;
+            whitelistModifier = "";
+        }
+
+        if (logger.isLoggable(MLevel.WARNING) && out.contains("*") && out.size() > 1 && warnOnStraySplat(pcfg))
+            logger.log(MLevel.WARNING, "The " + whitelistModifier + "whitelist contains an '*' entry, but it is not unique and will be ignored. To disable whitelist enforcement, '*' must be the whitelist's only element.");
+        return out;
     }
 
     private ByNameInstantiationUtils()

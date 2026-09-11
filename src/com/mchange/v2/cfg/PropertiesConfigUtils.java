@@ -4,10 +4,49 @@ import java.util.*;
 
 import com.mchange.v2.log.*;
 
+import com.mchange.v2.lang.ObjectUtils;
 import com.mchange.v2.util.IterableUtils;
 
 public class PropertiesConfigUtils
 {
+    public static class WarnedOn
+    {
+        Properties pConfigProperties;
+        Properties systemProperties;
+
+        /**
+         *  relevantPrefix can be "" if you want to warn on ANY change to pcfg. Properties from pcfg by prefix should be fast
+         *
+         *  we always warn on any change to sysprops because clone() is gonna be faster than iterating to check a subset.
+         */
+        public WarnedOn(PropertiesConfig pcfg, String relevantPrefix)
+        {
+            this.pConfigProperties = pcfg == null ? null : (Properties) pcfg.getPropertiesByPrefix(relevantPrefix).clone();
+            this.systemProperties = (Properties) System.getProperties().clone();
+        }
+
+        public WarnedOn(PropertiesConfig pcfg)
+        { this( pcfg, "" ); }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (o instanceof WarnedOn)
+            {
+                WarnedOn other = (WarnedOn) o;
+                return
+                    ObjectUtils.eqOrBothNull(this.pConfigProperties,other.pConfigProperties) &&
+                    ObjectUtils.eqOrBothNull(this.systemProperties,other.systemProperties);
+            }
+            else
+                return false;
+        }
+
+        @Override
+        public int hashCode()
+        {return ObjectUtils.hashOrZero(pConfigProperties) ^ ObjectUtils.hashOrZero(systemProperties);}
+    }
+
     // pcfg can be null
     public static boolean securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled, MLogger logger )
     {
@@ -69,6 +108,8 @@ public class PropertiesConfigUtils
 
 
     // pcfg can be null
+    //
+    // returns null iff the key is unavailable from either source
     public static Set<String> narrowestStringSetFromStringListSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, MLogger logger )
     {
         String rawSysProp = System.getProperty( propStyleKey );
@@ -118,17 +159,25 @@ public class PropertiesConfigUtils
         {
             String key = keysArray[i];
             Set<String> valuesForKey = narrowestStringSetFromStringListSyspropsPropertiesConfig( key, pcfg, logger );
-            if (logger.isLoggable(MLevel.FINE))
-                logger.log(MLevel.FINE, "Building Set<String>, adding for key '" + key + "' values: " + valuesForKey);
-            out.addAll(valuesForKey);
+            if (valuesForKey != null)
+            {
+                if (logger.isLoggable(MLevel.FINE))
+                    logger.log(MLevel.FINE, "Building Set<String>, adding for key '" + key + "' values: " + valuesForKey);
+                out.addAll(valuesForKey);
+            }
         }
         return out;
     }
 
     public static Set<String> commaSeparatedStringListToModifiableSet( String csList )
     {
-        String[] items = csList.split("\\s*,\\s*");
-        return new HashSet<String>(Arrays.asList(items));
+        if ("".equals(csList.trim()))
+            return new HashSet<String>();
+        else
+        {
+            String[] items = csList.split("\\s*,\\s*");
+            return new HashSet<String>(Arrays.asList(items));
+        }
     }
 
     public static Set<String> commaSeparatedStringListToSet( String csList )
