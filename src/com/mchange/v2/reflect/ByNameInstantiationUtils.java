@@ -42,26 +42,60 @@ public final class ByNameInstantiationUtils
             Boolean syspropsEnforceWhitelist = parseEnforceWhitelist(syspropsEnforceWhitelistStr);
 
             boolean enforce;
+            boolean explicit;
             if (pcfgEnforceWhitelist == null && syspropsEnforceWhitelist == null)
             {
                 if (logger.isLoggable(MLevel.WARNING))
                     logger.log(MLevel.WARNING, "No interpretable '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "' set, currently defaulting to '" + DEFAULT_ENFORCE_WHITELIST +"'. THIS MAY CHANGE IN FUTURE RELEASES.");
                 enforce = DEFAULT_ENFORCE_WHITELIST;
+                explicit = false;
             }
-            else if (pcfgEnforceWhitelist.booleanValue() || syspropsEnforceWhitelist.booleanValue())
-                enforce = true;
             else
-                enforce = false;
+            {
+                if (pcfgEnforceWhitelist == null)
+                {
+                    enforce = syspropsEnforceWhitelist.booleanValue();
+                    explicit = true;
+                }
+                else if (syspropsEnforceWhitelist == null)
+                {
+                    enforce = pcfgEnforceWhitelist.booleanValue();
+                    explicit = true;
+                }
+                else if (pcfgEnforceWhitelist.booleanValue() || syspropsEnforceWhitelist.booleanValue())
+                {
+                    enforce = true;
+                    explicit = true;
+
+                    if (logger.isLoggable(MLevel.WARNING))
+                    {
+                        if (pcfgEnforceWhitelist.booleanValue() != syspropsEnforceWhitelist.booleanValue())
+                            logger.log(
+                               MLevel.WARNING,
+                               "Differing values of '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "' were found between system properties and other configuration. " +
+                               "This security-sensitive key is true-biased. Since the value was 'true' in one source of configuration, the disagreement has been resolved to 'true' " +
+                               "and the whitelist will be enforced. To eliminate these annoying log messages, please resolve the disagreement between System properties and other config."
+                            );
+                    }
+                }
+                else
+                {
+                    enforce = false;
+                    explicit = true;
+                }
+            }
 
             if (enforce) // we already know fqcn is not in the whitelist
                 throw new InstantiationVetoedException("By-name instantiation of '" + fqcn + "' vetoed. The class is not in whitelist: " + whitelist);
             else
             {
-                if (logger.isLoggable(MLevel.WARNING))
+                if (!explicit && logger.isLoggable(MLevel.WARNING))
                     logger.log(
                        MLevel.WARNING,
-                       "Instantiating '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "' by name despite its absence from '" + BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX + "' or a subkey. " +
-                       "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist."
+                       "Instantiating '" + fqcn + "' by name despite its absence from '" + BY_NAME_INSTANTIATION_WHITELIST_KEY_PFX + "' or a subkey, " +
+                       "and despite no explicit suppression of whitelist enforcement via '" + BY_NAME_INSTANTIATION_ENFORCE_WHITELIST_KEY + "=false'. " +
+                       "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
+                       "or else explicitly suppress enforcement of the whitelist."
                     );
                 return instantiate(fqcn);
             }
