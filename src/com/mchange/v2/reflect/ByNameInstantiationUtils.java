@@ -7,7 +7,7 @@ import com.mchange.v2.log.*;
 
 import com.mchange.v2.cfg.PropertiesConfig;
 
-import static com.mchange.v2.cfg.PropertiesConfigUtils.WarnedOn;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.ConfigSnapshot;
 import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestStringSetFromStringListSyspropsPropertiesConfig;
 import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig;
 
@@ -24,12 +24,12 @@ public final class ByNameInstantiationUtils
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
 
     //MT: protected by class' monitor
-    private static WarnedOn warnedOverride   = null;
-    private static WarnedOn warnedStraySplat = null;
+    private static ConfigSnapshot warnedOverride   = null;
+    private static ConfigSnapshot warnedStraySplat = null;
 
     private synchronized static boolean warnOnOverride(PropertiesConfig pcfg)
     {
-        WarnedOn check = new WarnedOn(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
+        ConfigSnapshot check = new ConfigSnapshot(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
         if (check.equals(warnedOverride))
             return false;
         else
@@ -41,7 +41,7 @@ public final class ByNameInstantiationUtils
 
     private synchronized static boolean warnOnStraySplat(PropertiesConfig pcfg)
     {
-        WarnedOn check = new WarnedOn(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
+        ConfigSnapshot check = new ConfigSnapshot(pcfg, BY_NAME_INSTANTIATION_COMMON_KEY_PFX);
         if (check.equals(warnedStraySplat))
             return false;
         else

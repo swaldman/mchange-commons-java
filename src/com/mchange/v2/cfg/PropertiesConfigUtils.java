@@ -9,7 +9,7 @@ import com.mchange.v2.util.IterableUtils;
 
 public class PropertiesConfigUtils
 {
-    public static class WarnedOn
+    public static class ConfigSnapshot
     {
         Properties pConfigProperties;
         Properties systemProperties;
@@ -19,21 +19,21 @@ public class PropertiesConfigUtils
          *
          *  we always warn on any change to sysprops because clone() is gonna be faster than iterating to check a subset.
          */
-        public WarnedOn(PropertiesConfig pcfg, String relevantPrefix)
+        public ConfigSnapshot(PropertiesConfig pcfg, String relevantPrefix)
         {
             this.pConfigProperties = pcfg == null ? null : (Properties) pcfg.getPropertiesByPrefix(relevantPrefix).clone();
             this.systemProperties = (Properties) System.getProperties().clone();
         }
 
-        public WarnedOn(PropertiesConfig pcfg)
+        public ConfigSnapshot(PropertiesConfig pcfg)
         { this( pcfg, "" ); }
 
         @Override
         public boolean equals(Object o)
         {
-            if (o instanceof WarnedOn)
+            if (o instanceof ConfigSnapshot)
             {
-                WarnedOn other = (WarnedOn) o;
+                ConfigSnapshot other = (ConfigSnapshot) o;
                 return
                     ObjectUtils.eqOrBothNull(this.pConfigProperties,other.pConfigProperties) &&
                     ObjectUtils.eqOrBothNull(this.systemProperties,other.systemProperties);
