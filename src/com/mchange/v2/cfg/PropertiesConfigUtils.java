@@ -169,6 +169,111 @@ public class PropertiesConfigUtils
         return out;
     }
 
+    static abstract class WhitelistManager
+    {
+        String baseKey;
+        String legacyKey;
+
+        String whitelistBaseKey;
+        String overrideWhitelistKey;
+
+        //MT: protected by this' monitor
+        private ConfigSnapshot warnedOverride = null; // override is a supported configuration, should only warn once, not nag
+
+        private synchronized boolean warnOnOverride(PropertiesConfig pcfg)
+        {
+            ConfigSnapshot check = new ConfigSnapshot(pcfg, whitelistBaseKey);
+            if (check.equals(warnedOverride))
+                return false;
+            else
+            {
+                warnedOverride = check;
+                return true;
+            }
+        }
+
+        public WhitelistManager(String baseKey, String legacyKey)
+        {
+            this.baseKey = baseKey;
+            this.legacyKey = legacyKey;
+            this.whitelistBaseKey = baseKey + ".whitelist";
+            this.overrideWhitelistKey = baseKey + ".overrideWhitelist";
+        }
+
+        public Set<String> collectWhitelistSyspropsPropertiesConfig(PropertiesConfig pcfg, MLogger logger)
+        {
+            Set<String> out          = null;
+            String whitelistModifier = null;
+            String effectiveKey      = null;
+
+            // if a legacy whitelist exists, we use it, but with a big warning to migrate
+            if (legacyKey != null)
+            {
+                Set<String> legacyWhitelist = narrowestStringSetFromStringListSyspropsPropertiesConfig( legacyKey, pcfg, logger );
+                if (legacyWhitelist != null && legacyWhitelist.size() > 0)
+                {
+                    out = legacyWhitelist;
+                    whitelistModifier = "deprecated ";
+                    effectiveKey = legacyKey;
+
+                    if (logger.isLoggable(MLevel.WARNING))
+                    {
+                        logger.log(
+                          MLevel.WARNING,
+                          "Deprecated whitelist key '" + legacyKey + "' found. Please remove this from your configuration and migrate to '" + whitelistBaseKey + "' or any subkey for defining whitelist elements. " +
+                          "Please note that as long as this key is present in your configuration, it will remain effective, and '" + whitelistBaseKey + "', its subkeys, and '" + overrideWhitelistKey + "' will all be ignored! " +
+                          "Effective whitelist: " + out
+                        );
+                    }
+                }
+            }
+
+            if (out == null)
+            {
+                Set<String> override = narrowestStringSetFromStringListSyspropsPropertiesConfig( overrideWhitelistKey, pcfg, logger);
+                if (override != null)
+                {
+                    if (logger.isLoggable(MLevel.WARNING) && warnOnOverride(pcfg))
+                        logger.log(MLevel.WARNING,
+                                   "The whitelist that would have been built from '" + whitelistBaseKey +
+                                   "' and its subkeys has been overridden by '" + overrideWhitelistKey +
+                                   "'. The overridden whitelist that will be in effect is " + override + ".");
+                    out = override;
+                    whitelistModifier = "override ";
+                    effectiveKey = overrideWhitelistKey;
+                }
+                else
+                {
+                    Set<String> allWhitelistKeys = new HashSet<>();
+                    if (pcfg != null) allWhitelistKeys.addAll( pcfg.getPropertiesByPrefix(whitelistBaseKey).stringPropertyNames() );
+                    for (String k : System.getProperties().stringPropertyNames())
+                        if (k.startsWith(whitelistBaseKey))
+                            allWhitelistKeys.add(k);
+
+                    Set<String> noOverride = narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistKeys, pcfg, logger );
+                    out = noOverride;
+                    whitelistModifier = "";
+                    effectiveKey = whitelistBaseKey;
+                }
+            }
+
+            if (logger.isLoggable(MLevel.WARNING) && out.contains("*") && out.size() > 1)
+            {
+                String whitelistDescriptor =
+                    whitelistModifier + "whitelist defined by key '" + effectiveKey + "'" +
+                    (effectiveKey == whitelistBaseKey ? " and its subkeys" : "");
+                logger.log(
+                  MLevel.WARNING,
+                  "The " + whitelistDescriptor + " contains an '*' entry, but it is not unique and will be ignored. " +
+                  "To disable whitelist enforcement, '*' must be the whitelist's only element. " +
+                  "Please either remove the '*' element, or ensure that it is unique in the effective whitelist: " +
+                  out
+                );
+            }
+            return out;
+        }
+    }
+
     public static Set<String> commaSeparatedStringListToModifiableSet( String csList )
     {
         if ("".equals(csList.trim()))
