@@ -61,7 +61,7 @@ public final class ByNameInstantiationUtils
     /**
      * In some contexts, instantiation by name doesn't happen in a single step.
      * This does all the whitelist-checking and warning we want to support, and throws if we would not
-     * permit the operation. You can safely instantiateNyNameUngated(...) if this function succeeds.
+     * permit the operation. You can safely instantiateByNameUngated(...) if this function succeeds.
      */
     public static void checkWarnThrowForInstantiateByNameGated(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
     {
@@ -142,10 +142,61 @@ public final class ByNameInstantiationUtils
         }
     }
 
+    /**
+     *  Instantiates fqcn without consulting the whitelist at all. This is the bypass, and
+     *  the whole point of the whitelist is that most by-name instantiation should not use it.
+     *
+     *  <p>It is appropriate only where the name cannot have been influenced by anything
+     *  outside the application's control. In practice that means one of two things:</p>
+     *
+     *  <ul>
+     *    <li>the name is fixed in the code -- a literal or a compile-time constant -- so
+     *        there is nothing for a whitelist to decide; or</li>
+     *    <li>the name has already been passed through
+     *        {@link #checkWarnThrowForInstantiateByNameGated}, which performs the whole
+     *        check and throws if the operation would not be permitted. Instantiating after
+     *        that call returns normally is exactly as gated as
+     *        {@link #instantiateByNameGated} would have been.</li>
+     *    <li>the name was read from deployment configuration at the point of use -- a
+     *        PropertiesConfig or System property lookup -- so the party who chose it is the
+     *        same party who would have had to whitelist it. Gating there would only ask the
+     *        configurer to authorize themselves.
+     *
+     *        <p>Note this turns on where the value in hand came from, not on whether a
+     *        property of that name exists. A class name that is settable in configuration
+     *        may also reach you as a property of a deserialized or dereferenced object, and
+     *        at the point of instantiation the two are indistinguishable. If the value was
+     *        carried on an object rather than read directly from configuration, it must be
+     *        gated.</p></li>
+     *  </ul>
+     *
+     *  <p>A name that reached you from a deserialized object, a dereferenced JNDI
+     *  Reference, or any other channel an attacker might influence belongs in
+     *  {@link #instantiateByNameGated} instead. Reaching for this method to quiet an
+     *  {@link InstantiationNotPermittedException} converts a refusal into the vulnerability
+     *  the refusal existed to prevent; the fix for that exception is to add the class to the
+     *  whitelist.</p>
+     */
     public static Object instantiateByNameUngated(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     { return doInstantiate(fqcn); }
 
+    /**
+     *  As {@link #instantiateByNameUngated(String)}, and subject to the same caution about
+     *  when bypassing the whitelist is legitimate, but instantiating a Class already in
+     *  hand rather than resolving fqcn afresh.
+     *
+     *  <p>Which Class object is used matters. A caller that loaded the class through some
+     *  other ClassLoader -- a thread context ClassLoader, say, consulted because
+     *  Class.forName had already failed -- holds a Class that a fresh Class.forName here
+     *  could not find. This instantiates the Class it is given.</p>
+     *
+     *  <p>The two arguments must agree: preloaded.getName() must equal fqcn, and an
+     *  IllegalArgumentException is thrown if it does not. Passing the name separately is
+     *  not redundant -- it is what lets the caller gate on the same name it is about to
+     *  instantiate, via {@link #checkWarnThrowForInstantiateByNameGated}, before calling
+     *  this.</p>
+     */
     public static Object instantiateByNameUngated(String fqcn, Class<?> preloaded)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, IllegalArgumentException
     { return doInstantiate(fqcn, preloaded); }
