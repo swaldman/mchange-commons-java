@@ -4,11 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 import junit.framework.TestCase;
 
+import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
 import com.mchange.v2.reflect.ByNameInstantiationUtils;
 import com.mchange.v2.reflect.InstantiationNotPermittedException;
 
@@ -24,10 +26,10 @@ import com.mchange.v2.reflect.InstantiationNotPermittedException;
  */
 public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
 {
-    private final static String PFX       = "com.mchange.v2.reflect.by-name-instantiation";
+    private final static String PFX       = "com.mchange.v2.reflect.byNameInstantiation";
     private final static String WHITELIST = PFX + ".whitelist";
-    private final static String ENFORCE   = PFX + ".enforce-whitelist";
-    private final static String OVERRIDE  = PFX + ".override-whitelist";
+    private final static String ENFORCE   = PFX + ".enforceWhitelist";
+    private final static String OVERRIDE  = PFX + ".overrideWhitelist";
 
     private final static String MARKER = ByNameMarker.class.getName();
     private final static String OTHER  = "com.mchange.v2.reflect.junit.NotOnAnyWhitelist";
@@ -267,6 +269,144 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
         {
             ByNameInstantiationUtils.instantiateByNameUngated( "com.example.Mismatch", ByNameMarker.class );
             fail( "A Class whose name differs from the fqcn must be rejected." );
+        }
+        catch ( IllegalArgumentException expected )
+        {}
+    }
+
+
+    // ---------- what the whitelist reports about itself ----------
+
+    /**
+     *  An unconfigured whitelist is MISSING, not merely empty. The distinction is the
+     *  point: a deployment that configured a deny-all list meant it, while one that
+     *  configured nothing has simply not been told yet, and callers that must insist on
+     *  configuration -- ReferenceableUtils.findMandatoryObjectFactoryWhitelist is the one
+     *  this exists for -- can tell those two apart only through the source.
+     */
+    public void testUnconfiguredWhitelistReportsSourceMissing()
+    {
+        WhitelistInfo info = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        assertEquals( "Nothing configured must report MISSING.",
+                      WhitelistInfo.Source.MISSING, info.getSource() );
+        assertTrue( "A MISSING whitelist must still carry an empty Set, never null.",
+                    info.getWhitelist().isEmpty() );
+    }
+
+    /** An explicitly empty whitelist is a configured deny-all, and says so. */
+    public void testExplicitlyEmptyWhitelistReportsItsKeyAsSource()
+    {
+        System.setProperty( WHITELIST + ".layerOne", "" );
+
+        WhitelistInfo info = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        assertEquals( "A configured-but-empty whitelist is MAIN_WHITELIST, not MISSING.",
+                      WhitelistInfo.Source.MAIN_WHITELIST, info.getSource() );
+        assertTrue( info.getWhitelist().isEmpty() );
+    }
+
+    /** Both empty cases deny, however they are labelled. */
+    public void testBothEmptyAndMissingDenyUnderEnforcement()
+    {
+        System.setProperty( ENFORCE, "true" );
+        assertFalse( "A MISSING whitelist must permit nothing under enforcement.", permitted( OTHER ) );
+
+        System.setProperty( WHITELIST + ".layerOne", "" );
+        assertFalse( "A configured empty whitelist must permit nothing either.", permitted( OTHER ) );
+    }
+
+    public void testConfiguredWhitelistReportsItsContents()
+    {
+        System.setProperty( WHITELIST + ".layerOne", MARKER );
+
+        WhitelistInfo info = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        assertEquals( WhitelistInfo.Source.MAIN_WHITELIST, info.getSource() );
+        assertEquals( Collections.singleton( MARKER ), info.getWhitelist() );
+    }
+
+    /**
+     *  An override in force must report itself as the source. Diagnostics name the key
+     *  that decided, and naming the subkeys here would send a reader to edit a key whose
+     *  contents were discarded.
+     */
+    public void testOverrideReportsSourceOverride()
+    {
+        System.setProperty( WHITELIST + ".layerOne", MARKER );
+        System.setProperty( OVERRIDE, "com.example.OnlyThis" );
+
+        WhitelistInfo info = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        assertEquals( WhitelistInfo.Source.OVERRIDE, info.getSource() );
+        assertEquals( Collections.singleton( "com.example.OnlyThis" ), info.getWhitelist() );
+    }
+
+    /** currentWhitelistInfo(...) is a snapshot, not a view: later config changes do not mutate it. */
+    public void testWhitelistInfoIsASnapshot()
+    {
+        System.setProperty( WHITELIST + ".layerOne", MARKER );
+        WhitelistInfo before = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        System.setProperty( WHITELIST + ".layerTwo", "com.example.Beta" );
+        WhitelistInfo after = ByNameInstantiationUtils.currentWhitelistInfo( null );
+
+        assertEquals( "The earlier snapshot must not have grown.",
+                      Collections.singleton( MARKER ), before.getWhitelist() );
+        assertEquals( 2, after.getWhitelist().size() );
+    }
+
+    /**
+     *  toString is what lands in c3p0's SQLException message when a driver class is refused,
+     *  so it must name the source and the contents, and must not fall back to Object's
+     *  identity form.
+     */
+    public void testWhitelistInfoToStringIsLegible()
+    {
+        String missing = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
+        assertFalse( "toString must be overridden.", missing.contains( "@" ) );
+        assertTrue( "A MISSING whitelist must say so: " + missing, missing.contains( "missing" ) );
+
+        System.setProperty( WHITELIST + ".layerOne", MARKER );
+        String main = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
+        assertTrue( "The contents belong in the message: " + main, main.contains( MARKER ) );
+
+        System.setProperty( OVERRIDE, "com.example.OnlyThis" );
+        String override = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
+        assertTrue( "An override must identify itself: " + override, override.contains( "override" ) );
+        assertFalse( "and must not report the entries it discarded: " + override,
+                     override.contains( MARKER ) );
+    }
+
+    /** Same whitelist reached by different routes is not the same WhitelistInfo. */
+    public void testWhitelistInfoEqualityIncludesSource()
+    {
+        WhitelistInfo viaMain = new WhitelistInfo( Collections.singleton( MARKER ),
+                                                   WhitelistInfo.Source.MAIN_WHITELIST );
+        WhitelistInfo viaMainAgain = new WhitelistInfo( Collections.singleton( MARKER ),
+                                                        WhitelistInfo.Source.MAIN_WHITELIST );
+        WhitelistInfo viaOverride = new WhitelistInfo( Collections.singleton( MARKER ),
+                                                       WhitelistInfo.Source.OVERRIDE );
+
+        assertEquals( viaMain, viaMainAgain );
+        assertEquals( viaMain.hashCode(), viaMainAgain.hashCode() );
+        assertFalse( "Source participates in identity.", viaMain.equals( viaOverride ) );
+    }
+
+    public void testWhitelistInfoRejectsNulls()
+    {
+        try
+        {
+            new WhitelistInfo( null, WhitelistInfo.Source.MISSING );
+            fail( "A null whitelist must be rejected." );
+        }
+        catch ( IllegalArgumentException expected )
+        {}
+
+        try
+        {
+            new WhitelistInfo( Collections.<String>emptySet(), null );
+            fail( "A null source must be rejected." );
         }
         catch ( IllegalArgumentException expected )
         {}
