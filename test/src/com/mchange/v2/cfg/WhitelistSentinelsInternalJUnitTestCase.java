@@ -293,6 +293,19 @@ public class WhitelistSentinelsInternalJUnitTestCase extends TestCase
         assertTrue( "Precondition: nothing was logged.", logger.warnings().isEmpty() );
     }
 
+    /**
+     *  Both sentinels are typically the whole value of their key, which is exactly where a
+     *  stray space is easiest to leave behind -- and a sentinel that fails to be recognized
+     *  fails open or closed rather than merely mismatching one class name.
+     */
+    public void testDenyAllTokenIsRecognizedDespiteSurroundingWhitespace()
+    {
+        System.setProperty( WHITELIST + ".layerOne", ALPHA );
+        System.setProperty( WHITELIST + ".layerTwo", "  " + DENY_ALL + "  " );
+
+        assertDenied( "A '[]' with whitespace around it", collect( fresh() ) );
+    }
+
     // ======================= '*' is a wildcard only when it is truly unique =======================
 
     public void testLoneWildcardIsLeftIntact()
@@ -371,6 +384,30 @@ public class WhitelistSentinelsInternalJUnitTestCase extends TestCase
                                       pcfg( WHITELIST + ".layerOne", WILDCARD, WHITELIST + ".layerTwo", "" ) );
 
         assertEquals( "A blank key is silent, not dissenting.", setOf( WILDCARD ), info.getWhitelist() );
+    }
+
+    public void testWildcardIsRecognizedDespiteSurroundingWhitespace()
+    {
+        System.setProperty( WHITELIST + ".layerOne", " " + WILDCARD + " " );
+
+        assertEquals( "A '*' with whitespace around it is still the wildcard.",
+                      setOf( WILDCARD ), collect( fresh() ).getWhitelist() );
+    }
+
+    /**
+     *  A leading comma yields an empty-string entry. It can never match a class name, so it
+     *  does no harm on its own -- but it is an entry, so it costs the wildcard its
+     *  uniqueness, and that must be said out loud rather than silently dropping the '*'.
+     */
+    public void testAnInertEmptyEntryCostsTheWildcardItsUniquenessAudibly()
+    {
+        System.setProperty( WHITELIST + ".layerOne", "," + WILDCARD );
+
+        WhitelistInfo info = collect( fresh() );
+
+        assertEquals( setOf( "", WILDCARD ), info.getWhitelist() );
+        assertTrue( "The operator must be told why their wildcard stopped working.",
+                    logger.sawWarningContaining( "not unique" ) );
     }
 
     /** The refusal, like the veto, is a security decision and cannot depend on log level. */
