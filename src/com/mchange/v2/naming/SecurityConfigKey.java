@@ -7,7 +7,10 @@ public class SecurityConfigKey {
     public final static String NAME_GUARD_CLASS_NAME = "com.mchange.v2.naming.nameGuardClassName";
 
     // used in ReferenceableUtils.referenceToObject when no whitelist is provided explicitly
+    @Deprecated
     public final static String OBJECT_FACTORY_WHITELIST = "com.mchange.v2.naming.objectFactoryWhitelist";
+
+    public final static String OBJECT_FACTORY_BASE_KEY = "com.mchange.v2.naming.objectFactory";
 
     public final static String REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST = "com.mchange.v2.naming.referenceableJavaBeanClassWhitelist";
 

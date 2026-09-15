@@ -110,7 +110,7 @@ public class PropertiesConfigUtils
     // pcfg can be null
     //
     // returns null iff the key is unavailable from either source
-    public static Set<String> narrowestStringSetFromStringListSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, MLogger logger )
+    public static Set<String> narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( String propStyleKey, PropertiesConfig pcfg, String alwaysRetainToken, MLogger logger )
     {
         String rawSysProp = System.getProperty( propStyleKey );
         String rawPropsConfigProp = pcfg == null ? null : pcfg.getProperty( propStyleKey );
@@ -123,6 +123,9 @@ public class PropertiesConfigUtils
             return commaSeparatedStringListToSet( rawPropsConfigProp );
         else
         {
+            // note: sysPropSet, a newly constructed Set, will be mutated and returned
+            //       it will no longer faithfully represent the whitelist from sysprops
+            //       after the mutation.
             Set<String> sysPropSet = commaSeparatedStringListToModifiableSet( rawSysProp );
             Set<String> propsConfigSet = commaSeparatedStringListToModifiableSet( rawPropsConfigProp );
 
@@ -130,8 +133,11 @@ public class PropertiesConfigUtils
                 return Collections.unmodifiableSet(sysPropSet);
             else
             {
-                sysPropSet.retainAll(propsConfigSet);
-                Set<String> out = Collections.unmodifiableSet(sysPropSet);
+                boolean readd = sysPropSet.contains(alwaysRetainToken) || propsConfigSet.contains(alwaysRetainToken);
+                Set<String> tmp = sysPropSet; // just because it becomes awkward to read this as sysPropSet
+                tmp.retainAll(propsConfigSet);
+                if (readd) tmp.add(alwaysRetainToken);
+                Set<String> out = Collections.unmodifiableSet(tmp);
 
                 if ( logger.isLoggable( MLevel.WARNING ) )
                     logger.log(
@@ -139,12 +145,51 @@ public class PropertiesConfigUtils
                         "Inconsistent values of '" + propStyleKey + "' were found in System properties and the provided configuration. " +
                         "We are conservatively using the *intersection* of those values. " +
                         "Value in System properties: '" + rawSysProp + "'; Value in PropertiesConfig: '" + rawPropsConfigProp + "'; " +
-                        "Value of intersection: '" + IterableUtils.joinAsString(",",out)
+                        "Value of intersection: '" + IterableUtils.joinAsString(",",out) + "'"
                     );
 
                 return out;
             }
         }
+    }
+
+    // pcfg can be null
+    //
+    // returns null iff the key is unavailable from either source
+    public static Set<String> narrowestStringSetFromStringListSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, MLogger logger )
+    { return narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( propStyleKey, pcfg, null, logger ); }
+
+    /**
+     * for lists that can be grown additively across multiple keys,
+     * useful for whitelists that multiple layers of an application may need to add to,
+     * saves awkwardly trying to continually append
+     *
+     * builds a whitelist formed by union across keys, intersection between system properties and config within
+     *
+     * an empty set means an empty whitelist, forbids everything
+     *
+     * pcfg can be null
+     *
+     * @return set of elements of the composite whitelist, null if none of the keys are present
+     */
+    public static Set<String> narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( Set<String> keys, PropertiesConfig pcfg, String alwaysRetainToken, MLogger logger )
+    {
+        int len = keys.size();
+        String[] keysArray = keys.toArray(new String[len]);
+        Set<String> out = null;
+        for (int i = 0; i < len; ++i)
+        {
+            String key = keysArray[i];
+            Set<String> valuesForKey = narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( key, pcfg, "[]", logger );
+            if (valuesForKey != null)
+            {
+                if (out == null) out = new HashSet<>();
+                if (logger.isLoggable(MLevel.FINE))
+                    logger.log(MLevel.FINE, "Building Set<String>, adding for key '" + key + "' values: " + valuesForKey);
+                out.addAll(valuesForKey);
+            }
+        }
+        return out;
     }
 
     /**
@@ -161,24 +206,7 @@ public class PropertiesConfigUtils
      * @return set of elements of the composite whitelist, null if none of the keys are present
      */
     public static Set<String> narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( Set<String> keys, PropertiesConfig pcfg, MLogger logger )
-    {
-        int len = keys.size();
-        String[] keysArray = keys.toArray(new String[len]);
-        Set<String> out = null;
-        for (int i = 0; i < len; ++i)
-        {
-            String key = keysArray[i];
-            Set<String> valuesForKey = narrowestStringSetFromStringListSyspropsPropertiesConfig( key, pcfg, logger );
-            if (valuesForKey != null)
-            {
-                if (out == null) out = new HashSet<>();
-                if (logger.isLoggable(MLevel.FINE))
-                    logger.log(MLevel.FINE, "Building Set<String>, adding for key '" + key + "' values: " + valuesForKey);
-                out.addAll(valuesForKey);
-            }
-        }
-        return out;
-    }
+    { return narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken(keys, pcfg, null, logger); }
 
     public static class WhitelistInfo
     {
@@ -237,6 +265,17 @@ public class PropertiesConfigUtils
 
     public static class WhitelistManager
     {
+        private final static String WILDCARD = "*";
+        private final static String DENY_ALL = "[]";
+
+        private final static Set<String> ACCEPT_ANY_WHITELIST;
+        static
+        {
+            Set<String> tmp = new HashSet<String>();
+            tmp.add(WILDCARD);
+            ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp);
+        }
+
         final String baseKey;
         final String deprecatedKey;
 
@@ -273,16 +312,18 @@ public class PropertiesConfigUtils
 
         public WhitelistInfo collectWhitelistInfoSyspropsPropertiesConfig(PropertiesConfig pcfg, MLogger logger)
         {
-            Set<String> whitelist          = null;
+            Set<String> whitelist = null;
 
             WhitelistInfo.Source source = null;
 
             Boolean shouldWarnSupported = null;
 
+            boolean crossListVeto = false;
+
             // if a deprecated whitelist exists, we use it, but with a big warning to migrate
             if (deprecatedKey != null)
             {
-                Set<String> deprecatedWhitelist = narrowestStringSetFromStringListSyspropsPropertiesConfig( deprecatedKey, pcfg, logger );
+                Set<String> deprecatedWhitelist = narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( deprecatedKey, pcfg, DENY_ALL, logger );
                 if (deprecatedWhitelist != null)
                 {
                     whitelist = deprecatedWhitelist;
@@ -298,12 +339,27 @@ public class PropertiesConfigUtils
                           "Effective whitelist: " + whitelist
                         );
                     }
+
+                    if (overrideWhitelistKey != null && checkRawKeyForToken(overrideWhitelistKey, DENY_ALL, pcfg))
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInKey(overrideWhitelistKey, "deprecated key '" + deprecatedKey + "'", logger);
+                    }
+
+                    Set<String> blockers = whitelistBaseKey == null ? null : findRawSubkeysWithToken(whitelistBaseKey, DENY_ALL, pcfg);
+                    if (blockers != null)
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInSubKeys(blockers, "deprecated key '" + deprecatedKey + "'", logger);
+                    }
                 }
             }
 
             if (whitelist == null)
             {
-                Set<String> override = narrowestStringSetFromStringListSyspropsPropertiesConfig( overrideWhitelistKey, pcfg, logger);
+                Set<String> override = narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( overrideWhitelistKey, pcfg, DENY_ALL, logger);
                 if (override != null)
                 {
                     if (logger.isLoggable(MLevel.WARNING))
@@ -321,29 +377,53 @@ public class PropertiesConfigUtils
                     }
                     whitelist = override;
                     source = WhitelistInfo.Source.OVERRIDE;
+
+                    if (deprecatedKey != null && checkRawKeyForToken(deprecatedKey, DENY_ALL, pcfg))
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInKey(deprecatedKey, "override whitelist '" + overrideWhitelistKey + "'", logger);
+                    }
+
+                    Set<String> blockers = whitelistBaseKey == null ? null : findRawSubkeysWithToken(whitelistBaseKey, DENY_ALL, pcfg);
+                    if (blockers != null)
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInSubKeys(blockers, "override whitelist '" + overrideWhitelistKey + "'", logger);
+                    }
                 }
                 else
                 {
-                    Set<String> allWhitelistKeys = new HashSet<>();
-                    if (pcfg != null) allWhitelistKeys.addAll( pcfg.getPropertiesByPrefix(whitelistBaseKey).stringPropertyNames() );
-                    for (String k : System.getProperties().stringPropertyNames())
-                        if (k.startsWith(whitelistBaseKey))
-                            allWhitelistKeys.add(k);
-
-                    Set<String> noOverride = narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfig( allWhitelistKeys, pcfg, logger );
+                    Set<String> allWhitelistKeys = computeAllSubkeys( whitelistBaseKey, pcfg );
+                    Set<String> noOverride = narrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( allWhitelistKeys, pcfg, DENY_ALL, logger );
                     whitelist = noOverride;
                     source = WhitelistInfo.Source.MAIN_WHITELIST;
+
+                    if (deprecatedKey != null && checkRawKeyForToken(deprecatedKey, DENY_ALL, pcfg))
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInKey(deprecatedKey, whitelistBaseKey + " and subkeys", logger);
+                    }
+
+                    if (overrideWhitelistKey != null && checkRawKeyForToken(overrideWhitelistKey, DENY_ALL, pcfg))
+                    {
+                        whitelist = new HashSet<String>();
+                        crossListVeto = true;
+                        warnTokenInKey(overrideWhitelistKey, whitelistBaseKey + " and subkeys", logger);
+                    }
                 }
             }
 
             // various warnings that may need to be emitted about a whitelist, but only if there is one
             if (whitelist != null)
             {
-                if (logger.isLoggable(MLevel.WARNING))
+                int sz = whitelist.size();
+                String whitelistDescriptor = null;
+                if (!crossListVeto && sz == 0) // if it was a cross-list veto, we've already warned and described the true condition
                 {
-                    int sz = whitelist.size();
-                    String whitelistDescriptor = null;
-                    if (sz == 0)
+                    if (logger.isLoggable(MLevel.WARNING))
                     {
                         // empty whitelists meaning deny-all are supported, we warn just once
                         if (shouldWarnSupported == null)
@@ -355,28 +435,204 @@ public class PropertiesConfigUtils
                             logger.log(
                                MLevel.WARNING,
                                "The " + whitelistDescriptor + " contains no entries, an empty whitelist, which means deny-all. " +
-                               "If that is not intended, please configure entries in the whitelist, or a unique entry '*' to allow all."
+                               "If that is not intended, please configure entries in the whitelist, or a unique entry '" + WILDCARD + "' to allow all. " +
+                               "If an empty, deny-all whitelist is intended, declare it explicitly with an entry of '" + DENY_ALL + "'."
                             );
                         }
                     }
-                    else if (whitelist.contains("*") && sz > 1)
+                }
+                else if (whitelist.contains(DENY_ALL))
+                {
+                    if (sz > 1 &&logger.isLoggable(MLevel.WARNING))
                     {
-                        // whitelists containing multiple values and also '*' are misconfigurations,
-                        // not supported, we are content to nag
+
+                        // whitelists containing multiple values and also "[]" are misconfigurations,
+                        // the behavior they require is well-defined, but we can nag
                         if (whitelistDescriptor == null ) whitelistDescriptor = makeWhitelistDescriptor(source);
-                        logger.log(
+                       logger.log(
                           MLevel.WARNING,
-                          "The " + whitelistDescriptor + " contains an '*' entry, but it is not unique and will be ignored. " +
-                          "To disable whitelist enforcement, '*' must be the whitelist's only element. " +
-                          "Please either remove the '*' element, or ensure that it is unique in the effective whitelist: " +
-                          whitelist
-                        );
+                          "The " + whitelistDescriptor + " contains an explicit '" + DENY_ALL + "' entry, as well as other entries: " + whitelist +
+                          " The other entries will be ignored. '" + DENY_ALL + "' trumps everything and means an empty, deny-all whitelist."
+                       );
+                    }
+                    whitelist = new HashSet<String>();
+                }
+                else if (whitelist.contains(WILDCARD))
+                {
+                    if (sz > 1)
+                    {
+                        if (logger.isLoggable(MLevel.WARNING))
+                        {
+                            // whitelists containing multiple values and also '*' are misconfigurations,
+                            // not supported, we are content to nag
+                            if (whitelistDescriptor == null ) whitelistDescriptor = makeWhitelistDescriptor(source);
+                            logger.log(
+                              MLevel.WARNING,
+                              "The " + whitelistDescriptor + " contains an '" + WILDCARD + "' entry, but it is not unique and will be ignored. " +
+                              "To disable whitelist enforcement, '" + WILDCARD + "' must be the whitelist's only element. " +
+                              "Please either remove the '" + WILDCARD + "' element, or ensure that it is unique in the effective whitelist: " +
+                              whitelist
+                            );
+                        }
+                    }
+                    else
+                    {
+                        // the whitelist seems to specify a unique wildcard, but that could
+                        // also result from keys in different sources (sysprops, other config)
+                        // each specifying distinct lists whose intersection in '*'
+                        //
+                        // in that case, we don't accept the wildcard, and so are left conservatively
+                        // with an empty whitelist, deny everything.
+                        switch (source) {
+                        case MAIN_WHITELIST:
+                            whitelist = doubleCheckApparentWildcardWhitelistBaseKey( whitelistBaseKey, pcfg, whitelist, logger );
+                            break;
+                        case DEPRECATED:
+                            whitelist = doubleCheckApparentWildcardWhitelistSimpleKey( deprecatedKey, pcfg, whitelist, logger );
+                            break;
+                        case OVERRIDE:
+                            whitelist = doubleCheckApparentWildcardWhitelistSimpleKey( overrideWhitelistKey, pcfg, whitelist, logger );
+                            break;
+                        case MISSING:
+                            throw new RuntimeException("Huh? Missing configuration should never have produced an apparent wildcard whitelist!!!");
+                        default:
+                            throw new RuntimeException("Unexpected WhitelistInfo.Source: " + source);
+                        }
+
                     }
                 }
                 return new WhitelistInfo(whitelist,source);
             }
             else
                 return new WhitelistInfo(new HashSet<String>(),WhitelistInfo.Source.MISSING);
+        }
+
+        private Set<String> doubleCheckApparentWildcardWhitelistSimpleKey( String key, PropertiesConfig pcfg, Set<String> uncheckedWhitelist, MLogger logger )
+        {
+            if (pcfg == null) // no conflict possible, only system properties
+                return uncheckedWhitelist;
+            else
+            {
+                String syspropsWhitelist = System.getProperty( key );
+                String pcfgWhitelist     = pcfg.getProperty( key );
+                if (syspropsWhitelist == null) // if syspropsWhitelist is null, the '*' whitelist was uniquely specified in pcfg
+                    return uncheckedWhitelist;
+                else if (pcfgWhitelist == null) // if pcfgWhitelist is null, the '*' whitelist was uniquely specified in System properties
+                    return uncheckedWhitelist;
+                else // the whitelist is specified in both places. make sure both are simple '*' whitelists
+                {
+                    boolean syspropsAcceptAll = ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(syspropsWhitelist));
+                    boolean pcfgAcceptAll     = ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(pcfgWhitelist));
+
+                    if (syspropsAcceptAll && pcfgAcceptAll)
+                        return uncheckedWhitelist;
+                    else
+                    {
+                        if (logger.isLoggable(MLevel.WARNING))
+                        {
+                            logger.log(
+                                   MLevel.WARNING,
+                                   "Although the whitelist for key '" + key + "' resolves to '" + WILDCARD + "' (wildcard, meaning accept all), " +
+                                   "that result is the intersection of inconsistent whitelist values [from sysprops: '" + syspropsWhitelist +
+                                   "'; from other config: '" + pcfgWhitelist + "']. This specification cannot be safely interpreted as a " +
+                                   "wildcard and no other elements survive, so the whitelist becomes DENY ALL. Please resolve the inconsistent " +
+                                   "specification, and note that '" + WILDCARD + "' is only supported when it is the sole element of a whitelist."
+                            );
+                        }
+                        return new HashSet<String>();
+                    }
+                }
+            }
+        }
+
+        // if ANY key is a dubiously specified intersection, we shout and deny all
+        private Set<String> doubleCheckApparentWildcardWhitelistBaseKey( String baseKey, PropertiesConfig pcfg, Set<String> uncheckedWhitelist, MLogger logger )
+        {
+            if (pcfg == null) // no conflict possible, only system properties
+                return uncheckedWhitelist;
+            else
+            {
+                Set<String> subkeys = computeAllSubkeys(baseKey, pcfg);
+
+                Set<String> out = new HashSet<>( uncheckedWhitelist );
+                for (String key : subkeys)
+                {
+                    Set<String> check = narrowestStringSetFromStringListSyspropsPropertiesConfig( key, pcfg, logger );
+                    // if a key turned up null or empty, it contributed nothing to the resulting whitelist but shouldn't be taken to
+                    // mean a deny-all, empty whitelist when it is not the unique key, but part of a base-key composite
+                    if (check != null && !check.isEmpty())
+                        out.retainAll( doubleCheckApparentWildcardWhitelistSimpleKey( key, pcfg, uncheckedWhitelist, logger ) );
+                }
+                return out;
+            }
+        }
+
+        private Set<String> computeAllSubkeys( String baseKey, PropertiesConfig pcfg )
+        {
+            Set<String> allSubkeys = new HashSet<>();
+            if (pcfg != null) allSubkeys.addAll( pcfg.getPropertiesByPrefix(baseKey).stringPropertyNames() );
+            for (String k : System.getProperties().stringPropertyNames())
+                if (k.equals(baseKey) || k.startsWith(baseKey + "."))
+                    allSubkeys.add(k);
+            return allSubkeys;
+        }
+
+        private boolean checkRawKeyForToken(String rawKey, String token, PropertiesConfig pcfg)
+        {
+            String fromSysprops = System.getProperty(rawKey);
+
+            if (fromSysprops != null && commaSeparatedStringListToModifiableSet(fromSysprops).contains(token))
+                return true;
+            else if (pcfg != null)
+            {
+                String fromConfig  = pcfg.getProperty(rawKey);
+                return fromConfig != null && commaSeparatedStringListToModifiableSet(fromConfig).contains(token);
+            }
+            else
+                return false;
+        }
+
+        private Set<String> findRawSubkeysWithToken( String baseKey, String token, PropertiesConfig pcfg)
+        {
+            Set<String> out = null;
+            Set<String> subkeys = computeAllSubkeys(baseKey, pcfg);
+            for( String subkey : subkeys )
+                if (checkRawKeyForToken(subkey, token, pcfg))
+                {
+                    if (out == null) out = new HashSet<String>();
+                    out.add(subkey);
+                }
+            return out;
+        }
+
+        private void warnTokenInKey( String inKey, String configuringFrom, MLogger logger )
+        {
+            if (logger.isLoggable(MLevel.WARNING))
+            {
+                logger.log(
+                    MLevel.WARNING,
+                    "Deny-all token '" + DENY_ALL + "' found in '" + inKey + "'. " +
+                    "The whitelist will be empty. " +
+                    "Even though we are configuring from " + configuringFrom + ", " + 
+                    "a deny-all token anywhere in supported config trumps all other config. " +
+                    "Remove the deny-all token from key '" + inKey + "' to restore the rest of the whitelist."
+                );
+            }
+        }
+
+        private void warnTokenInSubKeys( Set<String> blockers, String configuringFrom, MLogger logger )
+        {
+            if (logger.isLoggable(MLevel.WARNING))
+            {
+                logger.log(
+                   MLevel.WARNING,
+                   "Deny-all token '" + DENY_ALL + "' found in whitelist keys " + blockers + ". " +
+                   "The whitelist will be empty. " +
+                   "Even though we are configuring from " + configuringFrom + ", " +
+                   "a deny-all token anywhere in supported config trumps all other config. " +
+                   "Remove the deny-all token from " + blockers + " to restore the rest of the whitelist."
+                );
+            }
         }
 
         private String effectiveKeyDescription(WhitelistInfo.Source source)
