@@ -768,7 +768,7 @@ public class PropertiesConfigUtils
             return new HashSet<String>();
         else
         {
-            String[] items = csList.split("\\s*,\\s*");
+            String[] items = csList.trim().split("\\s*,\\s*");
             return new HashSet<String>(Arrays.asList(items));
         }
     }
