@@ -180,7 +180,7 @@ public class PropertiesConfigUtils
         for (int i = 0; i < len; ++i)
         {
             String key = keysArray[i];
-            Set<String> valuesForKey = narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( key, pcfg, "[]", logger );
+            Set<String> valuesForKey = narrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( key, pcfg, alwaysRetainToken, logger );
             if (valuesForKey != null)
             {
                 if (out == null) out = new HashSet<>();
