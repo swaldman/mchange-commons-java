@@ -263,6 +263,106 @@ public class PropertiesConfigUtils
     }
 
 
+    /**
+     *  Resolves a whitelist of Strings -- in practice fully-qualified class names -- from
+     *  System properties and an optional {@link PropertiesConfig}, under one shape shared by
+     *  every whitelist in this library.
+     *
+     *  <h3>The keys</h3>
+     *
+     *  <p>A manager is built from one base key, and derives the rest:</p>
+     *
+     *  <ul>
+     *    <li><code>&lt;base&gt;.whitelist</code>, <b>and any subkey of it</b>. These
+     *        <i>union</i>: independent layers of an application can each contribute without
+     *        having to know what the others wrote, which is the point of the scheme. The
+     *        naked key counts as one of them. So a library may ship
+     *        <code>&lt;base&gt;.whitelist.mylib=com.example.Mine</code> while a deployment
+     *        writes <code>&lt;base&gt;.whitelist=com.example.Theirs</code>, and both take
+     *        effect.</li>
+     *    <li><code>&lt;base&gt;.overrideWhitelist</code>, which <b>replaces</b> that union
+     *        rather than adding to it, for a deployment that wants to discard what its
+     *        libraries contributed.</li>
+     *    <li>an optional deprecated key, named in full at construction, for a whitelist that
+     *        predates this scheme. While it is present it is the whole whitelist and the two
+     *        families above are ignored -- honoring them alongside it could only widen a
+     *        whitelist an existing deployment had already narrowed. Its continued use is
+     *        nagged about on every resolution.</li>
+     *  </ul>
+     *
+     *  <p>Precedence is deprecated key, then override, then the union; each is consulted only
+     *  if the previous is absent. Present-but-empty counts as present in all three: an
+     *  operator who set a key to nothing chose deny-all, and falling through would silently
+     *  widen it.</p>
+     *
+     *  <h3>Two sources, and why they intersect</h3>
+     *
+     *  <p>Each key is resolved from both System properties and the supplied config. Where
+     *  only one names it, that value stands. Where <i>both</i> do and they disagree, the
+     *  result is their <b>intersection</b>, and a warning says so: a whitelist is a security
+     *  control, so a name only one source vouches for is not vouched for. Note this makes
+     *  the two sources peers rather than one overriding the other, and note also that it
+     *  constrains only keys both sources set -- a key written in just one place is taken
+     *  whole, so this rule narrows disagreement, it does not make either source untrusted.</p>
+     *
+     *  <h3>The two sentinels</h3>
+     *
+     *  <p>Two entries mean something other than a class name. They resolve conflicts in
+     *  opposite directions, and both resolve toward denial.</p>
+     *
+     *  <ul>
+     *    <li><code>*</code> -- accept anything, <b>only when it is the whitelist's sole
+     *        element</b>. A <code>*</code> sharing a whitelist with real entries is reported
+     *        as configured but is not a wildcard, or one layer's <code>*</code> would
+     *        silently open a gate another layer had narrowed. Callers apply that test
+     *        themselves: this class hands back what was configured and warns.
+     *
+     *        <p>A lone <code>*</code> is additionally re-checked against the raw values that
+     *        produced it. <code>{A,*}</code> from one source intersected with
+     *        <code>{B,*}</code> from the other yields exactly <code>{*}</code> -- so two
+     *        sources that each meant to <i>narrow</i> would otherwise combine into
+     *        accept-everything. A wildcard nobody actually asked for becomes deny-all. Keys
+     *        that contributed nothing are exempt from that check: a blank key is silent, not
+     *        dissenting, and must not veto a wildcard another key vouched for.</p></li>
+     *    <li><code>[]</code> -- deny everything. Present in <b>any</b> key of <b>any</b> of
+     *        the three families above, in <b>either</b> source, it empties the whitelist,
+     *        regardless of the precedence that would otherwise have ignored that key. It is
+     *        the veto the additive union would otherwise lack: layers could widen but never
+     *        narrow.
+     *
+     *        <p>It is deliberately exempt from the intersection rule. Intersection is the
+     *        conservative resolution for <i>permissions</i>, because dropping one narrows --
+     *        but <code>[]</code> is a <i>denial</i>, and dropping a denial widens. Without
+     *        the exemption, <code>&lt;key&gt;=[]</code> set by an operator would be
+     *        annihilated by any disagreeing value for the same key in the other source,
+     *        leaving other keys' entries in force: the veto would degrade to a no-op.</p></li>
+     *  </ul>
+     *
+     *  <p>An empty whitelist reached by accident draws a warning naming both sentinels. One
+     *  reached by an explicit <code>[]</code> does not -- the operator already did the thing
+     *  that warning would advise.</p>
+     *
+     *  <h3>What comes back</h3>
+     *
+     *  <p>{@link #collectWhitelistInfoSyspropsPropertiesConfig} returns a
+     *  {@link WhitelistInfo}, never null, carrying a Set that is never null and the
+     *  {@link WhitelistInfo.Source} that decided it. The source is worth attending to twice
+     *  over. Diagnostics should name the key actually in force rather than the subkeys an
+     *  override discarded -- {@link #makeWhitelistDescriptor} renders exactly that phrase.
+     *  And {@link WhitelistInfo.Source#MISSING} distinguishes <i>no whitelist is
+     *  configured</i> from a configured deny-all, which is the distinction a caller needs if
+     *  it means to insist that one be configured rather than silently denying everything.</p>
+     *
+     *  <p>Every correction described here -- the <code>[]</code> veto, the refusal of a
+     *  spurious wildcard -- is computed outside any {@link MLogger#isLoggable} guard. They
+     *  are security decisions and must not depend on log level; only the warnings about them
+     *  are conditional.</p>
+     *
+     *  <p>Resolution happens per call, so configuration changes are picked up without
+     *  invalidating anything. The one piece of retained state is a snapshot used to warn only
+     *  once, rather than on every resolution, about configurations that are supported but
+     *  worth mentioning; it is guarded by this instance's monitor.</p>
+     */
     public static class WhitelistManager
     {
         private final static String WILDCARD = "*";
