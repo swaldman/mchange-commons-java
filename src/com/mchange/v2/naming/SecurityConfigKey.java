@@ -12,7 +12,10 @@ public class SecurityConfigKey {
 
     public final static String OBJECT_FACTORY_BASE_KEY = "com.mchange.v2.naming.objectFactory";
 
+    @Deprecated
     public final static String REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST = "com.mchange.v2.naming.referenceableJavaBeanClassWhitelist";
+
+    public final static String REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY = "com.mchange.v2.naming.referenceableJavaBeanClass";
 
     public final static String ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT = "com.mchange.v2.naming.acceptDeserializedInitialContextEnvironment";
 

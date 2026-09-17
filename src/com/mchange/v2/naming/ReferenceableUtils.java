@@ -13,9 +13,8 @@ import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
 import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.narrowestStringSetFromStringListSyspropsPropertiesConfig;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListToSet;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListToModifiableSet;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
+import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistManager;
 
 public final class ReferenceableUtils
 {
@@ -39,12 +38,24 @@ public final class ReferenceableUtils
     public final static Set<String> ALL_FACTORY_CLASS_NAMES = Collections.unmodifiableSet(new HashSet<String>());
 
     private final static Set<String> ACCEPT_ANY_WHITELIST;
+
+    private final static Set<WhitelistInfo.Source> ACCEPTABLE_WHITELIST_SOURCES;
+
     static
     {
-        Set<String> tmp = new HashSet<String>();
-        tmp.add("*");
-        ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp);
+        Set<String> tmp0 = new HashSet<String>();
+        tmp0.add("*");
+        ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp0);
+
+        Set<WhitelistInfo.Source> tmp1 = new HashSet<WhitelistInfo.Source>();
+        tmp1.add(WhitelistInfo.Source.MAIN_WHITELIST);
+        tmp1.add(WhitelistInfo.Source.OVERRIDE);
+        tmp1.add(WhitelistInfo.Source.DEPRECATED);
+        ACCEPTABLE_WHITELIST_SOURCES = Collections.unmodifiableSet(tmp1);
     }
+
+    private final static WhitelistManager objectFactoryWhitelistManager = new WhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+    private final static WhitelistManager referenceableJavaBeanClassWhitelistManager = new WhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
 
     /**
      * A null string value in a Reference sometimes goes to the literal
@@ -328,95 +339,79 @@ public final class ReferenceableUtils
     static void ensureWhitelistedJavaBeanClass( Object bean, PropertiesConfig pcfg ) throws NamingException
     { ensureWhitelistedJavaBeanClass( bean.getClass().getName(), pcfg ); }
 
-    private static boolean whitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg, String whitelistKey)
-    {
-        if (!ACCEPT_ANY_WHITELIST.equals(whitelisted))
-            return false;
-        else if (pcfg == null) // if pcfg is null, the '*' whitelist was uniquely specified in System properties
-            return true;
-        else
-        {
-            String syspropsWhitelist = System.getProperty( whitelistKey );
-            String pcfgWhitelist     = pcfg.getProperty( whitelistKey );
-            if (syspropsWhitelist == null) // if syspropsWhitelist is null, the '*' whitelist was uniquely specified in pcfg
-                return true;
-            else if (pcfgWhitelist == null) // if pcfgWhitelist is null, the '*' whitelist was uniquely specified in System properties
-                return true;
-            else // the whitelist is specified in both places. make sure both are trying to disable enforcement
-                return
-                    ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(syspropsWhitelist)) &&
-                    ACCEPT_ANY_WHITELIST.equals(commaSeparatedStringListToModifiableSet(pcfgWhitelist));
-        }
-    }
+    private static boolean whitelistIsDisabled(WhitelistInfo info)
+    { return info.getWhitelist().equals(ACCEPT_ANY_WHITELIST) && ACCEPTABLE_WHITELIST_SOURCES.contains(info.getSource()); }
 
-    private static boolean objectFactoryWhitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg)
-    { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.OBJECT_FACTORY_WHITELIST); }
+    private static boolean objectFactoryWhitelistIsDisabled(WhitelistInfo info)
+    { return whitelistIsDisabled(info); }
 
-    private static boolean javaBeanWhitelistIsDisabled(Set<String> whitelisted, PropertiesConfig pcfg)
-    { return whitelistIsDisabled(whitelisted,pcfg,SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST); }
+    private static boolean javaBeanWhitelistIsDisabled(WhitelistInfo info)
+    { return whitelistIsDisabled(info); }
 
     /* intentionally package-scope, accessed by JavaBeanObjectFactory */
     /* pcfg can be null */
     static void ensureWhitelistedJavaBeanClass( String fqcn, PropertiesConfig pcfg ) throws NamingException
     {
-        Set<String> whitelisted = referenceableJavaBeanClassWhiteList( pcfg );
-        if (whitelisted != null)
+        WhitelistInfo info = referenceableJavaBeanClassWhitelistManager.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger );
+        if (ACCEPTABLE_WHITELIST_SOURCES.contains(info.getSource()))
         {
-            if (!javaBeanWhitelistIsDisabled(whitelisted, pcfg) && !whitelisted.contains(fqcn))
+            if (!javaBeanWhitelistIsDisabled(info) && !info.getWhitelist().contains(fqcn))
             {
-                StringBuilder sb = new StringBuilder();
-                boolean first = true;
-                for ( Object cn : whitelisted )
-                {
-                    if (!first)
-                        sb.append(",");
-                    else
-                        first = false;
-                    sb.append(cn);
-                }
                 throw new NamingException(
-                    "The whitelist of acceptable JavaBeanClasses to which to create or look up references does not contain referenced class '" + fqcn + "'. " +
-                    "Please add that class to comma-separated list at config key '" + SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST + "' if " +
+                    "The whitelist of acceptable JavaBean classes to which to create or look up references does not contain referenced class '" + fqcn + "'. " +
+                    "Please add that class to comma-separated list at config key '" + referenceableJavaBeanClassWhitelistManager.getTopLevelBaseKey() + "' (and/or subkeys) if " +
                     "you wish for this reference to be created or resolved. " +
-                    "(If this is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
+                    "(If this denial is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
                     "Check for distinct whitelists in system properties and other config.) " +
-                    "Current whitelist: " + sb.toString() + " -- " + "Missing class: " + fqcn
+                    "Current whitelist: " + info + " -- " + "Missing class: " + fqcn
                 );
             }
         }
         else
         {
-            throw new NamingException(
-                "No whitelist is set for referenceable java beans. This is dangerous. Please set '" + SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST +
-                "'. You are currently creating or dereferencing an object of class '" + fqcn + "'. If that is intended and desirable, please include it " +
-                "in the whitelist! (If this is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
-                "Check for distinct whitelists in system properties and other config.) No classes are currently whitelisted. -- Missing class: " + fqcn
-            );
+            if (info.getSource() == WhitelistInfo.Source.MISSING)
+                throw new NamingException(
+                    "No whitelist is set for referenceable java beans. This is dangerous. Please set '" + referenceableJavaBeanClassWhitelistManager.getTopLevelBaseKey() + 
+                    "' (and/or subkeys). You are currently creating or dereferencing an object of class '" + fqcn + "'. If that is intended and desirable, please include it " +
+                    "in the whitelist! (If this denial is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
+                    "Check for distinct whitelists in system properties and other config.) No classes are currently whitelisted. -- Missing class: " + fqcn
+                );
+            else
+            {
+                // at present this can't happen, but in case the WhitelistInfo.Source enum grows
+                throw new NamingException(
+                    "The whitelist of Referenceable JavaBean classes was derived from an unexpected source, and will not be honored. Current whitelist: " + info +
+                    "; source " + info.getSource()
+                );
+            }
         }
-    }
-
-    private static Set<String> referenceableJavaBeanClassWhiteList( PropertiesConfig pcfg )
-    {
-        Set<String> out = narrowestStringSetFromStringListSyspropsPropertiesConfig( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST, pcfg, logger );
-        if (out != null && out.size() == 0) return null;
-        else return out;
     }
 
     // pcfg can be null
     private static Set<String> findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
     {
-        Set<String> narrowest = narrowestStringSetFromStringListSyspropsPropertiesConfig( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, pcfg, logger );
-        if (narrowest == null)
-            throw new NamingException(
-                "No ObjectFactory whitelist found. " +
-                "When calling referenceToObject(...) using overloads that lack an explicit allowedFactoryClassNames Set, a '" +
-                SecurityConfigKey.OBJECT_FACTORY_WHITELIST + "' must be provided either as a System property or a provided com.mchange.v2.PropertiesConfig instance. " +
-                "If you really want to live dangerously and accept any ObjectFactory (why?!?), you may provide a whitelist with a unique entry of '*'."
-            );
-        if (objectFactoryWhitelistIsDisabled(narrowest,pcfg))
+        WhitelistInfo info = objectFactoryWhitelistManager.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger );
+        if (!ACCEPTABLE_WHITELIST_SOURCES.contains(info.getSource()))
+        {
+            if (info.getWhitelist().isEmpty() && info.getSource().equals(WhitelistInfo.Source.MISSING))
+                throw new NamingException(
+                  "No acceptable ObjectFactory whitelist found. " +
+                  "When calling referenceToObject(...) using overloads that lack an explicit allowedFactoryClassNames Set, a '" +
+                  objectFactoryWhitelistManager.getTopLevelBaseKey() + "' (or a subkey) must be provided either as a System property or a provided com.mchange.v2.PropertiesConfig instance. " +
+                  "If you really want to live dangerously and accept any ObjectFactory (why?!?), you may provide a whitelist with a unique entry of '*'. WhitelistInfo: " + info
+                );
+            else
+            {
+                // at present this should not happen, the only unacceptable whitelist source is MISSING, and the whitelist
+                // should always be blank in that case. But, future-proofing, in case we unexpectedly find a non-empty MISSING whitelist, or
+                // the enum WhitelistInfo.Source expands, or ACCEPTABLE_WHITELIST_SOURCES shrinks..
+                throw new NamingException("ObjectFactory whitelist did not come from an expected source. Found whitelist: " + info + "; source " + info.getSource() + "; Acceptable sources: " + ACCEPTABLE_WHITELIST_SOURCES);
+            }
+        }
+        if (objectFactoryWhitelistIsDisabled(info))
             return ALL_FACTORY_CLASS_NAMES;
         else
-            return narrowest;
+            return info.getWhitelist();
     }
 
     /**
