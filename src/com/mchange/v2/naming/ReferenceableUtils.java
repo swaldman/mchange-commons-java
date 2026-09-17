@@ -145,9 +145,10 @@ public final class ReferenceableUtils
                                    MLevel.WARNING,
                                    "A javax.naming.Reference we have been tasked to dereference specifies a potentially remote factory class location. " +
                                    "This is dangerous. A malicious reference could load and execute arbitrary code. " +
-                                   "The factoryClassLocation property of the reference will be ignored, and the reference will atempt to dereference " +
+                                   "To prevent this, the factoryClassLocation property of the reference will be ignored, and the reference will attempt to dereference " +
                                    "using the calling Thread's context ClassLoader or else the ClassLoader that loaded com.mchange.v2.naming.ReferenceableUtils. " +
-                                   "Reference: " + ref
+                                   "If you really mean to allow references to download remote code, you can set '" + SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION +
+                                   "'. But it is strongly disrecommended. Reference: " + ref
                                 );
                             cl = defaultClassLoader;
                         }
@@ -361,8 +362,7 @@ public final class ReferenceableUtils
                     "The whitelist of acceptable JavaBean classes to which to create or look up references does not contain referenced class '" + fqcn + "'. " +
                     "Please add that class to comma-separated list at config key '" + referenceableJavaBeanClassWhitelistManager.getTopLevelBaseKey() + "' (and/or subkeys) if " +
                     "you wish for this reference to be created or resolved. " +
-                    "(If this denial is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
-                    "Check for distinct whitelists in system properties and other config.) " +
+                    "(If this denial is unexpected, note that if you have set the same whitelist key or subkey in both System properties and other config to distinct values, only the INTERSECTION becomes whitelisted.) " +
                     "Current whitelist: " + info + " -- " + "Missing class: " + fqcn
                 );
             }
@@ -371,10 +371,10 @@ public final class ReferenceableUtils
         {
             if (info.getSource() == WhitelistInfo.Source.MISSING)
                 throw new NamingException(
-                    "No whitelist is set for referenceable java beans. This is dangerous. Please set '" + referenceableJavaBeanClassWhitelistManager.getTopLevelBaseKey() + 
-                    "' (and/or subkeys). You are currently creating or dereferencing an object of class '" + fqcn + "'. If that is intended and desirable, please include it " +
-                    "in the whitelist! (If this denial is unexpected, note that if you have set the whitelist in multiple places, only the INTERSECTION becomes whitelisted. " +
-                    "Check for distinct whitelists in system properties and other config.) No classes are currently whitelisted. -- Missing class: " + fqcn
+                    "No whitelist is set for referenceable java beans. Please set '" + referenceableJavaBeanClassWhitelistManager.getTopLevelBaseKey() + 
+                    "' (and/or subkeys) if you wish to dereference Referenceable JavaBean classes. You are currently creating or dereferencing an object of class '" + fqcn + "'. If that is intended and desirable, please include it " +
+                    "in the whitelist! (If this denial is unexpected, note that if you have set the same whitelist key or subkey in both System properties and other config to distinct values, only the INTERSECTION becomes whitelisted.) " +
+                    "No classes are currently whitelisted. -- Missing class: " + fqcn
                 );
             else
             {
