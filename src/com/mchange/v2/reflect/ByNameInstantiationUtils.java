@@ -4,11 +4,10 @@ import java.util.*;
 import java.lang.reflect.InvocationTargetException;
 
 import com.mchange.v2.log.*;
+import com.mchange.v2.cfg.WhitelistInfo;
+import com.mchange.v2.cfg.WhitelistManager;
 
 import com.mchange.v2.cfg.PropertiesConfig;
-
-import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistManager;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
 
 public final class ByNameInstantiationUtils
 {

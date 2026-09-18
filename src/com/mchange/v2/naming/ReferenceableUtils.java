@@ -6,6 +6,8 @@ import javax.naming.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.cfg.WhitelistInfo;
+import com.mchange.v2.cfg.WhitelistManager;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -13,8 +15,6 @@ import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
 import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
-import static com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistManager;
 
 public final class ReferenceableUtils
 {
