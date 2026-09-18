@@ -317,23 +317,47 @@ public class WhitelistSentinelsInternalJUnitTestCase extends TestCase
     }
 
     /**
-     *  A '*' among other entries is left in the Set but is no longer unique, and callers
-     *  honor a wildcard only when it is the sole element. The manager's job here is to say
-     *  so loudly rather than to edit the Set.
+     *  A '*' among other entries is not a wildcard, and is <b>removed</b> from the resolved
+     *  Set rather than merely reported and left for callers to disregard.
+     *
+     *  <p>Removing it at resolution is what makes the guarantee total. A '*' left in the Set
+     *  could be reconstituted as a lone wildcard by a later intersection -- narrow
+     *  <code>{*, Alpha}</code> against <code>{*, Beta}</code> and exactly <code>{*}</code>
+     *  survives, turning two deployments that each meant to restrict into accept-everything.
+     *  EarliestOrNarrowestWhitelistManager relies on that being impossible.</p>
      */
-    public void testWildcardAmongOtherEntriesIsNotUniqueAndWarns()
+    public void testWildcardAmongOtherEntriesIsRemovedAndWarns()
     {
         System.setProperty( WHITELIST + ".layerOne", WILDCARD );
         System.setProperty( WHITELIST + ".layerTwo", ALPHA );
 
         WhitelistInfo info = collect( fresh() );
 
-        assertEquals( "The entries are reported as configured; uniqueness is the caller's test.",
-                      setOf( WILDCARD, ALPHA ), info.getWhitelist() );
+        assertEquals( "A non-unique '*' must not survive into the resolved whitelist.",
+                      setOf( ALPHA ), info.getWhitelist() );
         assertTrue( "A non-unique '*' must be warned about.",
                     logger.sawWarningContaining( "not unique" ) );
         assertTrue( "and the warning must name the key family that produced it.",
                     logger.sawWarningContaining( "not unique", WHITELIST ) );
+    }
+
+    /**
+     *  and having been removed, it cannot be reconstituted by narrowing -- which is the
+     *  escalation the removal exists to prevent.
+     */
+    public void testANonUniqueWildcardCannotBeReconstitutedByNarrowing()
+    {
+        System.setProperty( WHITELIST + ".layerOne", WILDCARD + "," + ALPHA );
+
+        Set<String> first = collect( fresh() ).getWhitelist();
+        assertEquals( setOf( ALPHA ), first );
+
+        System.setProperty( WHITELIST + ".layerOne", WILDCARD + "," + BETA );
+        Set<String> second = collect( fresh() ).getWhitelist();
+
+        assertEquals( setOf( BETA ), second );
+        assertFalse( "Intersecting these must not be able to yield a lone wildcard.",
+                     first.contains( WILDCARD ) || second.contains( WILDCARD ) );
     }
 
     /**
@@ -405,7 +429,9 @@ public class WhitelistSentinelsInternalJUnitTestCase extends TestCase
 
         WhitelistInfo info = collect( fresh() );
 
-        assertEquals( setOf( "", WILDCARD ), info.getWhitelist() );
+        assertEquals( "The '*' is stripped, leaving only the inert entry -- so this whitelist " +
+                      "permits nothing, rather than everything.",
+                      setOf( "" ), info.getWhitelist() );
         assertTrue( "The operator must be told why their wildcard stopped working.",
                     logger.sawWarningContaining( "not unique" ) );
     }

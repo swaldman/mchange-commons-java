@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -378,26 +380,64 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
                      override.contains( MARKER ) );
     }
 
-    /** Same whitelist reached by different routes is not the same WhitelistInfo. */
-    public void testWhitelistInfoEqualityIncludesSource()
+    /**
+     *  The same whitelist reached by different routes is not the same WhitelistInfo. Identity
+     *  spans all three components, because the keys a whitelist came from are load-bearing:
+     *  EarliestOrNarrowestWhitelistManager re-resolves against exactly those keys, so two infos
+     *  with identical contents but different origins would behave differently on the next
+     *  lookup.
+     */
+    public void testWhitelistInfoEqualityIncludesSourceAndKeys()
     {
+        Set<String> keys      = Collections.singleton( "a.key" );
+        Set<String> otherKeys = Collections.singleton( "another.key" );
+
         WhitelistInfo viaMain = new WhitelistInfo( Collections.singleton( MARKER ),
-                                                   WhitelistInfo.Source.MAIN_WHITELIST );
+                                                   keys, WhitelistInfo.Source.MAIN_WHITELIST );
         WhitelistInfo viaMainAgain = new WhitelistInfo( Collections.singleton( MARKER ),
-                                                        WhitelistInfo.Source.MAIN_WHITELIST );
+                                                        keys, WhitelistInfo.Source.MAIN_WHITELIST );
         WhitelistInfo viaOverride = new WhitelistInfo( Collections.singleton( MARKER ),
-                                                       WhitelistInfo.Source.OVERRIDE );
+                                                       keys, WhitelistInfo.Source.OVERRIDE );
+        WhitelistInfo viaOtherKeys = new WhitelistInfo( Collections.singleton( MARKER ),
+                                                        otherKeys, WhitelistInfo.Source.MAIN_WHITELIST );
 
         assertEquals( viaMain, viaMainAgain );
         assertEquals( viaMain.hashCode(), viaMainAgain.hashCode() );
         assertFalse( "Source participates in identity.", viaMain.equals( viaOverride ) );
+        assertFalse( "and so do the keys the whitelist was computed from.",
+                     viaMain.equals( viaOtherKeys ) );
+    }
+
+    /** The value object defends its own invariants: nothing handed out may be mutated. */
+    public void testWhitelistInfoIsImmutable()
+    {
+        Set<String> mutableWhitelist = new HashSet<String>( Collections.singleton( MARKER ) );
+        Set<String> mutableKeys      = new HashSet<String>( Collections.singleton( "a.key" ) );
+
+        WhitelistInfo info = new WhitelistInfo( mutableWhitelist, mutableKeys,
+                                                WhitelistInfo.Source.MAIN_WHITELIST );
+        try
+        {
+            info.getWhitelist().add( "com.example.Sneaky" );
+            fail( "A caller must not be able to widen a whitelist in place." );
+        }
+        catch ( UnsupportedOperationException expected )
+        {}
+
+        try
+        {
+            info.getFromKeys().add( "sneaky.key" );
+            fail( "nor add a key the whitelist will later be re-resolved against." );
+        }
+        catch ( UnsupportedOperationException expected )
+        {}
     }
 
     public void testWhitelistInfoRejectsNulls()
     {
         try
         {
-            new WhitelistInfo( null, WhitelistInfo.Source.MISSING );
+            new WhitelistInfo( null, Collections.<String>emptySet(), WhitelistInfo.Source.MISSING );
             fail( "A null whitelist must be rejected." );
         }
         catch ( IllegalArgumentException expected )
@@ -405,7 +445,15 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
 
         try
         {
-            new WhitelistInfo( Collections.<String>emptySet(), null );
+            new WhitelistInfo( Collections.<String>emptySet(), null, WhitelistInfo.Source.MISSING );
+            fail( "A null key set must be rejected." );
+        }
+        catch ( IllegalArgumentException expected )
+        {}
+
+        try
+        {
+            new WhitelistInfo( Collections.<String>emptySet(), Collections.<String>emptySet(), null );
             fail( "A null source must be rejected." );
         }
         catch ( IllegalArgumentException expected )
