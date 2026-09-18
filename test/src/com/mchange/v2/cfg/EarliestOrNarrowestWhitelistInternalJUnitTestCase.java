@@ -10,9 +10,6 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
-import com.mchange.v2.cfg.PropertiesConfigUtils.EarliestOrNarrowestWhitelistManager;
-
 /**
  *  EarliestOrNarrowestWhitelistManager: a whitelist that can tighten after startup but never
  *  loosen.

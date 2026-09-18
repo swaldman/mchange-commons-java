@@ -18,7 +18,7 @@ import com.mchange.v2.naming.SecurityConfigKey;
 
 /**
  *  That the two com.mchange.v2.naming whitelists are actually wired to
- *  PropertiesConfigUtils.WhitelistManager, rather than merely resolving as they always did.
+ *  WhitelistManager, rather than merely resolving as they always did.
  *
  *  <p>WhitelistManager's own behavior is covered in com.mchange.v2.cfg. What is untested
  *  without these is the wiring: that a name written under the <i>new</i> keys reaches

@@ -14,11 +14,8 @@ import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
 
-import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
-import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistManager;
-
 /**
- *  PropertiesConfigUtils.WhitelistManager, which factors out the shape every whitelist in
+ *  WhitelistManager, which factors out the shape every whitelist in
  *  this library is meant to share: a base key whose <code>.whitelist</code> subkeys union
  *  additively so independent layers can each contribute, an <code>.overrideWhitelist</code>
  *  that replaces that union outright, and an optional deprecated single key that keeps a

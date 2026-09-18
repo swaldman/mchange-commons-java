@@ -9,9 +9,6 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistInfo;
-import com.mchange.v2.cfg.PropertiesConfigUtils.WhitelistManager;
-
 /**
  *  The two sentinels a whitelist may contain, and the rules that make them safe.
  *
