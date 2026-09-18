@@ -674,6 +674,12 @@ public final class MConfig
             return new BasicMultiPropertiesConfig(BasicMultiPropertiesConfig.VetoThrowing.INSTANCE, resourcePath, delayedLogItems);
     }
 
+    public static boolean sealSystemProperties() { return SealedSystemProperties.seal(); }
+
+    public static PropertiesConfig getSealedSystemProperties() { return SealedSystemProperties.get(); }
+
+    public static boolean isSealedSystemProperties() { return SealedSystemProperties.isSealed(); }
+
     /**
      *  The ordinary FINE report of an identifier that turned up nothing.
      *
