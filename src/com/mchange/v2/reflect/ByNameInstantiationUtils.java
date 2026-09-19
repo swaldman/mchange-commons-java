@@ -4,10 +4,7 @@ import java.util.*;
 import java.lang.reflect.InvocationTargetException;
 
 import com.mchange.v2.log.*;
-import com.mchange.v2.cfg.WhitelistInfo;
-import com.mchange.v2.cfg.WhitelistManager;
-
-import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.cfg.*;
 
 public final class ByNameInstantiationUtils
 {
@@ -17,9 +14,11 @@ public final class ByNameInstantiationUtils
 
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
 
-    private final static WhitelistManager whitelistManager = new WhitelistManager( COMMON_KEY_PFX, null );
+    private final static EarliestOrNarrowestWhitelistManager whitelistManager = new EarliestOrNarrowestWhitelistManager( COMMON_KEY_PFX, null );
 
-    private final static String ENFORCE_WHITELIST_KEY  = whitelistManager.getTopLevelBaseKey() + ".enforceWhitelist";
+    private final static String ENFORCE_WHITELIST_KEY = whitelistManager.getTopLevelBaseKey() + ".enforceWhitelist";
+
+    private final static EarliestOrStrongestBooleanProperty _enforceWhiteList = new EarliestOrStrongestBooleanProperty( ENFORCE_WHITELIST_KEY, true, false );
 
     public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
@@ -38,7 +37,7 @@ public final class ByNameInstantiationUtils
         WhitelistInfo info = collectWhitelistSyspropsPropertiesConfig(pcfg);
         Set<String> whitelist = info.getWhitelist();
         boolean nameOkay;
-        
+
         if (whitelist.contains(fqcn))
             nameOkay = true;
         else if (whitelist.size() == 1 && whitelist.contains("*"))
@@ -48,76 +47,34 @@ public final class ByNameInstantiationUtils
 
         if (!nameOkay)
         {
-            String pcfgEnforceWhitelistStr = pcfg == null ? null : pcfg.getProperty(ENFORCE_WHITELIST_KEY);
-            String syspropsEnforceWhitelistStr = System.getProperty(ENFORCE_WHITELIST_KEY);
-
-            Boolean pcfgEnforceWhitelist = parseEnforceWhitelist(pcfgEnforceWhitelistStr);
-            Boolean syspropsEnforceWhitelist = parseEnforceWhitelist(syspropsEnforceWhitelistStr);
-
-            // doubles as a flag, non-null means we are enforcing, value explains why
-            String enforcedWhy = null;
-
-            boolean explicit;
-
-            if (pcfgEnforceWhitelist == null && syspropsEnforceWhitelist == null)
-            {
-                if (logger.isLoggable(MLevel.WARNING))
-                    logger.log(MLevel.WARNING, "No interpretable value for '" + ENFORCE_WHITELIST_KEY + "' set, currently defaulting to '" + DEFAULT_ENFORCE_WHITELIST +"'. THIS MAY CHANGE IN FUTURE RELEASES.");
-                enforcedWhy = DEFAULT_ENFORCE_WHITELIST ? "because this whitelist is enforced by default" : null;
-                explicit = false;
-            }
-            else
-            {
-                if (pcfgEnforceWhitelist == null)
-                {
-                    enforcedWhy = syspropsEnforceWhitelist.booleanValue() ? "because '" + ENFORCE_WHITELIST_KEY + "=true' is set in System properties" : null;
-                    explicit = true;
-                }
-                else if (syspropsEnforceWhitelist == null)
-                {
-                    enforcedWhy = pcfgEnforceWhitelist.booleanValue() ? "because '" + ENFORCE_WHITELIST_KEY + "=true' is set in configuration" : null;
-                    explicit = true;
-                }
-                else if (pcfgEnforceWhitelist.booleanValue() || syspropsEnforceWhitelist.booleanValue())
-                {
-                    enforcedWhy =  "because '" + ENFORCE_WHITELIST_KEY + "=true' is explicitly set in either or both of System properties and configuration (and the parameter is true-biased, explicitly true 'wins' and takes hold, even if there is a conflict)";
-                    explicit = true;
-
-                    if (logger.isLoggable(MLevel.WARNING))
-                    {
-                        if (pcfgEnforceWhitelist.booleanValue() != syspropsEnforceWhitelist.booleanValue())
-                            logger.log(
-                               MLevel.WARNING,
-                               "Differing values of '" + ENFORCE_WHITELIST_KEY + "' were found between system properties and other configuration. " +
-                               "This security-sensitive key is true-biased. Since the value was 'true' in one source of configuration, the disagreement has been resolved to 'true' " +
-                               "and the whitelist will be enforced. To eliminate these annoying log messages, please resolve the disagreement between System properties and other config."
-                            );
-                    }
-                }
-                else
-                {
-                    enforcedWhy = null;
-                    explicit = true;
-                }
-            }
-
             String whitelistDescriptor = whitelistManager.makeWhitelistDescriptor(info.getSource());
-            if (enforcedWhy != null)
+            EarliestOrStrongestBooleanProperty.Details[] holder = new EarliestOrStrongestBooleanProperty.Details[1];
+            if (_enforceWhiteList.getValue(pcfg, logger, holder))
             {
                 throw new InstantiationNotPermittedException(
-                  "By-name instantiation of '" + fqcn + "' not permitted. The class is not in the " + whitelistDescriptor + ", which is enforced " + enforcedWhy + ". Whitelist: " + whitelist
+                  "By-name instantiation of '" + fqcn + "' not permitted. The class is not in the " + whitelistDescriptor + ", which is enforced. Whitelist: " + whitelist
                 );
             }
             else
             {
-                if (!explicit && logger.isLoggable(MLevel.WARNING))
-                    logger.log(
-                       MLevel.WARNING,
-                       "Instantiating '" + fqcn + "' by name despite its absence from the " + whitelistDescriptor + ", " +
-                       "and despite no explicit suppression of whitelist enforcement via '" + ENFORCE_WHITELIST_KEY + "=false'. " +
-                       "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
-                       "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
-                    );
+                EarliestOrStrongestBooleanProperty.Details details = holder[0];
+                if (logger.isLoggable(MLevel.WARNING))
+                {
+                    if (details.isUnconfigured())
+                        logger.log(
+                           MLevel.WARNING,
+                           "Instantiating '" + fqcn + "' by name despite its absence from the " + whitelistDescriptor + ", " +
+                           "and despite no explicit suppression of whitelist enforcement via '" + ENFORCE_WHITELIST_KEY + "=false'. " +
+                           "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
+                           "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
+                        );
+                    else
+                        logger.log(
+                           MLevel.WARNING,
+                           "Instantiating '" + fqcn + "' by name despite conflicts in the configuration of the " + whitelistDescriptor + ": " + details +
+                           ". Current whitelist: " + whitelist
+                        );
+                }
             }
         }
     }

@@ -2,6 +2,8 @@ package com.mchange.v2.cfg;
 
 import com.mchange.v2.log.*;
 
+import com.mchange.v2.lang.ObjectUtils;
+
 import java.util.HashSet;
 
 public class EarliestOrStrongestBooleanProperty
@@ -26,14 +28,81 @@ public class EarliestOrStrongestBooleanProperty
     public EarliestOrStrongestBooleanProperty(String property, boolean strongest)
     { this(property, strongest, strongest); }
 
-    public synchronized boolean getValue(PropertiesConfig pcfg, MLogger logger)
+    public static class Details
+    {
+        Boolean earlySystemProperty;
+        Boolean currentSystemProperty;
+        Boolean currentConfigProperty;
+
+        Details(Boolean earlySystemProperty, Boolean currentSystemProperty, Boolean currentConfigProperty)
+        {
+            this.earlySystemProperty = earlySystemProperty;
+            this.currentSystemProperty = currentSystemProperty;
+            this.currentConfigProperty = currentConfigProperty;
+        }
+
+        public Boolean getEarlySystemProperty()   { return earlySystemProperty; }
+        public Boolean getCurrentSystemProperty() { return currentSystemProperty; }
+        public Boolean getCurrentConfigProperty() { return currentConfigProperty; }
+
+        public boolean isUnconfigured() { return earlySystemProperty == null && currentSystemProperty == null && currentConfigProperty == null; }
+
+        public boolean isCurrentExplicitUnconflicted()
+        {
+            if (currentSystemProperty == null && currentConfigProperty == null)
+                return false;
+            else if (currentSystemProperty != null && currentConfigProperty != null)
+            {
+                boolean noCurrentConflict = currentSystemProperty.equals(currentConfigProperty);
+                return noCurrentConflict && (earlySystemProperty == null || earlySystemProperty.equals(currentSystemProperty));
+            }
+            else if (currentSystemProperty != null)
+                return earlySystemProperty == null || earlySystemProperty.equals(currentSystemProperty);
+            else if (currentConfigProperty != null)
+                return earlySystemProperty == null || earlySystemProperty.equals(currentConfigProperty);
+            else
+                throw new RuntimeException("Huh? The cases we've checked, from which we've unconditionally returned should be exhaustive.");
+        }
+
+        @Override
+        public boolean equals(Object o)
+        { return this == o || (o instanceof Details && _equals((Details) o)); }
+
+        private boolean _equals(Details other)
+        {
+            return
+                ObjectUtils.eqOrBothNull(this.earlySystemProperty,   other.earlySystemProperty)   &&
+                ObjectUtils.eqOrBothNull(this.currentSystemProperty, other.currentSystemProperty) &&
+                ObjectUtils.eqOrBothNull(this.currentConfigProperty, other.earlySystemProperty);
+        }
+
+        @Override
+        public int hashCode()
+        { return ObjectUtils.hashOrZero(earlySystemProperty) << 2 ^ ObjectUtils.hashOrZero(currentSystemProperty) << 1 ^ ObjectUtils.hashOrZero(currentConfigProperty); }
+
+        @Override
+        public String toString()
+        { return "[earlySystemProperty: " + earlySystemProperty + "; currentSystemProperty: " + currentSystemProperty + "; currentConfigProperty: " + currentConfigProperty + "]"; }
+    }
+
+    public String  getProperty()     { return property; }
+    public boolean getStrongest()    { return strongest; }
+    public boolean getDefaultValue() { return defaultValue; }
+
+    public boolean getValue(PropertiesConfig pcfg, MLogger logger) { return getValue( pcfg, logger, null ); }
+
+    public synchronized boolean getValue(PropertiesConfig pcfg, MLogger logger, Details[] outHolder)
     {
         Boolean out;
+
+        Boolean earlySys    = null;
+        Boolean currentSys  = null;
+        Boolean currentPcfg = null;
         if (!strongestBoolean.equals(last)) // we have to check
         {
-            Boolean earlySys    = parseValue( "early system properties", SealedSystemProperties.get().getProperty(property), logger );
-            Boolean currentSys  = parseValue( "current system properties", System.getProperty(property), logger );
-            Boolean currentPcfg = pcfg == null ? null : parseValue( "current configuration", pcfg.getProperty(property), logger );
+            earlySys    = parseEarlySys(logger);
+            currentSys  = parseCurrentSys(logger);
+            currentPcfg = parseCurrentConfig(pcfg,logger);
 
             if (strongestBoolean.equals(earlySys) || checkWarnUpdateToStrongest("the latest system properties", currentSys, logger) || checkWarnUpdateToStrongest("the latest configuration", currentPcfg, logger))
                 out = strongestBoolean;
@@ -67,11 +136,30 @@ public class EarliestOrStrongestBooleanProperty
             }
         }
         else
+        {
+            if (outHolder != null)
+            {
+                earlySys    = parseEarlySys(logger);
+                currentSys  = parseCurrentSys(logger);
+                currentPcfg = parseCurrentConfig(pcfg, logger);
+            }
             out = last;
+        }
 
         last = out;
+        if (outHolder != null)
+            outHolder[0] = new Details( earlySys, currentSys, currentPcfg );
         return out.booleanValue();
     }
+
+    private Boolean parseEarlySys(MLogger logger)
+    { return parseValue( "early system properties", SealedSystemProperties.get().getProperty(property), logger ); }
+
+    private Boolean parseCurrentSys(MLogger logger)
+    { return parseValue( "current system properties", System.getProperty(property), logger ); }
+
+    private Boolean parseCurrentConfig(PropertiesConfig pcfg, MLogger logger)
+    { return pcfg == null ? null : parseValue( "current configuration", pcfg.getProperty(property), logger ); }
 
     private boolean configureUnconfigured(MLogger logger)
     {

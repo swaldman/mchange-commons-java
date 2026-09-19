@@ -7,14 +7,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.cfg.WhitelistInfo;
-import com.mchange.v2.cfg.WhitelistManager;
+import com.mchange.v2.cfg.EarliestOrNarrowestWhitelistManager;
+import com.mchange.v2.cfg.EarliestOrStrongestBooleanProperty;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
 import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
-import com.mchange.v2.cfg.EarliestOrStrongestBooleanProperty;
 //import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
 
 public final class ReferenceableUtils
@@ -55,8 +55,8 @@ public final class ReferenceableUtils
         ACCEPTABLE_WHITELIST_SOURCES = Collections.unmodifiableSet(tmp1);
     }
 
-    private final static WhitelistManager objectFactoryWhitelistManager = new WhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
-    private final static WhitelistManager referenceableJavaBeanClassWhitelistManager = new WhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+    private final static EarliestOrNarrowestWhitelistManager objectFactoryWhitelistManager = new EarliestOrNarrowestWhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+    private final static EarliestOrNarrowestWhitelistManager referenceableJavaBeanClassWhitelistManager = new EarliestOrNarrowestWhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
 
     /**
      * A null string value in a Reference sometimes goes to the literal
