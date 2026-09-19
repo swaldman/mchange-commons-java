@@ -13,6 +13,7 @@ public class EarliestOrStrongestBooleanProperty
 
     Boolean last = null;
     HashSet<String> warned = new HashSet<String>();
+    boolean warnedUnconfiguredWeakDefault = false;
 
     public EarliestOrStrongestBooleanProperty(String property, boolean strongest, boolean defaultValue)
     {
@@ -40,19 +41,7 @@ public class EarliestOrStrongestBooleanProperty
             {
                 boolean unconfigured = (earlySys == null && currentSys == null && currentPcfg == null);
                 if (unconfigured)
-                {
-                    if (defaultValue != strongest && logger.isLoggable(MLevel.WARNING))
-                        logger.log(MLevel.WARNING,
-                                   "Security-sensitive property '" + property +
-                                   "' has not been set (or has been set to a value not interpretable as a boolean). " +
-                                   "We currently default to " + defaultValue +
-                                   ", the less secure value. THIS MAY CHANGE IN A FUTURE RELEASE. " +
-                                   "Please modify your configuration to tolerate the more secure value of " + strongest +
-                                   " and explicitly configure '" + property + "' to " + strongest +
-                                   ", or else explicitly configure '" + property + "' to " + defaultValue +
-                                   " and take responsibility for the risk.");
-                    out = defaultValue;
-                }
+                    out = configureUnconfigured(logger);
                 else
                 {
                     // we are explicitly configured, but not to strongest (because the first if would have caught that!),
@@ -62,7 +51,20 @@ public class EarliestOrStrongestBooleanProperty
                 }
             }
             else
-                out = last; // not first pass, we don't update to stronger, we stay as we were
+            {
+                // it's not our first rodeo, we HAVE BEEN configured to the weaker and never the stronger value,
+                // we are not explicitly configured to the stronger value now.
+                //
+                // Several possibilities remain. We might have a cached earlySys that used to
+                // reflect a sysprop set to weak, and that is gone. earlySys can't be strong, or
+                // we'd have caught it in the first if. We don't want to set in stone a cached,
+                // earlySysprop setting to weak. So let's just see what happened recently.
+                boolean unconfiguredRecently = (currentSys == null && currentPcfg == null);
+                if (unconfiguredRecently)
+                    out = configureUnconfigured(logger);
+                else
+                    out = last; // not first pass, we don't update to stronger, we stay as we were, which is last == !strongest
+            }
         }
         else
             out = last;
@@ -70,6 +72,24 @@ public class EarliestOrStrongestBooleanProperty
         last = out;
         return out.booleanValue();
     }
+
+    private boolean configureUnconfigured(MLogger logger)
+    {
+        if (!warnedUnconfiguredWeakDefault && defaultValue != strongest && logger.isLoggable(MLevel.WARNING))
+        {
+            logger.log(MLevel.WARNING,
+                       "Security-sensitive property '" + property +
+                       "' has not been set (or has been set to a value not interpretable as a boolean). " +
+                       "We currently default to " + defaultValue +
+                       ", the less secure value. THIS MAY CHANGE IN A FUTURE RELEASE. " +
+                       "Please modify your configuration to tolerate the more secure value of " + strongest +
+                        " and explicitly configure '" + property + "' to " + strongest +
+                       ", or else explicitly configure '" + property + "' to " + defaultValue +
+                       " and take responsibility for the risk.");
+            warnedUnconfiguredWeakDefault = true;
+        }
+       return defaultValue;
+   }
 
     private boolean checkWarnUpdateToStrongest(String identifier, Boolean currentValue, MLogger logger)
     {

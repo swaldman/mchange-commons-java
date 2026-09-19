@@ -14,7 +14,8 @@ import com.mchange.v2.log.MLogger;
 import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
-import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
+import com.mchange.v2.cfg.EarliestOrStrongestBooleanProperty;
+//import static com.mchange.v2.cfg.PropertiesConfigUtils.securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig;
 
 public final class ReferenceableUtils
 {
@@ -264,6 +265,28 @@ public final class ReferenceableUtils
         }
     }
 
+    private static EarliestOrStrongestBooleanProperty _allowIndirectSerializationViaReference      = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, false );
+    private static EarliestOrStrongestBooleanProperty _generateSerializedObjectBinaryRefAddr       = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, false );
+    private static EarliestOrStrongestBooleanProperty _supportReferenceRemoteFactoryClassLocation  = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, false );
+    private static EarliestOrStrongestBooleanProperty _acceptDeserializedInitialContextEnvironment = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, false );
+
+    public static boolean allowIndirectSerializationViaReference( PropertiesConfig pcfg )
+    { return _allowIndirectSerializationViaReference.getValue(pcfg, logger ); }
+
+    public static boolean generateSerializedObjectBinaryRefAddr( PropertiesConfig pcfg )
+    { return _generateSerializedObjectBinaryRefAddr.getValue(pcfg, logger ); }
+
+    public static boolean supportReferenceRemoteFactoryClassLocation( PropertiesConfig pcfg )
+    { return _supportReferenceRemoteFactoryClassLocation.getValue(pcfg, logger ); }
+
+    public static boolean acceptDeserializedInitialContextEnvironment( PropertiesConfig pcfg )
+    { return _acceptDeserializedInitialContextEnvironment.getValue(pcfg, logger ); }
+
+    /*
+    // we do lose some informative warnings upgrading to.EarliestOrStrongestBooleanProperty.
+    // we're keeping the old version around commented out as a reminder, if down the line we want to
+    // restore them.
+
     public static boolean allowIndirectSerializationViaReference( PropertiesConfig pcfg )
     { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, pcfg, "Creating or decoding dangerous Java-Serialized References when objects are Referenceable but not Serializable, or ordinary Serialization fails.", logger ); }
 
@@ -275,6 +298,7 @@ public final class ReferenceableUtils
 
     public static boolean acceptDeserializedInitialContextEnvironment( PropertiesConfig pcfg )
     { return securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, pcfg, "Acceptance of deserialized InitialContext environment", logger ); }
+    */
 
     /**
      * @deprecated nesting references seemed useful until I realized that
