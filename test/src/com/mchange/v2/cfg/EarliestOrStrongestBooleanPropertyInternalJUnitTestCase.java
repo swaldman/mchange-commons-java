@@ -239,6 +239,150 @@ public class EarliestOrStrongestBooleanPropertyInternalJUnitTestCase extends Tes
         assertTrue( "Steady state must be silent: " + logger.warnings(), logger.warnings().isEmpty() );
     }
 
+    // ==================== removal is a tightening ====================
+
+    /**
+     *  Deleting a permissive setting reverts the flag to its default, and when that default is
+     *  the safe value the deletion is a tightening -- so it is honored, exactly as removing a
+     *  whitelist key narrows a whitelist. Requiring an operator to write "false" rather than
+     *  delete the line would be a surprising rule to have to know, and the gesture they will
+     *  actually make when revoking a dangerous opt-in is to remove it.
+     */
+    public void testRemovingAPermissiveSettingTightensToTheSafeDefault()
+    {
+        EarliestOrStrongestBooleanProperty p = permitFlag();   // safe when false, defaults true
+        System.setProperty( PERMIT, "false" );
+        assertFalse( "Precondition: explicitly safe.", value( p ) );
+
+        // and the mirror: a flag configured permissively, then unconfigured
+        System.setProperty( ENFORCE, "false" );                // safe when true, so false is weak
+        EarliestOrStrongestBooleanProperty q =
+            new EarliestOrStrongestBooleanProperty( ENFORCE, true, true );   // default is the safe value
+        assertFalse( "Precondition: explicitly configured to the weak value.", value( q ) );
+
+        System.clearProperty( ENFORCE );
+
+        assertTrue( "Removing the weak setting must revert to the safe default.", value( q ) );
+    }
+
+    /**
+     *  The sealed snapshot must not defeat that. It retains the old permissive value for the
+     *  life of the JVM, so a removal test that asks "is this unconfigured?" of the snapshot as
+     *  well as of live configuration can never see the removal at all.
+     */
+    public void testRemovalIsSeenDespiteThePermissiveValueSurvivingInTheSnapshot()
+    {
+        System.setProperty( ENFORCE, "false" );
+        EarliestOrStrongestBooleanProperty p =
+            new EarliestOrStrongestBooleanProperty( ENFORCE, true, true );
+        assertFalse( value( p ) );
+        assertTrue( "Precondition: the snapshot holds the weak value.",
+                    "false".equals( SealedSystemProperties.get().getProperty( ENFORCE ) ) );
+
+        System.clearProperty( ENFORCE );
+
+        assertTrue( "A stale snapshot entry must not mask the removal.", value( p ) );
+    }
+
+    /** Removal tightens, but the tightening is itself permanent -- the ratchet does not reopen. */
+    public void testAFlagTightenedByRemovalCannotBeLoosenedAgain()
+    {
+        System.setProperty( PERMIT, "true" );                  // permissive, and it is the default
+        EarliestOrStrongestBooleanProperty p = permitFlag();
+        assertTrue( "Precondition: permissive.", value( p ) );
+
+        System.clearProperty( PERMIT );
+        assertTrue( "A default that is itself permissive stays permissive on removal.", value( p ) );
+
+        System.setProperty( PERMIT, "false" );
+        assertFalse( value( p ) );
+
+        System.clearProperty( PERMIT );
+        assertFalse( "Having reached safety, removal must not relax it.", value( p ) );
+
+        System.setProperty( PERMIT, "true" );
+        assertFalse( "nor may re-asserting the permissive value.", value( p ) );
+    }
+
+    /**
+     *  Removal reverts to the <i>default</i>, not to the safe value. A flag whose default is
+     *  permissive becomes permissive again -- unconfigured means unconfigured, and it is only
+     *  a tightening when the default happens to be the safe side.
+     */
+    public void testRemovalRevertsToTheDefaultRatherThanToSafety()
+    {
+        System.setProperty( PERMIT, "true" );
+        EarliestOrStrongestBooleanProperty p = permitFlag();   // safe false, default true
+        assertTrue( value( p ) );
+
+        System.clearProperty( PERMIT );
+
+        assertTrue( "The default is permissive, so removal cannot make it safe.", value( p ) );
+    }
+
+    // ==================== the invariant, exhaustively ====================
+
+    /**
+     *  The property that everything else is in service of: the value never moves from the safe
+     *  side to the less safe side, whatever an operator does to configuration afterward.
+     *
+     *  <p>This exercises it directly rather than case by case -- every sequence of set-true,
+     *  set-false and clear up to length five, over every combination of polarity and default,
+     *  with the sealed snapshot reset between sequences so each begins as a fresh JVM would.
+     *  The individual cases above pin the behaviors that <i>imply</i> the invariant; this pins
+     *  the invariant, which is what should survive a refactoring that reorganizes them.</p>
+     *
+     *  <p>Where the safety actually comes from is worth knowing: configureUnconfigured, the
+     *  only path that can lower a value, is reachable only from inside the guard that skips a
+     *  flag already at its safe value. Relax that guard -- treat it as the mere optimization it
+     *  resembles -- and removal of configuration would loosen a safe flag. This test is the one
+     *  that would notice.</p>
+     */
+    public void testTheValueNeverMovesFromSafeToLessSafe() throws Exception
+    {
+        final String[] gestures = { "set-true", "set-false", "clear" };
+        int sequences = 0, tightenings = 0;
+
+        for ( boolean strongest : new boolean[]{ true, false } )
+            for ( boolean dflt : new boolean[]{ true, false } )
+                for ( int len = 1; len <= 5; ++len )
+                    for ( int code = 0, n = (int) Math.pow( 3, len ); code < n; ++code )
+                    {
+                        List<String> seq = new ArrayList<String>();
+                        for ( int i = 0, c = code; i < len; ++i, c /= 3 )
+                            seq.add( gestures[ c % 3 ] );
+
+                        System.clearProperty( ENFORCE );
+                        unseal();   // each sequence starts as a fresh JVM would
+                        EarliestOrStrongestBooleanProperty p =
+                            new EarliestOrStrongestBooleanProperty( ENFORCE, strongest, dflt );
+
+                        Boolean prev = null;
+                        for ( String g : seq )
+                        {
+                            if ( "clear".equals( g ) ) System.clearProperty( ENFORCE );
+                            else System.setProperty( ENFORCE, "set-true".equals( g ) ? "true" : "false" );
+
+                            boolean v = p.getValue( null, logger );
+                            if ( prev != null )
+                            {
+                                boolean wasSafe = ( prev.booleanValue() == strongest );
+                                boolean nowSafe = ( v == strongest );
+                                assertFalse( "Moved from safe to less safe: strongest=" + strongest +
+                                             " default=" + dflt + " " + seq,
+                                             wasSafe && !nowSafe );
+                                if ( !wasSafe && nowSafe ) ++tightenings;
+                            }
+                            prev = Boolean.valueOf( v );
+                        }
+                        ++sequences;
+                    }
+
+        assertTrue( "Precondition: the sweep must actually be exercising something.", sequences > 1000 );
+        assertTrue( "and must include tightenings, or it proves only that nothing ever changes.",
+                    tightenings > 0 );
+    }
+
     // ==================== the other polarity ====================
 
     /**

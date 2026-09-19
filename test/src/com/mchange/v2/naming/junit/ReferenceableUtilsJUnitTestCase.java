@@ -10,6 +10,7 @@ import com.mchange.v2.naming.AnyNameNameGuard;
 import com.mchange.v2.naming.ApparentlyLocalNameGuard;
 import com.mchange.v2.naming.ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
+import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.naming.SecurityConfigKey;
 
@@ -54,6 +55,18 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
         p.setProperty( key, value );
         return MultiPropertiesConfig.fromProperties( "/test", p );
     }
+
+    /**
+     *  See ReferenceIndirectorJUnitTestCase: the security flags latch once read, so each case
+     *  must begin from an unstarted JVM's worth of state.
+     */
+    @Override
+    protected void setUp() throws Exception
+    { SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class ); }
+
+    @Override
+    protected void tearDown() throws Exception
+    { SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class ); }
 
     private static void restoreSystemProperty( String key, String savedValue )
     {

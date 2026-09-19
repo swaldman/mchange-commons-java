@@ -9,7 +9,9 @@ import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.naming.AnyNameNameGuard;
 import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
+import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import com.mchange.v2.naming.ReferenceIndirector;
+import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.naming.SecurityConfigKey;
 import com.mchange.v2.ser.IndirectSerializationForbiddenException;
 import com.mchange.v2.ser.IndirectlySerialized;
@@ -83,16 +85,28 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
 
     private String savedAllowSysprop;
 
+    /**
+     *  Each case sets its own configuration and expects it to take effect, so each has to look
+     *  like a fresh JVM. ReferenceableUtils now holds its security flags in static
+     *  EarliestOrStrongestBooleanProperty instances, which latch at their safe value and stop
+     *  consulting configuration -- deliberately, since the supported arrangement is to
+     *  configure once at startup and leave it alone. Releasing them here is what lets a shared
+     *  JVM stand in for several deployments.
+     */
     @Override
-    protected void setUp()
+    protected void setUp() throws Exception
     {
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         savedAllowSysprop = System.getProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
         System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true" );
     }
 
     @Override
-    protected void tearDown()
-    { restoreSystemProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, savedAllowSysprop ); }
+    protected void tearDown() throws Exception
+    {
+        restoreSystemProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, savedAllowSysprop );
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+    }
 
     // ==========================================
     // Getter / setter tests
