@@ -1,5 +1,6 @@
 package com.mchange.v2.naming.junit;
 
+import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -61,15 +62,23 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
     private Properties saved;
 
     @Override
-    public void setUp()
+    public void setUp() throws Exception
     {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+
         saved = (Properties) System.getProperties().clone();
         clearOurKeys();
     }
 
     @Override
-    public void tearDown()
+    public void tearDown() throws Exception
     {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+
         clearOurKeys();
         for ( String k : saved.stringPropertyNames() )
             if ( ours( k ) )
@@ -168,15 +177,19 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
         assertTrue( "Both layers contribute.", factoryAccepted() );
     }
 
-    public void testObjectFactoryOverrideReplacesTheSubkeys()
+    public void testObjectFactoryOverrideReplacesTheSubkeys() throws Exception
     {
         System.setProperty( OF_WL + ".layerOne", ALPHA_FACTORY );
         System.setProperty( OF_OVER, "com.example.SomeOtherFactory" );
 
         assertFalse( "An override discards what the subkeys contributed.", factoryAccepted() );
 
+        // A second deployment, not a second phase of this one: the gate latches at its first
+        // lookup, and a change from refusing to accepting is a widening it would decline.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.setProperty( OF_OVER, ALPHA_FACTORY );
-        assertTrue( factoryAccepted() );
+
+        assertTrue( "and honors what the override itself names.", factoryAccepted() );
     }
 
     /**
@@ -306,13 +319,16 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
      *  messages must say which. Collapsing them is what the old code did, and it told a
      *  deployment that had deliberately configured deny-all that no whitelist was set.
      */
-    public void testJavaBeanMissingAndConfiguredEmptyGiveDifferentMessages()
+    public void testJavaBeanMissingAndConfiguredEmptyGiveDifferentMessages() throws Exception
     {
         String missingMsg = beanRefusalMessage();
         assertNotNull( "An unconfigured whitelist must refuse.", missingMsg );
         assertTrue( "and must say no whitelist is set: " + missingMsg,
                     missingMsg.contains( "No whitelist is set" ) );
 
+        // Again, a separate deployment: the first reading latched MISSING, and MISSING is
+        // exactly what the second case must not be.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.setProperty( JB_WL + ".layerOne", DENY_ALL );
         String emptyMsg = beanRefusalMessage();
         assertNotNull( "A configured deny-all must also refuse.", emptyMsg );

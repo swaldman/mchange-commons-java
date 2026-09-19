@@ -55,11 +55,45 @@ public final class SecurityRatchetTestSupport
         }
     }
 
-    /** Both of the above, for the common case of a class whose gates are all config-driven. */
+    /**
+     *  Releases every EarliestOrNarrowestWhitelistManager held in a static field of the given
+     *  class, discarding the whitelist it latched at its first lookup.
+     *
+     *  <p>Also clears the once-only record behind the manager's "supported configuration"
+     *  warnings, for the same reason the boolean ratchets' record is cleared: a case asserting
+     *  on a warning must not be silenced by an earlier case having already provoked it.</p>
+     */
+    public static void resetWhitelistRatchets( Class<?> holder ) throws Exception
+    {
+        for ( Field f : holder.getDeclaredFields() )
+        {
+            if ( Modifier.isStatic( f.getModifiers() )
+                 && EarliestOrNarrowestWhitelistManager.class.isAssignableFrom( f.getType() ) )
+            {
+                f.setAccessible( true );
+                EarliestOrNarrowestWhitelistManager wm = (EarliestOrNarrowestWhitelistManager) f.get( null );
+                if ( wm != null )
+                {
+                    wm.previousWhitelistInfo = null;   // package-private: we are in com.mchange.v2.cfg
+
+                    // private to WhitelistManager, so reflection even from inside the package
+                    Field ws = WhitelistManager.class.getDeclaredField( "warnedSupported" );
+                    ws.setAccessible( true );
+                    ws.set( wm, null );
+                }
+            }
+        }
+    }
+
+    /**
+     *  Every ratchet a class holds, plus the sealed snapshot -- the usual need for a test class
+     *  that drives configuration-controlled gates case by case.
+     */
     public static void resetAll( Class<?> holder ) throws Exception
     {
         unsealSystemProperties();
         resetBooleanRatchets( holder );
+        resetWhitelistRatchets( holder );
     }
 
     private SecurityRatchetTestSupport()

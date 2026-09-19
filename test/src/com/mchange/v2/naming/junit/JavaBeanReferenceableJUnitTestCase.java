@@ -1,5 +1,7 @@
 package com.mchange.v2.naming.junit;
 
+import com.mchange.v2.naming.ReferenceableUtils;
+import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import java.util.*;
 import javax.naming.*;
 import junit.framework.TestCase;
@@ -93,15 +95,23 @@ public final class JavaBeanReferenceableJUnitTestCase extends TestCase
     private String savedWhitelistSysprop;
 
     @Override
-    protected void setUp()
+    protected void setUp() throws Exception
     {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+
         savedWhitelistSysprop = System.getProperty( WL_KEY );
         System.clearProperty( WL_KEY );
     }
 
     @Override
-    protected void tearDown()
-    { restoreSystemProperty( WL_KEY, savedWhitelistSysprop ); }
+    protected void tearDown() throws Exception
+    {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+ restoreSystemProperty( WL_KEY, savedWhitelistSysprop ); }
 
     // ==========================================
     // Encode side: JavaBeanReferenceMaker.createReference

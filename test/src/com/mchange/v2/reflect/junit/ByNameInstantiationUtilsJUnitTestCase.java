@@ -1,5 +1,6 @@
 package com.mchange.v2.reflect.junit;
 
+import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,15 +40,23 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
     private Properties saved;
 
     @Override
-    public void setUp()
+    public void setUp() throws Exception
     {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ByNameInstantiationUtils.class );
+
         saved = (Properties) System.getProperties().clone();
         clearOurKeys();
     }
 
     @Override
-    public void tearDown()
+    public void tearDown() throws Exception
     {
+        // The gates these cases drive now latch at first lookup, so each case must begin
+        // from the state an unstarted JVM would have. See SecurityRatchetTestSupport.
+        SecurityRatchetTestSupport.resetAll( ByNameInstantiationUtils.class );
+
         clearOurKeys();
         for ( String k : saved.stringPropertyNames() )
             if ( k.startsWith( PFX ) )
@@ -344,18 +353,27 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
         assertEquals( Collections.singleton( "com.example.OnlyThis" ), info.getWhitelist() );
     }
 
-    /** currentWhitelistInfo(...) is a snapshot, not a view: later config changes do not mutate it. */
+    /**
+     *  currentWhitelistInfo(...) is a snapshot, not a view: a later resolution does not reach
+     *  back and alter one already handed out.
+     *
+     *  <p>Demonstrated by <i>narrowing</i>, since the gate now ratchets and a widening would
+     *  simply be ignored -- which would make the test pass for the wrong reason, proving only
+     *  that nothing had changed anywhere.</p>
+     */
     public void testWhitelistInfoIsASnapshot()
     {
-        System.setProperty( WHITELIST + ".layerOne", MARKER );
+        System.setProperty( WHITELIST + ".layerOne", MARKER + ",com.example.Beta" );
         WhitelistInfo before = ByNameInstantiationUtils.currentWhitelistInfo( null );
+        assertEquals( "Precondition: two entries to begin with.", 2, before.getWhitelist().size() );
 
-        System.setProperty( WHITELIST + ".layerTwo", "com.example.Beta" );
+        System.setProperty( WHITELIST + ".layerOne", MARKER );
         WhitelistInfo after = ByNameInstantiationUtils.currentWhitelistInfo( null );
 
-        assertEquals( "The earlier snapshot must not have grown.",
-                      Collections.singleton( MARKER ), before.getWhitelist() );
-        assertEquals( 2, after.getWhitelist().size() );
+        assertEquals( "The narrowing must take effect in the new reading.",
+                      Collections.singleton( MARKER ), after.getWhitelist() );
+        assertEquals( "but must not reach back into the earlier one.",
+                      2, before.getWhitelist().size() );
     }
 
     /**
@@ -363,16 +381,20 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
      *  so it must name the source and the contents, and must not fall back to Object's
      *  identity form.
      */
-    public void testWhitelistInfoToStringIsLegible()
+    public void testWhitelistInfoToStringIsLegible() throws Exception
     {
+        // Three separate deployments, not three phases of one: the gate latches at its first
+        // lookup, so each configuration needs the state an unstarted JVM would have.
         String missing = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
         assertFalse( "toString must be overridden.", missing.contains( "@" ) );
         assertTrue( "A MISSING whitelist must say so: " + missing, missing.contains( "missing" ) );
 
+        SecurityRatchetTestSupport.resetAll( ByNameInstantiationUtils.class );
         System.setProperty( WHITELIST + ".layerOne", MARKER );
         String main = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
         assertTrue( "The contents belong in the message: " + main, main.contains( MARKER ) );
 
+        SecurityRatchetTestSupport.resetAll( ByNameInstantiationUtils.class );
         System.setProperty( OVERRIDE, "com.example.OnlyThis" );
         String override = ByNameInstantiationUtils.currentWhitelistInfo( null ).toString();
         assertTrue( "An override must identify itself: " + override, override.contains( "override" ) );
