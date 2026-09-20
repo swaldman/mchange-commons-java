@@ -10,7 +10,7 @@ public final class ByNameInstantiationUtils
 {
     final static MLogger logger = MLog.getLogger( ByNameInstantiationUtils.class );
 
-    private final static String COMMON_KEY_PFX         = "com.mchange.v2.reflect.byNameInstantiation";
+    private final static String COMMON_KEY_PFX = "com.mchange.v2.reflect.byNameInstantiation";
 
     private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
 
