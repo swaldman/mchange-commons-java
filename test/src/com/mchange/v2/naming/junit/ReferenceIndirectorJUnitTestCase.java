@@ -405,7 +405,11 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
     {
         // The ReferenceSerialized is produced while the gate is open (sysprop=true from setUp()).
         IndirectlySerialized is = makeReferenceSerialized( new ReferenceIndirector() );
-        // Now close the gate before calling getObject().
+
+        // Decoding happens in a deployment of its own -- which is the realistic case anyway, since
+        // the artifact an attacker holds was produced somewhere else. System properties are read as
+        // of the seal, so closing the gate means closing it before this deployment reads it.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.clearProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE );
         try
         {
@@ -458,6 +462,9 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
     {
         // Produce the ReferenceSerialized while the gate is open (sysprop=true from setUp()).
         IndirectlySerialized is = makeReferenceSerialized( new ReferenceIndirector() );
+
+        // Again a separate deployment, whose operator has pinned the flag safe before anything reads it.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.setProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "false" );
         PropertiesConfig cfg = pcfg(
             SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, "true",

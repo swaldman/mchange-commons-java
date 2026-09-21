@@ -31,69 +31,84 @@ public final class SecurityRatchetTestSupport
     }
 
     /**
-     *  Releases every EarliestOrStrongestBooleanProperty held in a static field of the given
-     *  class, so a flag latched at its safe value will consult configuration again.
+     *  Returns every boolean property held in a static field of the given class to the state a
+     *  freshly constructed one would have.
      *
-     *  <p>Also clears each one's record of what it has already complained about, so a case
-     *  asserting on a warning is not silenced by an earlier case having provoked it.</p>
+     *  <p>Matched on AbstractBooleanProperty rather than on any particular implementation.
+     *  Matching a concrete class is how this quietly stopped working once the consumers moved
+     *  to the sealed implementations -- those are siblings of the ratcheting ones, not
+     *  subclasses, so the reset matched nothing and reported no trouble.</p>
      */
-    public static void resetBooleanRatchets( Class<?> holder ) throws Exception
+    public static void resetBooleanProperties( Class<?> holder ) throws Exception
     {
         for ( Field f : holder.getDeclaredFields() )
         {
             if ( Modifier.isStatic( f.getModifiers() )
-                 && EarliestOrStrongestBooleanProperty.class.isAssignableFrom( f.getType() ) )
+                 && AbstractBooleanProperty.class.isAssignableFrom( f.getType() ) )
             {
                 f.setAccessible( true );
-                EarliestOrStrongestBooleanProperty p = (EarliestOrStrongestBooleanProperty) f.get( null );
-                if ( p != null )
-                {
-                    p.last = null;          // package-private: we are in com.mchange.v2.cfg
-                    p.warned.clear();
-                }
+                AbstractBooleanProperty p = (AbstractBooleanProperty) f.get( null );
+                if ( p != null ) reset( p );
             }
         }
     }
 
+    /** package-private state, reachable directly: we are declared in com.mchange.v2.cfg */
+    private static void reset( AbstractBooleanProperty p )
+    {
+        p.warned.clear();
+        p.warnedUnconfiguredWeakDefault = false;
+
+        if ( p instanceof EarliestOrStrongestBooleanProperty )
+            ((EarliestOrStrongestBooleanProperty) p).last = null;
+        else if ( p instanceof SealedSystemPropertiesBooleanProperty )
+        {
+            SealedSystemPropertiesBooleanProperty sp = (SealedSystemPropertiesBooleanProperty) p;
+            sp.uninitialized = true;    // note: true, not the JVM default -- this is a field initializer
+            sp.sealedSys = null;
+        }
+        else if ( p instanceof SystemOnlyStrengthensBooleanProperty )
+            ((SystemOnlyStrengthensBooleanProperty) p).systemEverStrong = false;
+    }
+
     /**
-     *  Releases every EarliestOrNarrowestWhitelistManager held in a static field of the given
-     *  class, discarding the whitelist it latched at its first lookup.
+     *  Returns every whitelist manager held in a static field of the given class to the state a
+     *  freshly constructed one would have.
      *
-     *  <p>Also clears the once-only record behind the manager's "supported configuration"
-     *  warnings, for the same reason the boolean ratchets' record is cleared: a case asserting
-     *  on a warning must not be silenced by an earlier case having already provoked it.</p>
+     *  <p>Matched on WhitelistManager, for the same reason. A stateless manager needs nothing
+     *  beyond its once-only warning record; a ratcheting one also has a latched whitelist.</p>
      */
-    public static void resetWhitelistRatchets( Class<?> holder ) throws Exception
+    public static void resetWhitelistManagers( Class<?> holder ) throws Exception
     {
         for ( Field f : holder.getDeclaredFields() )
         {
             if ( Modifier.isStatic( f.getModifiers() )
-                 && EarliestOrNarrowestWhitelistManager.class.isAssignableFrom( f.getType() ) )
+                 && WhitelistManager.class.isAssignableFrom( f.getType() ) )
             {
                 f.setAccessible( true );
-                EarliestOrNarrowestWhitelistManager wm = (EarliestOrNarrowestWhitelistManager) f.get( null );
+                WhitelistManager wm = (WhitelistManager) f.get( null );
                 if ( wm != null )
                 {
-                    wm.previousWhitelistInfo = null;   // package-private: we are in com.mchange.v2.cfg
-
-                    // private to WhitelistManager, so reflection even from inside the package
                     Field ws = WhitelistManager.class.getDeclaredField( "warnedSupported" );
                     ws.setAccessible( true );
                     ws.set( wm, null );
+
+                    if ( wm instanceof EarliestOrNarrowestWhitelistManager )
+                        ((EarliestOrNarrowestWhitelistManager) wm).previousWhitelistInfo = null;
                 }
             }
         }
     }
 
     /**
-     *  Every ratchet a class holds, plus the sealed snapshot -- the usual need for a test class
+     *  Every gate a class holds, plus the sealed snapshot -- the usual need for a test class
      *  that drives configuration-controlled gates case by case.
      */
     public static void resetAll( Class<?> holder ) throws Exception
     {
         unsealSystemProperties();
-        resetBooleanRatchets( holder );
-        resetWhitelistRatchets( holder );
+        resetBooleanProperties( holder );
+        resetWhitelistManagers( holder );
     }
 
     private SecurityRatchetTestSupport()

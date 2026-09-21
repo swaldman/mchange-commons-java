@@ -196,11 +196,14 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
      *  The compatibility promise: an existing deployment still carrying the flat key keeps
      *  exactly the behavior it had, and the new keys do not quietly widen it.
      */
-    public void testObjectFactoryDeprecatedKeyStillDecides()
+    public void testObjectFactoryDeprecatedKeyStillDecides() throws Exception
     {
         System.setProperty( OF_DEPR, ALPHA_FACTORY );
         assertTrue( "The pre-existing flat key must still admit its factory.", factoryAccepted() );
 
+        // A deployment of its own: System properties are read as of the seal, so a revised
+        // deprecated key is only revised for a JVM that has not yet read it.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.setProperty( OF_DEPR, "com.example.SomeOtherFactory" );
         System.setProperty( OF_WL + ".layerOne", ALPHA_FACTORY );
         assertFalse( "and must not be widened by the new keys while it is present.", factoryAccepted() );
@@ -283,11 +286,14 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
         assertFalse( beanAccepted() );
     }
 
-    public void testJavaBeanDeprecatedKeyStillDecides()
+    public void testJavaBeanDeprecatedKeyStillDecides() throws Exception
     {
         System.setProperty( JB_DEPR, BEAN_FQCN );
         assertTrue( "The pre-existing flat key must still admit its bean.", beanAccepted() );
 
+        // A deployment of its own: System properties are read as of the seal, so a revised
+        // deprecated key is only revised for a JVM that has not yet read it.
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
         System.setProperty( JB_DEPR, "com.example.SomeOtherBean" );
         System.setProperty( JB_WL + ".layerOne", BEAN_FQCN );
         assertFalse( "and must not be widened by the new keys while it is present.", beanAccepted() );

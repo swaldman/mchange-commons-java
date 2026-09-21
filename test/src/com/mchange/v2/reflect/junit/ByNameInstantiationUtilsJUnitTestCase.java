@@ -13,6 +13,8 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
+import com.mchange.v2.cfg.MultiPropertiesConfig;
+import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.cfg.WhitelistInfo;
 import com.mchange.v2.reflect.ByNameInstantiationUtils;
 import com.mchange.v2.reflect.InstantiationNotPermittedException;
@@ -357,23 +359,33 @@ public class ByNameInstantiationUtilsJUnitTestCase extends TestCase
      *  currentWhitelistInfo(...) is a snapshot, not a view: a later resolution does not reach
      *  back and alter one already handed out.
      *
-     *  <p>Demonstrated by <i>narrowing</i>, since the gate now ratchets and a widening would
-     *  simply be ignored -- which would make the test pass for the wrong reason, proving only
-     *  that nothing had changed anywhere.</p>
+     *  <p>Driven through a supplied PropertiesConfig, which is the only source that varies
+     *  between lookups now -- System properties are read as of the seal, so changing one would
+     *  leave both readings identical and the test would pass for want of anything happening
+     *  rather than because the earlier snapshot held. It has been rewritten twice for this
+     *  reason, each time because the previously-varying source stopped varying; if it needs
+     *  rewriting again, the question to ask is which source this class still honors per call.</p>
      */
     public void testWhitelistInfoIsASnapshot()
     {
-        System.setProperty( WHITELIST + ".layerOne", MARKER + ",com.example.Beta" );
-        WhitelistInfo before = ByNameInstantiationUtils.currentWhitelistInfo( null );
+        WhitelistInfo before = ByNameInstantiationUtils.currentWhitelistInfo(
+            pcfg( WHITELIST + ".layerOne", MARKER + ",com.example.Beta" ) );
         assertEquals( "Precondition: two entries to begin with.", 2, before.getWhitelist().size() );
 
-        System.setProperty( WHITELIST + ".layerOne", MARKER );
-        WhitelistInfo after = ByNameInstantiationUtils.currentWhitelistInfo( null );
+        WhitelistInfo after = ByNameInstantiationUtils.currentWhitelistInfo(
+            pcfg( WHITELIST + ".layerOne", MARKER ) );
 
         assertEquals( "The narrowing must take effect in the new reading.",
                       Collections.singleton( MARKER ), after.getWhitelist() );
         assertEquals( "but must not reach back into the earlier one.",
                       2, before.getWhitelist().size() );
+    }
+
+    private static PropertiesConfig pcfg( String key, String value )
+    {
+        Properties p = new Properties();
+        p.setProperty( key, value );
+        return MultiPropertiesConfig.fromProperties( "/test", p );
     }
 
     /**
