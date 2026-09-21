@@ -9,7 +9,54 @@ import static com.mchange.v2.cfg.PropertiesConfigUtils.modifiableNarrowestString
 import static com.mchange.v2.cfg.PropertiesConfigUtils.modifiableNarrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken;
 import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListToModifiableSet;
 
-public class EarliestOrNarrowestWhitelistManager extends WhitelistManager
+/**
+ *  A whitelist that may narrow after startup but never widen -- a ratchet over <i>both</i>
+ *  System properties and supplied configuration.
+ *
+ *  <p><b>Not currently used.</b> The implementation in service is
+ *  {@link SealedSystemPropertiesWhitelistManager}. Kept for the reasons below, which are mostly
+ *  about what this can express that sealing cannot.</p>
+ *
+ *  <h3>The policy</h3>
+ *
+ *  <p>The whitelist is fixed at its first lookup and thereafter re-resolved only against the
+ *  keys that produced it -- which is what stops a newly added subkey from being a back door,
+ *  since the additive subkey scheme would otherwise let one widen the result. The re-resolution
+ *  is intersected with what was latched, so entries may leave but never arrive. Both sentinels
+ *  keep their meanings: a lone wildcard narrows to a concrete list when configuration supplies
+ *  one, a later widening to a wildcard is ignored, and a deny-all token anywhere empties the
+ *  whitelist irreversibly.</p>
+ *
+ *  <p>Getting that right took some care. Set intersection alone mishandles the wildcard in both
+ *  directions -- <code>{*}</code> against <code>{A}</code> is empty, as is <code>{A}</code>
+ *  against <code>{*}</code> -- so the most permissive configuration would silently become the
+ *  most restrictive. And a non-unique wildcard must be stripped at resolution, or narrowing
+ *  <code>{*,A}</code> against <code>{*,B}</code> would leave exactly <code>{*}</code>, turning
+ *  two deployments that each meant to restrict into accept-everything.</p>
+ *
+ *  <h3>Why it is not what we settled on</h3>
+ *
+ *  <p>The same objection as {@link EarliestOrStrongestBooleanProperty}: ratcheting supplied
+ *  configuration conflates a parameter with an ambient channel, and breaks the overloads that
+ *  accept a config per call. Beyond that, the retained whitelist is expensive in ways sealing is
+ *  not. An unconfigured first lookup latches deny-all permanently, so a library that consults a
+ *  gate before a deployment has finished configuring can brick it; additions to a latched key,
+ *  and whole new subkeys, are ignored in silence; and the result depends on lookup history,
+ *  which a shared-JVM test suite can only manage by reaching in and resetting state.</p>
+ *
+ *  <p>{@link SealedSystemPropertiesWhitelistManager} closes the same channel -- runtime property
+ *  mutation cannot widen a whitelist, because runtime System properties are not read -- while
+ *  holding no state at all. What it gives up is runtime <i>narrowing</i> through System
+ *  properties, which is not a workflow we support and which application configuration can do
+ *  instead.</p>
+ *
+ *  <h3>When it might be right after all</h3>
+ *
+ *  <p>If a whitelist ever needs to be tightenable at runtime through System properties -- an
+ *  operator hardening a live JVM without a restart -- this is the shape that allows it safely.
+ *  Nothing in service today needs that.</p>
+ */
+class EarliestOrNarrowestWhitelistManager extends WhitelistManager
 {
     //MT: protected by this' lock
     WhitelistInfo previousWhitelistInfo = null;

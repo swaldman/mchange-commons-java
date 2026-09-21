@@ -190,8 +190,8 @@ public abstract class MLog
 	List<String> attempts = null;
 	for (int i = 0, len = classnames.length; i < len; ++i)
 	    {
-                // note that we cannot gate this behind a whitelist using EarliestOrNarrowestWhitelistManager,
-                // because that hits SealedSystemProperties, which requires that logging already be initialized
+                // note that we cannot gate this behind a whitelist using a WhitelistManager
+                // that hits SealedSystemProperties, which requires that logging already be initialized
                 //
                 // classnames must be provided by a trusted source
 		try { return (MLog) Class.forName( MLogClasses.resolveIfAlias( classnames[i] ) ).getDeclaredConstructor().newInstance(); }

@@ -12,13 +12,11 @@ public final class ByNameInstantiationUtils
 
     private final static String COMMON_KEY_PFX = "com.mchange.v2.reflect.byNameInstantiation";
 
-    private final static boolean DEFAULT_ENFORCE_WHITELIST = false;
-
-    private final static EarliestOrNarrowestWhitelistManager whitelistManager = new EarliestOrNarrowestWhitelistManager( COMMON_KEY_PFX, null );
+    private final static SealedSystemPropertiesWhitelistManager whitelistManager = new SealedSystemPropertiesWhitelistManager( COMMON_KEY_PFX, null );
 
     private final static String ENFORCE_WHITELIST_KEY = whitelistManager.getTopLevelBaseKey() + ".enforceWhitelist";
 
-    private final static EarliestOrStrongestBooleanProperty _enforceWhiteList = new EarliestOrStrongestBooleanProperty( ENFORCE_WHITELIST_KEY, true, false );
+    private final static SealedSystemPropertiesBooleanProperty _enforceWhiteList = new SealedSystemPropertiesBooleanProperty( ENFORCE_WHITELIST_KEY, true, false );
 
     public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
@@ -48,7 +46,7 @@ public final class ByNameInstantiationUtils
         if (!nameOkay)
         {
             String whitelistDescriptor = whitelistManager.makeWhitelistDescriptor(info.getSource());
-            EarliestOrStrongestBooleanProperty.Details[] holder = new EarliestOrStrongestBooleanProperty.Details[1];
+            SealedSystemPropertiesBooleanProperty.Details[] holder = new SealedSystemPropertiesBooleanProperty.Details[1];
             if (_enforceWhiteList.getValue(pcfg, logger, holder))
             {
                 throw new InstantiationNotPermittedException(
@@ -57,7 +55,7 @@ public final class ByNameInstantiationUtils
             }
             else
             {
-                EarliestOrStrongestBooleanProperty.Details details = holder[0];
+                SealedSystemPropertiesBooleanProperty.Details details = holder[0];
                 if (logger.isLoggable(MLevel.WARNING))
                 {
                     if (details.isUnconfigured())

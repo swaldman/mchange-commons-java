@@ -7,8 +7,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.cfg.WhitelistInfo;
-import com.mchange.v2.cfg.EarliestOrNarrowestWhitelistManager;
-import com.mchange.v2.cfg.EarliestOrStrongestBooleanProperty;
+import com.mchange.v2.cfg.SealedSystemPropertiesBooleanProperty;
+import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -55,8 +55,8 @@ public final class ReferenceableUtils
         ACCEPTABLE_WHITELIST_SOURCES = Collections.unmodifiableSet(tmp1);
     }
 
-    private final static EarliestOrNarrowestWhitelistManager objectFactoryWhitelistManager = new EarliestOrNarrowestWhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
-    private final static EarliestOrNarrowestWhitelistManager referenceableJavaBeanClassWhitelistManager = new EarliestOrNarrowestWhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+    private final static SealedSystemPropertiesWhitelistManager objectFactoryWhitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
+    private final static SealedSystemPropertiesWhitelistManager referenceableJavaBeanClassWhitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
 
     /**
      * A null string value in a Reference sometimes goes to the literal
@@ -265,10 +265,10 @@ public final class ReferenceableUtils
         }
     }
 
-    private static EarliestOrStrongestBooleanProperty _allowIndirectSerializationViaReference      = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, false );
-    private static EarliestOrStrongestBooleanProperty _generateSerializedObjectBinaryRefAddr       = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, false );
-    private static EarliestOrStrongestBooleanProperty _supportReferenceRemoteFactoryClassLocation  = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, false );
-    private static EarliestOrStrongestBooleanProperty _acceptDeserializedInitialContextEnvironment = new EarliestOrStrongestBooleanProperty( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, false );
+    private static SealedSystemPropertiesBooleanProperty _allowIndirectSerializationViaReference      = new SealedSystemPropertiesBooleanProperty( SecurityConfigKey.ALLOW_INDIRECT_SERIALIZATION_VIA_REFERENCE, false );
+    private static SealedSystemPropertiesBooleanProperty _generateSerializedObjectBinaryRefAddr       = new SealedSystemPropertiesBooleanProperty( SecurityConfigKey.GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR, false );
+    private static SealedSystemPropertiesBooleanProperty _supportReferenceRemoteFactoryClassLocation  = new SealedSystemPropertiesBooleanProperty( SecurityConfigKey.SUPPORT_REFERENCE_REMOTE_FACTORY_CLASS_LOCATION, false );
+    private static SealedSystemPropertiesBooleanProperty _acceptDeserializedInitialContextEnvironment = new SealedSystemPropertiesBooleanProperty( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, false );
 
     public static boolean allowIndirectSerializationViaReference( PropertiesConfig pcfg )
     { return _allowIndirectSerializationViaReference.getValue(pcfg, logger ); }
@@ -283,7 +283,7 @@ public final class ReferenceableUtils
     { return _acceptDeserializedInitialContextEnvironment.getValue(pcfg, logger ); }
 
     /*
-    // we do lose some informative warnings upgrading to.EarliestOrStrongestBooleanProperty.
+    // we do lose some informative warnings upgrading to.SealedSystemPropertiesBooleanProperty.
     // we're keeping the old version around commented out as a reminder, if down the line we want to
     // restore them.
 
