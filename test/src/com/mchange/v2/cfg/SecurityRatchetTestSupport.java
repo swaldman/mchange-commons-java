@@ -101,14 +101,57 @@ public final class SecurityRatchetTestSupport
     }
 
     /**
+     *  Returns every String property held in a static field of the given class to the state a
+     *  freshly constructed one would have.
+     *
+     *  <p>These hold no decision, only a record of what has already been said once, so leaving
+     *  them alone changes no value a test reads back. It changes what a test would see in a
+     *  captured log, which is precisely the kind of leakage that is invisible until some later
+     *  test starts asserting on warnings and then fails depending on what ran before it.</p>
+     */
+    public static void resetStringProperties( Class<?> holder ) throws Exception
+    {
+        for ( Field f : holder.getDeclaredFields() )
+        {
+            if ( Modifier.isStatic( f.getModifiers() )
+                 && SealedSystemPropertiesStringProperty.class.isAssignableFrom( f.getType() ) )
+            {
+                f.setAccessible( true );
+                SealedSystemPropertiesStringProperty sp = (SealedSystemPropertiesStringProperty) f.get( null );
+                if ( sp != null ) reset( sp );
+            }
+        }
+    }
+
+    /** package-private state, reachable directly: we are declared in com.mchange.v2.cfg */
+    private static void reset( SealedSystemPropertiesStringProperty sp )
+    {
+        sp.warnedSealed  = false;
+        sp.warnedDefault = false;
+
+        // recomputed rather than set to a constant: this one is derived from the default value
+        // and the whitespace policy, exactly as the constructor derives it.
+        sp.mustWarnDefaultValueWhitespaceOrEmpty =
+            ( sp.whitespace != SealedSystemPropertiesStringProperty.Whitespace.NO_TRIM
+              && sp.defaultValue != null
+              && ( "".equals( sp.defaultValue ) || !sp.defaultValue.equals( sp.defaultValue.trim() ) ) );
+    }
+
+    /**
      *  Every gate a class holds, plus the sealed snapshot -- the usual need for a test class
      *  that drives configuration-controlled gates case by case.
+     *
+     *  <p>Every gate <i>type</i>, that is. When a new kind of gate appears and this method is
+     *  not taught about it, nothing here fails; the new gate simply stops being reset, which is
+     *  how the move to the sealed implementations went unnoticed. Adding a gate type means
+     *  adding a line here.</p>
      */
     public static void resetAll( Class<?> holder ) throws Exception
     {
         unsealSystemProperties();
         resetBooleanProperties( holder );
         resetWhitelistManagers( holder );
+        resetStringProperties( holder );
     }
 
     private SecurityRatchetTestSupport()

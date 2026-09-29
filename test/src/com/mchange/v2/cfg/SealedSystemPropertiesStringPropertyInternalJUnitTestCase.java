@@ -76,7 +76,11 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     }
 
     private SealedSystemPropertiesStringProperty prop()
-    { return new SealedSystemPropertiesStringProperty( KEY, DEFAULT ); }
+    { return new SealedSystemPropertiesStringProperty( KEY, DEFAULT, false ); }
+
+    /** The same property, but declaring its default the secure choice rather than a concession. */
+    private SealedSystemPropertiesStringProperty highSecurityProp()
+    { return new SealedSystemPropertiesStringProperty( KEY, DEFAULT, true ); }
 
     private String value( SealedSystemPropertiesStringProperty p )
     { return p.getValue( null, logger ); }
@@ -180,7 +184,7 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     public void testBlanksAreEmptyPolicyReturnsTheEmptyString()
     {
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, DEFAULT, Whitespace.TRIM_BLANKS_ARE_EMPTY );
+            new SealedSystemPropertiesStringProperty( KEY, DEFAULT, false, Whitespace.TRIM_BLANKS_ARE_EMPTY );
 
         assertEquals( "", value( p, pcfg( KEY, "   " ) ) );
     }
@@ -188,7 +192,7 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     public void testNoTrimPolicyPreservesWhatWasConfigured()
     {
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, DEFAULT, Whitespace.NO_TRIM );
+            new SealedSystemPropertiesStringProperty( KEY, DEFAULT, false, Whitespace.NO_TRIM );
 
         assertEquals( "  spaced  ", value( p, pcfg( KEY, "  spaced  " ) ) );
     }
@@ -203,7 +207,7 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     public void testTheDefaultIsNotProcessedByTheWhitespacePolicy()
     {
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, "  " + DEFAULT + "  " );
+            new SealedSystemPropertiesStringProperty( KEY, "  " + DEFAULT + "  ", false );
 
         assertEquals( "  " + DEFAULT + "  ", value( p ) );
     }
@@ -213,7 +217,7 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     {
         System.setProperty( KEY, FROM_SYS );
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, "  " + DEFAULT + "  " );
+            new SealedSystemPropertiesStringProperty( KEY, "  " + DEFAULT + "  ", false );
 
         assertEquals( "Precondition: the default is not in play.", FROM_SYS, value( p ) );
         assertEquals( "A defect in code should be reported however the deployment is configured: "
@@ -241,7 +245,7 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     public void testAnEmptyDefaultIsNotComplainedAboutWhenBlanksAreEmpty()
     {
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, "", Whitespace.TRIM_BLANKS_ARE_EMPTY );
+            new SealedSystemPropertiesStringProperty( KEY, "", false, Whitespace.TRIM_BLANKS_ARE_EMPTY );
 
         assertEquals( "", value( p ) );
         assertTrue( "The policy declared this value meaningful: " + logger.warnings(),
@@ -252,11 +256,80 @@ public class SealedSystemPropertiesStringPropertyInternalJUnitTestCase extends T
     public void testAnEmptyDefaultIsComplainedAboutWhenBlanksAreNull()
     {
         SealedSystemPropertiesStringProperty p =
-            new SealedSystemPropertiesStringProperty( KEY, "", Whitespace.TRIM_BLANKS_ARE_NULL );
+            new SealedSystemPropertiesStringProperty( KEY, "", false, Whitespace.TRIM_BLANKS_ARE_NULL );
 
         value( p );
 
         assertEquals( 1, logger.warningsContaining( "used AS-IS" ).size() );
+    }
+
+    // ==================== a high-security default is not news ====================
+
+    /**
+     *  The fallback notice exists to tell a deployment it is running on a default it might
+     *  want to reconsider. Some defaults are instead the most restrictive choice available --
+     *  ReferenceableUtils defaults its NameGuard to ApparentlyLocalNameGuard, which refuses
+     *  every name that does not look local -- and since almost no deployment configures such a
+     *  setting, announcing it would put a WARNING in front of nearly every user for being
+     *  correctly configured.
+     *
+     *  <p>The boolean member of this family can work this out for itself, warning only when
+     *  its default differs from its safe polarity. A String has no polarity, so only the
+     *  caller knows, and says so at construction.</p>
+     */
+    public void testAHighSecurityDefaultIsUsedWithoutAnnouncement()
+    {
+        assertEquals( "Precondition: the default is what we fall back to.", DEFAULT, value( highSecurityProp() ) );
+
+        assertTrue( "Nothing to report -- the default is the secure answer: " + logger.warnings(),
+                    logger.warnings().isEmpty() );
+    }
+
+    /** The distinction is in the declaration, not in the value: the same default, announced. */
+    public void testAnOrdinaryDefaultWithTheSameValueIsStillAnnounced()
+    {
+        assertEquals( DEFAULT, value( prop() ) );
+
+        assertEquals( "Told, because this default was not declared secure: " + logger.warnings(),
+                      1, logger.warningsContaining( "Using default value" ).size() );
+    }
+
+    /**
+     *  Only that notice is suppressed. A default with surrounding whitespace is an authoring
+     *  mistake whatever its security posture, and Class.forName will not care how the author
+     *  characterized it.
+     */
+    public void testAMalformedHighSecurityDefaultIsStillReported()
+    {
+        SealedSystemPropertiesStringProperty p =
+            new SealedSystemPropertiesStringProperty( KEY, "  " + DEFAULT + "  ", true );
+
+        assertEquals( "  " + DEFAULT + "  ", value( p ) );
+
+        assertTrue( "Falling back to a secure default is not news: " + logger.warnings(),
+                    logger.warningsContaining( "Using default value" ).isEmpty() );
+        assertEquals( "but a malformed one still is: " + logger.warnings(),
+                      1, logger.warningsContaining( "used AS-IS" ).size() );
+    }
+
+    /** Nor does it quiet the notice that a sealed System property has taken over. */
+    public void testAHighSecurityDefaultDoesNotQuietTheSealedSystemPropertyNotice()
+    {
+        logger.setMinimumLevel( MLevel.INFO );
+        System.setProperty( KEY, FROM_SYS );
+
+        assertEquals( FROM_SYS, value( highSecurityProp() ) );
+
+        assertEquals( "An operator override is worth noting regardless: " + logger.warnings(),
+                      1, logger.warningsContaining( "will be ignored" ).size() );
+    }
+
+    /** Configuration still outranks it, silently -- that is ordinary use, not a fallback. */
+    public void testAHighSecurityDefaultYieldsToConfigurationWithoutComment()
+    {
+        assertEquals( FROM_CFG, value( highSecurityProp(), pcfg( KEY, FROM_CFG ) ) );
+
+        assertTrue( "Nothing was defaulted: " + logger.warnings(), logger.warnings().isEmpty() );
     }
 
     // ==================== notices about falling back ====================

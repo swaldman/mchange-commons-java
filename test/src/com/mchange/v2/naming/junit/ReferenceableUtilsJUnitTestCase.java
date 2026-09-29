@@ -38,6 +38,8 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
     }
 
     // Binary names as used by Class.forName / class literals
+    static final String DEFAULT_NAME_GUARD_CLASS_NAME = ApparentlyLocalNameGuard.class.getName();
+
     static final String ALPHA_FACTORY = AlphaObjectFactory.class.getName();
     static final String BETA_FACTORY  = BetaObjectFactory.class.getName();
 
@@ -380,6 +382,190 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
             fail( "Expected NamingException: non-existent NameGuard class" );
         }
         catch (NamingException e) { /* expected */ }
+    }
+
+    // ==========================================
+    // assertAcceptableName -- how a refusal describes the guard that refused
+    //
+    // A refusal is often the only thing a deployer sees, and it has to say where the guard came
+    // from: "we defaulted to this" and "you configured this" call for different responses. That
+    // provenance is decided by comparing the resolved class name against the default, which is
+    // easy to get wrong -- the test was a null check for as long as an unconfigured lookup
+    // returned null, and silently stopped meaning anything when the default moved into the
+    // property object and null stopped being possible.
+    // ==========================================
+
+    /** Unconfigured: the refusal must own the choice as ours, not attribute it to the deployer. */
+    public void testRefusalUnderTheDefaultGuardCallsItTheDefault()
+    {
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( "ldap://example.com", null );
+            fail( "Expected NamingException: non-local name rejected by default guard" );
+        }
+        catch (NamingException e)
+        {
+            String msg = e.getMessage();
+            assertTrue( "Should name the default guard as a default: " + msg,
+                        msg.contains( "default NameGuard" ) );
+            assertTrue( "Nothing was configured, so nothing should be blamed on configuration: " + msg,
+                        !msg.contains( "currently configured via" ) );
+        }
+        finally { restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved ); }
+    }
+
+    /** Configured: the refusal must name the key, so the deployer knows what to go change. */
+    public void testRefusalUnderAConfiguredGuardNamesTheKeyThatSelectedIt()
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     FirstComponentIsJavaIdentifierNameGuard.class.getName() );
+        try
+        {
+            // first component "java:comp" contains a colon, so this guard refuses it
+            ReferenceableUtils.assertAcceptableName( "java:comp/env", cfg );
+            fail( "Expected NamingException: 'java:comp/env' rejected by FirstComponentIsJavaIdentifier guard" );
+        }
+        catch (NamingException e)
+        {
+            String msg = e.getMessage();
+            assertTrue( "Should name the guard that was configured: " + msg,
+                        msg.contains( FirstComponentIsJavaIdentifierNameGuard.class.getName() ) );
+            assertTrue( "and the key that selected it: " + msg,
+                        msg.contains( SecurityConfigKey.NAME_GUARD_CLASS_NAME ) );
+            assertTrue( "This guard was chosen, not defaulted to: " + msg,
+                        !msg.contains( "default NameGuard" ) );
+        }
+    }
+
+    /**
+     *  A guard named in configuration that cannot be constructed is the deployer's problem, and
+     *  the message says so. Its counterpart -- failing to construct the default, which would be
+     *  ours and raises InternalError -- has no test: it would require ApparentlyLocalNameGuard
+     *  to be absent from a JVM that is running this suite out of the same jar.
+     */
+    public void testAFailureToConstructAConfiguredGuardIsAttributedToConfiguration()
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     "com.example.DoesNotExistNameGuard" );
+        try
+        {
+            ReferenceableUtils.assertAcceptableName( "java:comp/env", cfg );
+            fail( "Expected NamingException: non-existent NameGuard class" );
+        }
+        catch (NamingException e)
+        {
+            String msg = e.getMessage();
+            assertTrue( "Should say the configured guard failed, and name it: " + msg,
+                        msg.contains( "configured NameGuard" ) && msg.contains( "com.example.DoesNotExistNameGuard" ) );
+        }
+    }
+
+    /**
+     *  ApparentlyLocalNameGuard is the most restrictive guard we ship, and almost nobody
+     *  configures a NameGuard at all, so falling back to it is the normal state rather than
+     *  news. It must therefore be declared a high-security default, or every deployment that
+     *  ever resolves a JNDI name gets a WARNING for being correctly configured.
+     *
+     *  <p>Asserted structurally, which is not how we would prefer to test it. The behaviour it
+     *  protects -- that nothing is logged -- happens through ReferenceableUtils' own static
+     *  MLogger, which a test cannot substitute for, and the declaration is the whole of what
+     *  this class contributes; {@code SealedSystemPropertiesStringPropertyInternalJUnitTestCase}
+     *  covers what the flag then does.</p>
+     */
+    public void testTheDefaultNameGuardIsDeclaredAHighSecurityDefault() throws Exception
+    {
+        java.lang.reflect.Field pf = ReferenceableUtils.class.getDeclaredField( "nameGuardClassNameProperty" );
+        pf.setAccessible( true );
+        Object prop = pf.get( null );
+
+        java.lang.reflect.Field hsf = prop.getClass().getDeclaredField( "highSecurityDefault" );
+        hsf.setAccessible( true );
+
+        assertTrue( "Defaulting to the most restrictive guard we have is not something to warn about.",
+                    hsf.getBoolean( prop ) );
+    }
+
+    /** A NameGuard that cannot be constructed, to stand in for a default that has gone missing. */
+    public static final class ExplodingNameGuard implements com.mchange.v2.naming.NameGuard
+    {
+        public ExplodingNameGuard() { throw new UnsupportedOperationException( "boom" ); }
+        @Override public boolean nameIsAcceptable( Name name )   { return false; }
+        @Override public boolean nameIsAcceptable( String name ) { return false; }
+        @Override public String onlyAcceptableWhen()             { return "never"; }
+    }
+
+    /**
+     *  The other half of the attribution: when it is the <i>default</i> guard that will not
+     *  construct, that is our bug and not the deployer's, and it raises InternalError rather
+     *  than a NamingException blaming configuration they never wrote.
+     *
+     *  <p>ApparentlyLocalNameGuard ships in the same jar as the code under test, so the only way
+     *  to reach this branch is to make its construction fail artificially. ReferenceableUtils
+     *  caches Constructors by class name; we put one that throws under the default guard's name,
+     *  and restore the cache afterward. Invasive, but this branch is otherwise unreachable, and
+     *  it is a branch that has already rotted once unnoticed.</p>
+     */
+    @SuppressWarnings("unchecked")
+    public void testAFailureToConstructTheDefaultGuardIsOurBugNotTheDeployersFault() throws Exception
+    {
+        java.lang.reflect.Field f = ReferenceableUtils.class.getDeclaredField( "nameGuardClassNameToConstructor" );
+        f.setAccessible( true );
+        Map<String,java.lang.reflect.Constructor<?>> cache =
+            (Map<String,java.lang.reflect.Constructor<?>>) f.get( null );
+
+        Map<String,java.lang.reflect.Constructor<?>> savedCache;
+        java.lang.reflect.Constructor<?> exploding = ExplodingNameGuard.class.getDeclaredConstructor();
+        synchronized ( cache )
+        {
+            savedCache = new HashMap<String,java.lang.reflect.Constructor<?>>( cache );
+            cache.put( DEFAULT_NAME_GUARD_CLASS_NAME, exploding );
+        }
+        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        try
+        {
+            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            ReferenceableUtils.assertAcceptableName( "java:comp/env/myDS", null );
+            fail( "Expected InternalError: the default guard could not be constructed" );
+        }
+        catch (InternalError e)
+        {
+            assertTrue( "Should name the default guard: " + e.getMessage(),
+                        e.getMessage().contains( DEFAULT_NAME_GUARD_CLASS_NAME ) );
+        }
+        catch (NamingException e)
+        {
+            fail( "This is our failure, not the deployer's; it should not arrive as a NamingException "
+                  + "blaming configuration: " + e.getMessage() );
+        }
+        finally
+        {
+            restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved );
+            synchronized ( cache ) { cache.clear(); cache.putAll( savedCache ); }
+        }
+    }
+
+    /**
+     *  Provenance is decided by comparing class names, so explicitly configuring the very class
+     *  we would have defaulted to is described as the default. Documented rather than fixed:
+     *  the description names the guard accurately either way, and the alternative is having the
+     *  property object report whether a value was found, for no benefit a reader would notice.
+     */
+    public void testExplicitlyConfiguringTheDefaultGuardReadsAsTheDefault()
+    {
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                     ApparentlyLocalNameGuard.class.getName() );
+        try
+        {
+            ReferenceableUtils.assertAcceptableName( "ldap://example.com", cfg );
+            fail( "Expected NamingException: non-local name rejected" );
+        }
+        catch (NamingException e)
+        {
+            assertTrue( "Known, harmless: " + e.getMessage(),
+                        e.getMessage().contains( "default NameGuard" ) );
+        }
     }
 
     // ==========================================
