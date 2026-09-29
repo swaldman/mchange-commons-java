@@ -26,6 +26,7 @@ public class CapturingMLogger implements MLogger
 {
     private final List<String> warnings = new ArrayList<String>();
     private boolean loggable = true;
+    private MLevel minimumLevel = MLevel.WARNING;
 
     /** with warnings off, isLoggable(WARNING) is false -- security behavior must not depend on it */
     public void setLoggable( boolean loggable )
@@ -54,9 +55,13 @@ public class CapturingMLogger implements MLogger
     public boolean sawWarningContaining( String... fragments )
     { return ! warningsContaining( fragments ).isEmpty(); }
 
+    /** Capture at a lower level than WARNING, for a class whose notices are informational. */
+    public void setMinimumLevel( MLevel minimumLevel )
+    { this.minimumLevel = minimumLevel; }
+
     @Override
     public boolean isLoggable(MLevel l)
-    { return loggable && l != null && l.intValue() >= MLevel.WARNING.intValue(); }
+    { return loggable && l != null && l.intValue() >= minimumLevel.intValue(); }
 
     @Override
     public void log(MLevel l, String msg)
