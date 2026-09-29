@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.cfg.WhitelistInfo;
 import com.mchange.v2.cfg.SealedSystemPropertiesBooleanProperty;
+import com.mchange.v2.cfg.SealedSystemPropertiesStringProperty;
 import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
@@ -55,8 +56,12 @@ public final class ReferenceableUtils
         ACCEPTABLE_WHITELIST_SOURCES = Collections.unmodifiableSet(tmp1);
     }
 
+    private final static String DEFAULT_NAME_GUARD_CLASS_NAME = "com.mchange.v2.naming.ApparentlyLocalNameGuard";
+
     private final static SealedSystemPropertiesWhitelistManager objectFactoryWhitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.OBJECT_FACTORY_BASE_KEY, SecurityConfigKey.OBJECT_FACTORY_WHITELIST );
     private final static SealedSystemPropertiesWhitelistManager referenceableJavaBeanClassWhitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
+
+    private final static SealedSystemPropertiesStringProperty nameGuardClassNameProperty = new SealedSystemPropertiesStringProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, DEFAULT_NAME_GUARD_CLASS_NAME, true );
 
     /**
      * A null string value in a Reference sometimes goes to the literal
@@ -190,8 +195,6 @@ public final class ReferenceableUtils
 	    }
     }
 
-    private final static String DEFAULT_NAME_GUARD_CLASS_NAME = "com.mchange.v2.naming.ApparentlyLocalNameGuard";
-
     // for now we'll just use a simple HashMap, synchronizing access, to cache Constructors.
     // there should be very few values looked up, so soft-reference-ing seems like overkill
     //
@@ -216,19 +219,11 @@ public final class ReferenceableUtils
 
     public static void assertAcceptableName( Object jndiName, PropertiesConfig pcfg ) throws NamingException
     {
-        String nameGuardClassName;
-        if (pcfg == null)
-            nameGuardClassName = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
-        else
-            nameGuardClassName = pcfg.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        String nameGuardClassName = nameGuardClassNameProperty.getValue(pcfg, logger); // resolves to default if not configured
 
         try
         {
-            NameGuard nameGuard;
-            if (nameGuardClassName == null)
-                nameGuard = nameGuardForClassName( DEFAULT_NAME_GUARD_CLASS_NAME );
-            else
-                nameGuard = nameGuardForClassName( nameGuardClassName );
+            NameGuard nameGuard = nameGuardForClassName( nameGuardClassName );
 
             boolean acceptable;
             if ( jndiName instanceof String )
@@ -247,7 +242,7 @@ public final class ReferenceableUtils
             if (!acceptable)
             {
                 String nameGuardDescription;
-                if (nameGuardClassName == null)
+                if (DEFAULT_NAME_GUARD_CLASS_NAME.equals(nameGuardClassName))
                     nameGuardDescription = "default NameGuard '" + DEFAULT_NAME_GUARD_CLASS_NAME +"'";
                 else
                     nameGuardDescription = "NameGuard '" + nameGuardClassName + "', currently configured via '" + SecurityConfigKey.NAME_GUARD_CLASS_NAME + "'";
@@ -258,7 +253,7 @@ public final class ReferenceableUtils
         }
         catch (ReflectiveOperationException roe)
         {
-            if (nameGuardClassName == null)
+            if (DEFAULT_NAME_GUARD_CLASS_NAME.equals(nameGuardClassName))
                 throw new InternalError("Huh? We failed to reflectively lookup and construct default NameGuard '" + DEFAULT_NAME_GUARD_CLASS_NAME + "'?!?", roe);
             else
                 throw new NamingException("We failed to reflectively lookup and construct configured NameGuard '" + nameGuardClassName + ". Cause: " + roe);

@@ -64,8 +64,24 @@ import com.mchange.v2.log.*;
  *  {@link Whitespace#TRIM_BLANKS_ARE_EMPTY} is exempt, that policy having declared the empty
  *  String meaningful.</p>
  *
- *  <p>Falling back to the default at all is reported too, once, and again if configuration
- *  appears and is later withdrawn -- a deployment running on a default should know it.</p>
+ *  <h3>High-security defaults</h3>
+ *
+ *  <p>Falling back to the default is reported too, once, and again if configuration appears and
+ *  is later withdrawn -- a deployment running on the library's choice rather than its own should
+ *  know it. But not every default is a concession. Some are the most restrictive setting
+ *  available, and a setting whose default already refuses everything it ought to refuse is one
+ *  almost nobody configures, so reporting the fallback would put a warning in front of nearly
+ *  every user for being correctly configured. Constructing with <code>highSecurityDefault</code>
+ *  true declares a default to be of that kind, and suppresses the notice.</p>
+ *
+ *  <p>{@link SealedSystemPropertiesBooleanProperty} needs no such flag. A boolean has a safe
+ *  polarity, so it can see for itself whether its default is the safe one and warn only when it
+ *  is not. A String has no polarity, so only the caller knows.</p>
+ *
+ *  <p>The flag suppresses that one notice and nothing else. A default carrying stray whitespace
+ *  is still reported -- that is a mistake in code whatever the setting's security posture, and
+ *  <code>Class.forName</code> will not care how the author characterized it -- and a sealed
+ *  System property taking over is still noted.</p>
  */
 public class SealedSystemPropertiesStringProperty
 {
@@ -74,10 +90,11 @@ public class SealedSystemPropertiesStringProperty
     //MT: immutable post-constructor
     final String property;
     final String defaultValue;
+    final boolean highSecurityDefault;
     final Whitespace whitespace;
 
     //MT: protected by this' lock
-    boolean mustWarnRiskyDefaultValue;
+    boolean mustWarnDefaultValueWhitespaceOrEmpty;
     boolean warnedSealed = false;
     boolean warnedDefault = false;
 
@@ -108,24 +125,25 @@ public class SealedSystemPropertiesStringProperty
         return out;
     }
 
-    public SealedSystemPropertiesStringProperty(String property, String defaultValue, Whitespace whitespace)
+    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault, Whitespace whitespace)
     {
         this.property = property;
         this.defaultValue = defaultValue;
+        this.highSecurityDefault = highSecurityDefault;
         this.whitespace = whitespace;
 
-        this.mustWarnRiskyDefaultValue = (whitespace != Whitespace.NO_TRIM && defaultValue != null && ("".equals(defaultValue) || !defaultValue.equals(defaultValue.trim())));
+        this.mustWarnDefaultValueWhitespaceOrEmpty = (whitespace != Whitespace.NO_TRIM && defaultValue != null && ("".equals(defaultValue) || !defaultValue.equals(defaultValue.trim())));
     }
 
-    public SealedSystemPropertiesStringProperty(String property, String defaultValue)
-    { this( property, defaultValue, Whitespace.TRIM_BLANKS_ARE_NULL ); }
+    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault)
+    { this( property, defaultValue, highSecurityDefault, Whitespace.TRIM_BLANKS_ARE_NULL ); }
 
     public SealedSystemPropertiesStringProperty(String property)
-    { this( property, null ); }
+    { this( property, null, false ); }
 
     public synchronized String getValue(PropertiesConfig pcfg, MLogger logger)
     {
-        if (mustWarnRiskyDefaultValue && logger.isLoggable(MLevel.WARNING))
+        if (mustWarnDefaultValueWhitespaceOrEmpty && logger.isLoggable(MLevel.WARNING))
         {
             if (whitespace == Whitespace.TRIM_BLANKS_ARE_EMPTY && "".equals(defaultValue))
             {
@@ -133,7 +151,7 @@ public class SealedSystemPropertiesStringProperty
             }
             else
                 logger.log(MLevel.WARNING, "Note that default value '" + defaultValue + "' has leading or trailing spaces or is empty. This value will be used AS-IS as the default, it will not be processed according to whitespace policy " + whitespace + ".");
-            mustWarnRiskyDefaultValue = false;
+            mustWarnDefaultValueWhitespaceOrEmpty = false;
         }
 
         String out = trim(SealedSystemProperties.get().getProperty(property));
@@ -143,7 +161,7 @@ public class SealedSystemPropertiesStringProperty
             if (out == null)
             {
                 out = defaultValue;
-                if (defaultValue != null && !warnedDefault && logger.isLoggable(MLevel.WARNING))
+                if (!highSecurityDefault && defaultValue != null && !warnedDefault && logger.isLoggable(MLevel.WARNING))
                 {
                     logger.log(MLevel.WARNING,
                                "No value available in sealed System properties or in current config for property '" +
