@@ -38,6 +38,7 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
     {
 	Set<String> set = new HashSet<String>();
         set.add( "com.mchange.v2.lang.Coerce" );
+        set.add( "com.mchange.v2.cfg.PropertiesConfig" );
         set.add( "com.mchange.v2.csv.FastCsvUtils" );
         set.add( "com.mchange.v2.csv.CsvBufferedReader" );
         set.add( "com.mchange.v2.naming.SecurelyStringifiable" );
@@ -97,9 +98,9 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
         iw.println("}");
         iw.println();
         if (baseClass)
-            iw.println("public static " + info.getClassName() + " constructSecurelyStringified( String s, " + info.getClassName() + " nascent ) throws Exception");
+            iw.println("public static " + info.getClassName() + " constructSecurelyStringified( String s, " + info.getClassName() + " nascent, PropertiesConfig pcfg ) throws Exception");
         else
-            iw.println("public static " + info.getClassName() + " constructSecurelyStringified( String s ) throws Exception");
+            iw.println("public static " + info.getClassName() + " constructSecurelyStringified( String s, PropertiesConfig pcfg ) throws Exception");
         iw.println("{");
         iw.upIndent();
         iw.println("Set nullSet = new HashSet();");
@@ -179,7 +180,7 @@ public class CsvSecurelyStringifiableBeangenGeneratorExtension implements Genera
                     iw.println( "out." + propName + " = (" + propType.getName() + ") Coerce.toObject( (String) valMap.get( \"" + propName + "\"), " + propType.getName() + ".class );" );
             }
             else
-                iw.println( "out." + propName + " = (" + propType.getName() + ") SecurelyStringifiable.constructSecurelyStringified( (String) valMap.get( \"" + propName + "\") );" );
+                iw.println( "out." + propName + " = (" + propType.getName() + ") SecurelyStringifiable.constructSecurelyStringified( (String) valMap.get( \"" + propName + "\"), pcfg );" );
             iw.downIndent();
             iw.println("}");
             if (refType)

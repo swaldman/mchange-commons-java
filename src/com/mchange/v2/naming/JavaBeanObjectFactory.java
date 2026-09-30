@@ -13,6 +13,7 @@ import com.mchange.v2.cfg.CurrentConfigFinder;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.csv.FastCsvUtils;
 import com.mchange.v2.lang.Coerce;
+import com.mchange.v2.reflect.InstantiationNotPermittedException;
 import com.mchange.v2.ser.SerializableUtils;
 
 public class JavaBeanObjectFactory implements ObjectFactory
@@ -63,14 +64,14 @@ public class JavaBeanObjectFactory implements ObjectFactory
                     Collections.addAll(refProps, refPropsArray);
                     //System.err.println(refProps);
                 }
-		Map<String,Object> propMap = createPropertyMap( beanClass, refAddrsMap );
+		Map<String,Object> propMap = createPropertyMap( beanClass, refAddrsMap, pcfg );
 		return findBean( beanClass, propMap, refProps );
 	    }
 	else
 	    return null;
     }
 
-    private Map<String,Object> createPropertyMap( Class<?> beanClass, Map<String,RefAddr> refAddrsMap ) throws Exception
+    private Map<String,Object> createPropertyMap( Class<?> beanClass, Map<String,RefAddr> refAddrsMap, PropertiesConfig pcfg ) throws Exception
     {
 	BeanInfo bi = Introspector.getBeanInfo( beanClass );
 	PropertyDescriptor[] pds = bi.getPropertyDescriptors();
@@ -106,7 +107,17 @@ public class JavaBeanObjectFactory implements ObjectFactory
                                     {
                                         try
                                         {
-                                            out.put( propertyName, SecurelyStringifiable.constructSecurelyStringified( content ) );
+                                            out.put( propertyName, SecurelyStringifiable.constructSecurelyStringified( content, pcfg ) );
+                                        }
+                                        catch (InstantiationNotPermittedException e)
+                                        {
+                                            if (logger.isLoggable( MLevel.WARNING ))
+                                                logger.log(
+                                                    MLevel.WARNING,
+                                                    "Attempt to decode StringRefAddr for property '" + propertyName +
+                                                    "' of " + beanClass + " was DENIED for security reasons. Content: " + content,
+                                                    e
+                                                );
                                         }
                                         catch (Exception e)
                                         {
