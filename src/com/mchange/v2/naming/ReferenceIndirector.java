@@ -84,16 +84,53 @@ public class ReferenceIndirector implements Indirector
 	Name        contextName;
 	Hashtable<?,?>   env;
 
-	ReferenceSerialized( Reference   reference,
-			     Name        name,
-			     Name        contextName,
-			     Hashtable<?,?>   env )
+	ReferenceSerialized( Reference      reference,
+			     Name           name,
+			     Name           contextName,
+			     Hashtable<?,?> env )
 	{
 	    this.reference = reference;
 	    this.name = name;
 	    this.contextName = contextName;
-	    this.env = env;
+            this.env = env;
 	}
+
+        // we want to treat an empty env and null identically, so we
+        // often just normalize empty to null
+        private Hashtable<?,?> normalEnv()
+        { return (env == null || env.isEmpty()) ? null : env; }
+
+        private Hashtable<?,?> getSafeEnv(PropertiesConfig pcfg) throws IOException
+        {
+            Hashtable<?,?> safeEnv = null;
+            if (normalEnv() != null)
+            {
+                 try
+                 {
+                    UnsafeInitialContextEnvFilter filter = ReferenceableUtils.getUnsafeInitialContextEnvFilter( pcfg );
+                    safeEnv = filter.safeEnv(normalEnv(),ReferenceSerialized.class,pcfg);
+                 }
+                 catch (ForbiddenInitialContextException e)
+                 {
+                     throw new IOException(
+                         "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
+                         "because our UnsafeInitialContextEnvFilter forbade the operation while we attempted to " +
+                         "render the lookup safe. This is a policy decision, not a failure. Please see the nested cause Exception for more details.",
+                         e
+                     );
+                 }
+                 catch (Exception e)
+                 {
+                     throw new IOException(
+                         "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
+                         "because we failed to instantiate the UnsafeInitialContextEnvFilter " +
+                         "we required to render the lookup safe. Please see the nested cause Exception for more details.",
+                         e
+                     );
+                 }
+            }
+            return safeEnv; // if env was null, so is safeEnv
+        }
 
         @Override
         public String toString()
@@ -121,17 +158,18 @@ public class ReferenceIndirector implements Indirector
 	{
             if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
             {
+                Hashtable<?,?> safeEnv = this.getSafeEnv(pcfg); // if env is null and we won't need to filter, this is very fast anyway
                 if ( logger.isLoggable(MLevel.FINE) )
                     logger.log(MLevel.FINE, "Indirectly deserializing using dangerous ReferenceIndirector mechanism: " + this);
                 try
                     {
                         Context initialContext;
-                        if ( env == null )
+                        if ( normalEnv() == null )
                             initialContext = new InitialContext();
                         else
                         {
                             if (ReferenceableUtils.acceptDeserializedInitialContextEnvironment(pcfg))
-                                initialContext = new InitialContext( env );
+                                initialContext = new InitialContext( safeEnv );
                             else
                                 throw new IOException(
                                     "A value indirectly serialized as a reference includes a non-default (non-null) InitialContext environment " +
@@ -157,13 +195,15 @@ public class ReferenceIndirector implements Indirector
                         }
 
                         try
-                        { return ReferenceableUtils.referenceToObject( reference, name, nameContext, env, pcfg ); }
+                        { return ReferenceableUtils.referenceToObject( reference, name, nameContext, safeEnv, pcfg ); }
                         catch (NamingException ne)
                         {
                             throw new IOException(
                                 "Failed to dereference reference '" + reference +
                                 "' under name '" + name + "' and nameContext '" + nameContext +
-                                "' using environment: " + envToString(env),
+                                "' using environment: " + envToString(env) +
+                                "; sanitized to environment: " + envToString(safeEnv)
+                                ,
                                 ne
                             );
                         }

@@ -23,5 +23,7 @@ public class SecurityConfigKey {
 
     public final static String GENERATE_SERIALIZED_OBJECT_BINARY_REF_ADDR = "com.mchange.v2.naming.generateSerializedObjectBinaryRefAddr";
 
+    public final static String UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME = "com.mchange.v2.naming.unsafeInitialContextEnvFilterClassName";
+
     private SecurityConfigKey() {}
 }

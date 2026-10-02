@@ -13,6 +13,7 @@ import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
+import com.mchange.v2.reflect.ByNameInstantiationUtils;
 import com.mchange.v2.util.IterableUtils;
 import javax.naming.spi.ObjectFactory;
 
@@ -62,6 +63,7 @@ public final class ReferenceableUtils
     private final static SealedSystemPropertiesWhitelistManager referenceableJavaBeanClassWhitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_BASE_KEY, SecurityConfigKey.REFERENCEABLE_JAVA_BEAN_CLASS_WHITELIST );
 
     private final static SealedSystemPropertiesStringProperty nameGuardClassNameProperty = new SealedSystemPropertiesStringProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, DEFAULT_NAME_GUARD_CLASS_NAME, true );
+    private final static SealedSystemPropertiesStringProperty unsafeInitialContextEnvFilterClassNameProperty = new SealedSystemPropertiesStringProperty( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME, "com.mchange.v2.naming.AlwaysForbidUnsafeInitialContextEnvFilter", true );
 
     /**
      * A null string value in a Reference sometimes goes to the literal
@@ -213,8 +215,36 @@ public final class ReferenceableUtils
                 ctor = cl.getDeclaredConstructor();
                 nameGuardClassNameToConstructor.put(fqcn,ctor);
             }
-            return (NameGuard) ctor.newInstance();
+            return (NameGuard) ctor.newInstance(); // ungated because derives from trusted config!
         }
+    }
+
+    // for now we'll just use a simple HashMap
+    // there should be very few values looked up, so soft-reference-ing seems like overkill
+    //
+    // MT: Synchronized on own lock
+    private final static Map<String,UnsafeInitialContextEnvFilter> unsafeInitialContextEnvFilterClassNameToInstance = new HashMap<String,UnsafeInitialContextEnvFilter>();
+
+    private final static UnsafeInitialContextEnvFilter unsafeInitialContextEnvFilterForClassName(String fqcn)
+        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
+    {
+        synchronized (unsafeInitialContextEnvFilterClassNameToInstance)
+        {
+            UnsafeInitialContextEnvFilter out = unsafeInitialContextEnvFilterClassNameToInstance.get(fqcn);
+            if (out == null)
+            {
+                out = (UnsafeInitialContextEnvFilter) ByNameInstantiationUtils.instantiateByNameUngated(fqcn); // ungated because derives from trusted config!
+                unsafeInitialContextEnvFilterClassNameToInstance.put(fqcn,out);
+            }
+            return out;
+        }
+    }
+
+    public static UnsafeInitialContextEnvFilter getUnsafeInitialContextEnvFilter( PropertiesConfig pcfg )
+        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    {
+        String fqcn = unsafeInitialContextEnvFilterClassNameProperty.getValue( pcfg, logger );
+        return unsafeInitialContextEnvFilterForClassName( fqcn );
     }
 
     public static void assertAcceptableName( Object jndiName, PropertiesConfig pcfg ) throws NamingException
