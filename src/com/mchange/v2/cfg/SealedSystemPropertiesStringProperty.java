@@ -98,6 +98,27 @@ public class SealedSystemPropertiesStringProperty
     boolean warnedSealed = false;
     boolean warnedDefault = false;
 
+    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault, Whitespace whitespace)
+    {
+        this.property = property;
+        this.defaultValue = defaultValue;
+        this.highSecurityDefault = highSecurityDefault;
+        this.whitespace = whitespace;
+
+        this.mustWarnDefaultValueWhitespaceOrEmpty = (whitespace != Whitespace.NO_TRIM && defaultValue != null && ("".equals(defaultValue) || !defaultValue.equals(defaultValue.trim())));
+    }
+
+    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault)
+    { this( property, defaultValue, highSecurityDefault, Whitespace.TRIM_BLANKS_ARE_NULL ); }
+
+    public SealedSystemPropertiesStringProperty(String property)
+    { this( property, null, false ); }
+
+    public String     getProperty()           { return property;            }
+    public String     getDefaultValue()       { return defaultValue;        }
+    public boolean    isHighSecurityDefault() { return highSecurityDefault; }
+    public Whitespace getWhitespace()         { return whitespace;          }
+
     private String trim(String raw)
     {
         String out;
@@ -124,23 +145,7 @@ public class SealedSystemPropertiesStringProperty
         }
         return out;
     }
-
-    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault, Whitespace whitespace)
-    {
-        this.property = property;
-        this.defaultValue = defaultValue;
-        this.highSecurityDefault = highSecurityDefault;
-        this.whitespace = whitespace;
-
-        this.mustWarnDefaultValueWhitespaceOrEmpty = (whitespace != Whitespace.NO_TRIM && defaultValue != null && ("".equals(defaultValue) || !defaultValue.equals(defaultValue.trim())));
-    }
-
-    public SealedSystemPropertiesStringProperty(String property, String defaultValue, boolean highSecurityDefault)
-    { this( property, defaultValue, highSecurityDefault, Whitespace.TRIM_BLANKS_ARE_NULL ); }
-
-    public SealedSystemPropertiesStringProperty(String property)
-    { this( property, null, false ); }
-
+    
     public synchronized String getValue(PropertiesConfig pcfg, MLogger logger)
     {
         if (mustWarnDefaultValueWhitespaceOrEmpty && logger.isLoggable(MLevel.WARNING))
