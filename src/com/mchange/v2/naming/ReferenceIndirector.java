@@ -10,6 +10,7 @@ import javax.naming.NamingException;
 import javax.naming.Reference;
 import javax.naming.Referenceable;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.cfg.ResolvingEntry;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -105,16 +106,18 @@ public class ReferenceIndirector implements Indirector
             Hashtable<?,?> safeEnv = null;
             if (normalEnv() != null)
             {
+                 ResolvingEntry<UnsafeInitialContextEnvFilter> reUnsafeInitialContextEnvFilter = ReferenceableUtils.getUnsafeInitialContextEnvFilterResolvingEntry( pcfg );
                  try
                  {
-                    UnsafeInitialContextEnvFilter filter = ReferenceableUtils.getUnsafeInitialContextEnvFilter( pcfg );
+                    UnsafeInitialContextEnvFilter filter = reUnsafeInitialContextEnvFilter.resolve();
                     safeEnv = filter.safeEnv(normalEnv(),ReferenceSerialized.class,pcfg);
                  }
                  catch (ForbiddenInitialContextException e)
                  {
                      throw new IOException(
                          "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
-                         "because our UnsafeInitialContextEnvFilter forbade the operation while we attempted to " +
+                         "because our UnsafeInitialContextEnvFilter, specified under config key '" + reUnsafeInitialContextEnvFilter.getKey() +
+                         "' with value '" + reUnsafeInitialContextEnvFilter.getValue() + "', forbade the operation while we attempted to " +
                          "render the lookup safe. This is a policy decision, not a failure. Please see the nested cause Exception for more details.",
                          e
                      );
@@ -123,8 +126,9 @@ public class ReferenceIndirector implements Indirector
                  {
                      throw new IOException(
                          "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
-                         "because we failed to instantiate the UnsafeInitialContextEnvFilter " +
-                         "we required to render the lookup safe. Please see the nested cause Exception for more details.",
+                         "because we failed to instantiate the UnsafeInitialContextEnvFilter of class '" + reUnsafeInitialContextEnvFilter.getValue() +
+                         "' (specified by config key '" + reUnsafeInitialContextEnvFilter.getKey() + "'), " +
+                         "which we required to render the lookup safe. Please see the nested cause Exception for more details.",
                          e
                      );
                  }

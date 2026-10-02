@@ -6,10 +6,11 @@ import javax.naming.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.cfg.PropertiesConfig;
-import com.mchange.v2.cfg.WhitelistInfo;
+import com.mchange.v2.cfg.ResolvingEntry;
 import com.mchange.v2.cfg.SealedSystemPropertiesBooleanProperty;
 import com.mchange.v2.cfg.SealedSystemPropertiesStringProperty;
 import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
+import com.mchange.v2.cfg.WhitelistInfo;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
@@ -240,11 +241,15 @@ public final class ReferenceableUtils
         }
     }
 
-    public static UnsafeInitialContextEnvFilter getUnsafeInitialContextEnvFilter( PropertiesConfig pcfg )
-        throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    public static ResolvingEntry<UnsafeInitialContextEnvFilter> getUnsafeInitialContextEnvFilterResolvingEntry( PropertiesConfig pcfg )
     {
-        String fqcn = unsafeInitialContextEnvFilterClassNameProperty.getValue( pcfg, logger );
-        return unsafeInitialContextEnvFilterForClassName( fqcn );
+        final String fqcn = unsafeInitialContextEnvFilterClassNameProperty.getValue( pcfg, logger );
+        return new ResolvingEntry<UnsafeInitialContextEnvFilter>(unsafeInitialContextEnvFilterClassNameProperty.getProperty(), fqcn)
+        {
+            @Override
+            public UnsafeInitialContextEnvFilter resolve() throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+            { return unsafeInitialContextEnvFilterForClassName( fqcn ); }
+        };
     }
 
     public static void assertAcceptableName( Object jndiName, PropertiesConfig pcfg ) throws NamingException
