@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.PropertiesConfig;
+import com.mchange.v2.cfg.ResolvingEntry;
 import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import com.mchange.v2.naming.AlwaysForbidUnsafeInitialContextEnvFilter;
 import com.mchange.v2.naming.AlwaysReplaceWithDefaultUnsafeInitialContextEnvFilter;
@@ -61,6 +62,13 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
             return env;
         }
     }
+
+    /**
+     *  Resolution now comes back as a ResolvingEntry, so that a caller refusing a lookup can
+     *  name the key and value it acted on. Most cases here care only about the filter itself.
+     */
+    private static UnsafeInitialContextEnvFilter filter( PropertiesConfig pcfg ) throws Exception
+    { return ReferenceableUtils.getUnsafeInitialContextEnvFilterResolvingEntry( pcfg ).resolve(); }
 
     private static PropertiesConfig filterCfg( Class<?> filterClass )
     {
@@ -128,7 +136,7 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
      */
     public void testTheDefaultFilterRefusesEverything() throws Exception
     {
-        UnsafeInitialContextEnvFilter filter = ReferenceableUtils.getUnsafeInitialContextEnvFilter( null );
+        UnsafeInitialContextEnvFilter filter = filter( null );
 
         assertEquals( AlwaysForbidUnsafeInitialContextEnvFilter.class, filter.getClass() );
         try
@@ -142,7 +150,7 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
     public void testAConfiguredFilterIsUsedInsteadOfTheDefault() throws Exception
     {
         UnsafeInitialContextEnvFilter filter =
-            ReferenceableUtils.getUnsafeInitialContextEnvFilter( filterCfg( DropFactoryKeysFilter.class ) );
+            filter( filterCfg( DropFactoryKeysFilter.class ) );
 
         assertEquals( DropFactoryKeysFilter.class, filter.getClass() );
     }
@@ -165,10 +173,10 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
 
             assertEquals( "The shipped default must resolve even under enforcement.",
                           AlwaysForbidUnsafeInitialContextEnvFilter.class,
-                          ReferenceableUtils.getUnsafeInitialContextEnvFilter( null ).getClass() );
+                          filter( null ).getClass() );
             assertEquals( "and so must a filter the deployment named, which is equally its own choice.",
                           DropFactoryKeysFilter.class,
-                          ReferenceableUtils.getUnsafeInitialContextEnvFilter( filterCfg( DropFactoryKeysFilter.class ) ).getClass() );
+                          filter( filterCfg( DropFactoryKeysFilter.class ) ).getClass() );
         }
         finally
         {
@@ -180,15 +188,58 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
     public void testTheFilterInstanceIsShared() throws Exception
     {
         PropertiesConfig cfg = filterCfg( DropFactoryKeysFilter.class );
+        UnsafeInitialContextEnvFilter first = filter( cfg );
 
-        assertSame( ReferenceableUtils.getUnsafeInitialContextEnvFilter( cfg ),
-                    ReferenceableUtils.getUnsafeInitialContextEnvFilter( cfg ) );
+        assertSame( "A second resolution of the same class name should hand back the same instance.",
+                    first, filter( cfg ) );
 
         clearFilterCache();
-        assertNotSame( "Precondition for every other test here: clearing the cache really does "
-                       + "force a fresh resolution.",
-                       ReferenceableUtils.getUnsafeInitialContextEnvFilter( cfg ),
-                       null );
+        assertNotSame( "and clearing the cache must force a fresh one -- which every test here "
+                       + "depends on, since a cached instance means resolution is not happening.",
+                       first, filter( cfg ) );
+    }
+
+    // ==================== what the entry reports about itself ====================
+
+    /**
+     *  Resolution hands back the key and the value alongside the filter, so a caller refusing a
+     *  lookup can say which setting produced the refusal. A message naming only the interface
+     *  leaves a deployer with nothing to go on.
+     */
+    public void testTheEntryReportsTheKeyAndValueItResolvedFrom() throws Exception
+    {
+        ResolvingEntry<UnsafeInitialContextEnvFilter> entry =
+            ReferenceableUtils.getUnsafeInitialContextEnvFilterResolvingEntry( filterCfg( DropFactoryKeysFilter.class ) );
+
+        assertEquals( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME, entry.getKey() );
+        assertEquals( DropFactoryKeysFilter.class.getName(), entry.getValue() );
+        assertEquals( DropFactoryKeysFilter.class, entry.resolve().getClass() );
+    }
+
+    /** Unconfigured, the value reported is the shipped default rather than null. */
+    public void testTheEntryReportsTheDefaultWhenNothingIsConfigured() throws Exception
+    {
+        ResolvingEntry<UnsafeInitialContextEnvFilter> entry =
+            ReferenceableUtils.getUnsafeInitialContextEnvFilterResolvingEntry( null );
+
+        assertEquals( AlwaysForbidUnsafeInitialContextEnvFilter.class.getName(), entry.getValue() );
+    }
+
+    /**
+     *  The entry is immutable. getValue() gets quoted into messages describing what resolve()
+     *  did, so an entry whose value could be changed independently of what it resolves would be
+     *  an entry that can misreport -- which is the one thing it exists to avoid.
+     */
+    public void testTheEntryCannotBeMutated() throws Exception
+    {
+        ResolvingEntry<UnsafeInitialContextEnvFilter> entry =
+            ReferenceableUtils.getUnsafeInitialContextEnvFilterResolvingEntry( null );
+        try
+        {
+            entry.setValue( "com.example.SomethingElse" );
+            fail( "getValue() must not be able to drift from what resolve() returns." );
+        }
+        catch ( UnsupportedOperationException e ) { /* expected */ }
     }
 
     /** A misspelled filter class name must fail plainly, not silently fall back to something. */
@@ -198,8 +249,7 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
         p.setProperty( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME, "com.example.NoSuchFilter" );
         try
         {
-            ReferenceableUtils.getUnsafeInitialContextEnvFilter(
-                MultiPropertiesConfig.fromProperties( "/notional-test-resource", p ) );
+            filter( MultiPropertiesConfig.fromProperties( "/notional-test-resource", p ) );
             fail( "Expected a ClassNotFoundException for a filter class that does not exist." );
         }
         catch ( ClassNotFoundException e ) { /* expected */ }
@@ -241,7 +291,7 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
     public void testABespokeFilterCanReturnAFilteredEnvironment() throws Exception
     {
         UnsafeInitialContextEnvFilter filter =
-            ReferenceableUtils.getUnsafeInitialContextEnvFilter( filterCfg( DropFactoryKeysFilter.class ) );
+            filter( filterCfg( DropFactoryKeysFilter.class ) );
 
         Hashtable<?,?> out = filter.safeEnv( hostileEnv(), getClass(), null );
 
@@ -256,7 +306,7 @@ public class UnsafeInitialContextEnvFilterJUnitTestCase extends TestCase
         RecordingFilter.lastEnv = null;
         Hashtable<String,String> env = hostileEnv();
 
-        ReferenceableUtils.getUnsafeInitialContextEnvFilter( filterCfg( RecordingFilter.class ) )
+        filter( filterCfg( RecordingFilter.class ) )
             .safeEnv( env, getClass(), null );
 
         assertEquals( env, RecordingFilter.lastEnv );

@@ -397,6 +397,48 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
         }
     }
 
+    /**
+     *  A refusal has to say which setting produced it. The filter is chosen by configuration, so
+     *  "a filter refused this" leaves a deployer with no way to find, let alone change, the
+     *  thing that decided -- the message must name the key and the class it resolved to.
+     */
+    public void testARefusalNamesTheConfigKeyAndTheFilterClass() throws Exception
+    {
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        try
+        {
+            is.getObject( envFilterCfg( AlwaysForbidUnsafeInitialContextEnvFilter.class.getName() ) );
+            fail( "Expected IOException: the filter refuses this environment." );
+        }
+        catch ( IOException e )
+        {
+            assertTrue( "should name the key a deployer would change: " + e.getMessage(),
+                        e.getMessage().indexOf( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME ) >= 0 );
+            assertTrue( "and the class that actually refused: " + e.getMessage(),
+                        e.getMessage().indexOf( AlwaysForbidUnsafeInitialContextEnvFilter.class.getName() ) >= 0 );
+        }
+    }
+
+    /** The same holds when the filter cannot be constructed at all, which is a different fault. */
+    public void testAFailureToConstructTheFilterNamesTheClassItTried() throws Exception
+    {
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        try
+        {
+            is.getObject( envFilterCfg( "com.example.NoSuchFilter" ) );
+            fail( "Expected IOException: the configured filter class does not exist." );
+        }
+        catch ( IOException e )
+        {
+            assertTrue( "should name the class it could not instantiate: " + e.getMessage(),
+                        e.getMessage().indexOf( "com.example.NoSuchFilter" ) >= 0 );
+            assertTrue( "and the key that named it: " + e.getMessage(),
+                        e.getMessage().indexOf( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME ) >= 0 );
+            assertFalse( "This is a failure, not a policy decision: " + e.getMessage(),
+                         e.getMessage().indexOf( "policy decision" ) >= 0 );
+        }
+    }
+
     /** Unconfigured, the filter refuses -- so the boolean alone is no longer enough. */
     public void testWithNoFilterConfiguredAnEnvironmentIsStillRefused() throws Exception
     {
