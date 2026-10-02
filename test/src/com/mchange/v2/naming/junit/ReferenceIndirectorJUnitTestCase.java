@@ -10,7 +10,11 @@ import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.naming.AnyNameNameGuard;
 import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.cfg.SecurityRatchetTestSupport;
+import com.mchange.v2.naming.AlwaysForbidUnsafeInitialContextEnvFilter;
+import com.mchange.v2.naming.AlwaysReplaceWithDefaultUnsafeInitialContextEnvFilter;
+import com.mchange.v2.naming.ForbiddenInitialContextException;
 import com.mchange.v2.naming.ReferenceIndirector;
+import com.mchange.v2.naming.UnsafeInitialContextEnvFilter;
 import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.naming.SecurityConfigKey;
 import com.mchange.v2.ser.IndirectSerializationForbiddenException;
@@ -39,6 +43,86 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
         @Override
         public Reference getReference() throws NamingException
         { return new Reference( TestReferenceable.class.getName(), SIMPLE_FACTORY, null ); }
+    }
+
+    /**
+     *  Records the environment it is handed, so we can tell which environment actually reached
+     *  the ObjectFactory -- the one the filter returned, or the untrusted original.
+     */
+    public static final class EnvRecordingObjectFactory implements ObjectFactory
+    {
+        public static volatile Hashtable recordedEnv;
+        public static volatile boolean   called;
+
+        @Override
+        public Object getObjectInstance( Object obj, Name name, Context nameCtx, Hashtable environment )
+            throws Exception
+        {
+            recordedEnv = environment;
+            called = true;
+            return "RECORDED";
+        }
+    }
+
+    static final String RECORDING_FACTORY = EnvRecordingObjectFactory.class.getName();
+
+    public static final class RecordingReferenceable implements Referenceable
+    {
+        @Override
+        public Reference getReference() throws NamingException
+        { return new Reference( RecordingReferenceable.class.getName(), RECORDING_FACTORY, null ); }
+    }
+
+    /**
+     *  An InitialContextFactory that records the environment JNDI hands it. This is how we
+     *  observe the environment the InitialContext itself was built with, which is otherwise
+     *  invisible: the context is constructed eagerly but only consults its environment when a
+     *  lookup actually happens.
+     */
+    public static final class EnvRecordingInitialContextFactory implements javax.naming.spi.InitialContextFactory
+    {
+        public static volatile Hashtable recordedEnv;
+
+        @Override
+        public Context getInitialContext( Hashtable<?,?> environment )
+        {
+            recordedEnv = environment;
+            return (Context) java.lang.reflect.Proxy.newProxyInstance(
+                Context.class.getClassLoader(),
+                new Class<?>[] { Context.class },
+                new java.lang.reflect.InvocationHandler()
+                {
+                    @Override
+                    public Object invoke( Object proxy, java.lang.reflect.Method m, Object[] args )
+                    { return "lookup".equals( m.getName() ) ? proxy : null; }
+                } );
+        }
+    }
+
+    /** Keeps the context factory (so a lookup can happen at all) and drops everything else. */
+    public static final class KeepOnlyFactoryEnvFilter implements UnsafeInitialContextEnvFilter
+    {
+        @Override
+        public Hashtable<?,?> safeEnv( Hashtable<?,?> env, Class<?> materializingClass, PropertiesConfig pcfg )
+        {
+            Hashtable<Object,Object> out = new Hashtable<Object,Object>();
+            out.put( Context.INITIAL_CONTEXT_FACTORY, EnvRecordingInitialContextFactory.class.getName() );
+            return out;
+        }
+    }
+
+    /** Replaces the whole environment with a single marker entry, so its effect is unmistakable. */
+    public static final class MarkerEnvFilter implements UnsafeInitialContextEnvFilter
+    {
+        public final static String MARKER_KEY = "filtered.by.MarkerEnvFilter";
+
+        @Override
+        public Hashtable<?,?> safeEnv( Hashtable<?,?> env, Class<?> materializingClass, PropertiesConfig pcfg )
+        {
+            Hashtable<Object,Object> out = new Hashtable<Object,Object>();
+            out.put( MARKER_KEY, "yes" );
+            return out;
+        }
     }
 
     // ==========================================
@@ -217,6 +301,187 @@ public final class ReferenceIndirectorJUnitTestCase extends TestCase
             fail( "Expected IOException: contextName rejected by default ApparentlyLocalNameGuard" );
         }
         catch (IOException e) { /* expected */ }
+    }
+
+    // ==========================================
+    // The InitialContext environment filter
+    //
+    // An environment arriving on a deserialized or dereferenced object can name the context
+    // factory to instantiate and the server to fetch from. acceptDeserializedInitialContextEnvironment
+    // decides whether such an environment may be considered at all; the filter decides what it
+    // may contain. Both must permit, and the filter is named by the deployment rather than by
+    // the object carrying the environment.
+    // ==========================================
+
+    private static PropertiesConfig envFilterCfg( String filterClassName )
+    {
+        Properties p = new Properties();
+        p.setProperty( SecurityConfigKey.ACCEPT_DESERIALIZED_INITIAL_CONTEXT_ENVIRONMENT, "true" );
+        p.setProperty( SecurityConfigKey.OBJECT_FACTORY_WHITELIST, RECORDING_FACTORY );
+        if ( filterClassName != null )
+            p.setProperty( SecurityConfigKey.UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME, filterClassName );
+        return MultiPropertiesConfig.fromProperties( "/test", p );
+    }
+
+    private static Hashtable<String,String> hostileEnv()
+    {
+        Hashtable<String,String> env = new Hashtable<String,String>();
+        env.put( "java.naming.provider.url", "ldap://evil.example.com:1389/payload" );
+        return env;
+    }
+
+    private static IndirectlySerialized recordingSerialized( Hashtable<?,?> env ) throws Exception
+    {
+        ReferenceIndirector ri = new ReferenceIndirector();
+        ri.setEnvironmentProperties( env );
+        return ri.indirectForm( new RecordingReferenceable() );
+    }
+
+    /**
+     *  The environment the ObjectFactory receives must be the filter's, not the original. The
+     *  filtered environment used to reach only the InitialContext constructor, while the raw
+     *  one was passed on to referenceToObject and from there to the factory -- so a filter
+     *  could appear to be working while the thing it removed was delivered anyway.
+     */
+    public void testTheFilteredEnvironmentIsWhatReachesTheObjectFactory() throws Exception
+    {
+        EnvRecordingObjectFactory.called = false;
+        EnvRecordingObjectFactory.recordedEnv = null;
+
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        assertEquals( "RECORDED", is.getObject( envFilterCfg( MarkerEnvFilter.class.getName() ) ) );
+
+        assertTrue( "Precondition: the factory ran.", EnvRecordingObjectFactory.called );
+        assertEquals( "The factory must see what the filter returned.",
+                      "yes", EnvRecordingObjectFactory.recordedEnv.get( MarkerEnvFilter.MARKER_KEY ) );
+        assertNull( "and must not see what the filter removed: " + EnvRecordingObjectFactory.recordedEnv,
+                    EnvRecordingObjectFactory.recordedEnv.get( "java.naming.provider.url" ) );
+    }
+
+    /** Discarding the environment entirely leaves the factory with none, not with the original. */
+    public void testReplacingWithTheDefaultLeavesTheFactoryWithNoEnvironment() throws Exception
+    {
+        EnvRecordingObjectFactory.called = false;
+        EnvRecordingObjectFactory.recordedEnv = null;
+
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        assertEquals( "RECORDED",
+            is.getObject( envFilterCfg( AlwaysReplaceWithDefaultUnsafeInitialContextEnvFilter.class.getName() ) ) );
+
+        assertTrue( EnvRecordingObjectFactory.called );
+        assertNull( "A discarded environment must not resurface downstream: "
+                    + EnvRecordingObjectFactory.recordedEnv,
+                    EnvRecordingObjectFactory.recordedEnv );
+    }
+
+    /**
+     *  A refusal must be distinguishable from a mechanical failure. It arrives as an
+     *  IOException either way, so the cause is what carries the distinction -- and the catch
+     *  that classifies it is easy to get wrong, since a filter that throws and a filter that
+     *  cannot be constructed arrive at the same place.
+     */
+    public void testARefusalIsReportedAsARefusalRatherThanAFailure() throws Exception
+    {
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        try
+        {
+            is.getObject( envFilterCfg( AlwaysForbidUnsafeInitialContextEnvFilter.class.getName() ) );
+            fail( "Expected IOException: the filter refuses this environment." );
+        }
+        catch ( IOException e )
+        {
+            assertTrue( "A refusal should be caused by the refusal, not by an instantiation failure: " + e.getCause(),
+                        e.getCause() instanceof ForbiddenInitialContextException );
+            assertTrue( "and should say so: " + e.getMessage(),
+                        e.getMessage().indexOf( "policy decision" ) >= 0 );
+        }
+    }
+
+    /** Unconfigured, the filter refuses -- so the boolean alone is no longer enough. */
+    public void testWithNoFilterConfiguredAnEnvironmentIsStillRefused() throws Exception
+    {
+        IndirectlySerialized is = recordingSerialized( hostileEnv() );
+        try
+        {
+            is.getObject( envFilterCfg( null ) );
+            fail( "Expected IOException: acceptDeserializedInitialContextEnvironment no longer suffices alone." );
+        }
+        catch ( IOException e )
+        { assertTrue( "" + e.getCause(), e.getCause() instanceof ForbiddenInitialContextException ); }
+    }
+
+    /**
+     *  An empty environment is behaviourally identical to none -- new InitialContext(empty) and
+     *  new InitialContext() do the same thing -- so it is normalized away and never reaches the
+     *  filter. Without that, the default filter would refuse a reference carrying an empty
+     *  Hashtable, which commons used to accept and which c3p0 has always treated as absent.
+     */
+    public void testAnEmptyEnvironmentIsTreatedAsAbsent() throws Exception
+    {
+        EnvRecordingObjectFactory.called = false;
+
+        IndirectlySerialized is = recordingSerialized( new Hashtable() );
+
+        // no filter configured, so the default would refuse if the empty env reached it
+        assertEquals( "RECORDED", is.getObject( envFilterCfg( null ) ) );
+        assertTrue( EnvRecordingObjectFactory.called );
+    }
+
+    /**
+     *  And the normalization has to survive deserialization, which is how these objects
+     *  actually arrive: Java deserialization assigns fields directly and runs no constructor,
+     *  so normalizing at construction alone would leave a stream written by an older version
+     *  -- or by anyone else -- carrying an empty Hashtable straight to the filter.
+     */
+    public void testAnEmptyEnvironmentArrivingByDeserializationIsAlsoTreatedAsAbsent() throws Exception
+    {
+        EnvRecordingObjectFactory.called = false;
+
+        IndirectlySerialized is = recordingSerialized( null );
+
+        // stand in for a stream written before empty environments were normalized away
+        java.lang.reflect.Field f = is.getClass().getDeclaredField( "env" );
+        f.setAccessible( true );
+        f.set( is, new Hashtable() );
+
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream( baos );
+        try { oos.writeObject( is ); } finally { oos.close(); }
+        java.io.ObjectInputStream ois =
+            new java.io.ObjectInputStream( new java.io.ByteArrayInputStream( baos.toByteArray() ) );
+        IndirectlySerialized restored;
+        try { restored = (IndirectlySerialized) ois.readObject(); } finally { ois.close(); }
+
+        assertEquals( "RECORDED", restored.getObject( envFilterCfg( null ) ) );
+        assertTrue( EnvRecordingObjectFactory.called );
+    }
+
+    /**
+     *  The InitialContext must be built from the filtered environment too. That is harder to
+     *  observe than the factory case, because the context is only consulted when a lookup
+     *  happens -- so this one sets a contextName, which forces the lookup, and routes it
+     *  through a context factory that records the environment JNDI passed it.
+     */
+    public void testTheInitialContextIsBuiltFromTheFilteredEnvironment() throws Exception
+    {
+        EnvRecordingInitialContextFactory.recordedEnv = null;
+
+        Hashtable<String,String> env = new Hashtable<String,String>();
+        env.put( Context.INITIAL_CONTEXT_FACTORY, EnvRecordingInitialContextFactory.class.getName() );
+        env.put( "java.naming.provider.url", "ldap://evil.example.com:1389/payload" );
+
+        ReferenceIndirector ri = new ReferenceIndirector();
+        ri.setEnvironmentProperties( env );
+        ri.setNameContextName( new CompositeName( "java:comp/env" ) ); // local, so the NameGuard allows it
+        IndirectlySerialized is = ri.indirectForm( new RecordingReferenceable() );
+
+        is.getObject( envFilterCfg( KeepOnlyFactoryEnvFilter.class.getName() ) );
+
+        assertNotNull( "Precondition: a lookup happened, so the context consulted its environment.",
+                       EnvRecordingInitialContextFactory.recordedEnv );
+        assertNull( "The InitialContext must not be built from the unfiltered environment: "
+                    + EnvRecordingInitialContextFactory.recordedEnv,
+                    EnvRecordingInitialContextFactory.recordedEnv.get( "java.naming.provider.url" ) );
     }
 
     // ==========================================
