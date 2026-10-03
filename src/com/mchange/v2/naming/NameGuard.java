@@ -2,6 +2,10 @@ package com.mchange.v2.naming;
 
 import javax.naming.Name;
 
+/**
+ *  Implementations should be sharable, stateless immutable objects, creatable by no-arg constructor,
+ *  all identical and substitutable within a single class.
+ */
 public interface NameGuard
 {
     public boolean nameIsAcceptable( Name name );

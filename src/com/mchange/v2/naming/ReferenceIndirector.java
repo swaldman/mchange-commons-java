@@ -14,7 +14,6 @@ import com.mchange.v2.cfg.ResolvingEntry;
 import com.mchange.v2.log.MLevel;
 import com.mchange.v2.log.MLog;
 import com.mchange.v2.log.MLogger;
-import com.mchange.v2.naming.ReferenceableUtils;
 import com.mchange.v2.ser.Indirector;
 import com.mchange.v2.ser.IndirectlySerialized;
 import com.mchange.v2.ser.IndirectSerializationForbiddenException;
@@ -115,20 +114,14 @@ public class ReferenceIndirector implements Indirector
                  catch (ForbiddenInitialContextException e)
                  {
                      throw new IOException(
-                         "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
-                         "because our UnsafeInitialContextEnvFilter, specified under config key '" + reUnsafeInitialContextEnvFilter.getKey() +
-                         "' with value '" + reUnsafeInitialContextEnvFilter.getValue() + "', forbade the operation while we attempted to " +
-                         "render the lookup safe. This is a policy decision, not a failure. Please see the nested cause Exception for more details.",
+                         ReferenceableUtils.unsafeInitialContextEnvRefusedMessage(reUnsafeInitialContextEnvFilter),
                          e
                      );
                  }
                  catch (Exception e)
                  {
                      throw new IOException(
-                         "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
-                         "because we failed to instantiate the UnsafeInitialContextEnvFilter of class '" + reUnsafeInitialContextEnvFilter.getValue() +
-                         "' (specified by config key '" + reUnsafeInitialContextEnvFilter.getKey() + "'), " +
-                         "which we required to render the lookup safe. Please see the nested cause Exception for more details.",
+                         ReferenceableUtils.unsafeInitialContextEnvFilterUnavailableMessage(reUnsafeInitialContextEnvFilter),
                          e
                      );
                  }
@@ -162,18 +155,21 @@ public class ReferenceIndirector implements Indirector
 	{
             if (ReferenceableUtils.allowIndirectSerializationViaReference( pcfg ))
             {
-                Hashtable<?,?> safeEnv = this.getSafeEnv(pcfg); // if env is null and we won't need to filter, this is very fast anyway
+                Hashtable<?,?> safeEnv;
                 if ( logger.isLoggable(MLevel.FINE) )
                     logger.log(MLevel.FINE, "Indirectly deserializing using dangerous ReferenceIndirector mechanism: " + this);
                 try
                     {
                         Context initialContext;
                         if ( normalEnv() == null )
+                        {
                             initialContext = new InitialContext();
+                            safeEnv = null;
+                        }
                         else
                         {
                             if (ReferenceableUtils.acceptDeserializedInitialContextEnvironment(pcfg))
-                                initialContext = new InitialContext( safeEnv );
+                                initialContext = new InitialContext( safeEnv = this.getSafeEnv(pcfg) ); // we don't want to do this at the top, because it can occlude the conceptually prior warning below
                             else
                                 throw new IOException(
                                     "A value indirectly serialized as a reference includes a non-default (non-null) InitialContext environment " +

@@ -5,11 +5,17 @@ import com.mchange.v2.cfg.PropertiesConfig;
 
 /**
  *  Implementations should be sharable, stateless immutable objects, creatable by no-arg constructor,
- *  all identical and equal within a single class.
+ *  all identical and substitutable within a single class.
  */
 public interface UnsafeInitialContextEnvFilter
 {
     /**
+     *  The filter should be executed once per InitialContext construction, when the constructor of the InitialContext
+     *  would take an untrusted, potentially unsafe environment (usually because it is derived from deserializing or dereferencing,
+     *  the source bytes of which might be tampered with).
+     *
+     *  It is <i>not</i> necessarily called once per lookup, as InitialContext instances may be retained for many lookups.
+     *
      *  Note: the returned environment must replace the original everywhere downstream, not only in the InitialContext constructor.
      *        applications that inadvertantly use a leaked reference to the unsanitized environment are subject to compromise by
      *        the unsanitized environment.

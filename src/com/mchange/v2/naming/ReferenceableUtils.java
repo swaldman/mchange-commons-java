@@ -192,31 +192,30 @@ public final class ReferenceableUtils
                 else
                 {
                     NamingException ne = new NamingException("Could not resolve Reference to Object!");
-                    ne.setRootCause( e );
+                    ne.initCause( e );
                     throw ne;
                 }
 	    }
     }
 
-    // for now we'll just use a simple HashMap, synchronizing access, to cache Constructors.
+    // for now we'll just use a simple HashMap
     // there should be very few values looked up, so soft-reference-ing seems like overkill
     //
     // MT: Synchronized on own lock
-    private final static Map<String,Constructor<?>> nameGuardClassNameToConstructor = new HashMap<String,Constructor<?>>();
+    private final static Map<String,NameGuard> nameGuardClassNameToInstance = new HashMap<String,NameGuard>();
 
     private final static NameGuard nameGuardForClassName(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
     {
-        synchronized (nameGuardClassNameToConstructor)
+        synchronized (nameGuardClassNameToInstance)
         {
-            Constructor<?> ctor = nameGuardClassNameToConstructor.get(fqcn);
-            if (ctor == null)
+            NameGuard out = nameGuardClassNameToInstance.get(fqcn);
+            if (out == null)
             {
-                Class<?> cl = Class.forName(fqcn);
-                ctor = cl.getDeclaredConstructor();
-                nameGuardClassNameToConstructor.put(fqcn,ctor);
+                out = (NameGuard) ByNameInstantiationUtils.instantiateByNameUngated(fqcn); // ungated because derives from trusted config!
+                nameGuardClassNameToInstance.put(fqcn,out);
             }
-            return (NameGuard) ctor.newInstance(); // ungated because derives from trusted config!
+            return out;
         }
     }
 
@@ -250,6 +249,23 @@ public final class ReferenceableUtils
             public UnsafeInitialContextEnvFilter resolve() throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
             { return unsafeInitialContextEnvFilterForClassName( fqcn ); }
         };
+    }
+
+    public static String unsafeInitialContextEnvRefusedMessage( ResolvingEntry<UnsafeInitialContextEnvFilter> entry )
+    {
+        return
+            "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
+            "because our UnsafeInitialContextEnvFilter, specified under config key '" + entry.getKey() +
+            "' with value '" + entry.getValue() + "', forbade the operation while we attempted to " +
+            "render the lookup safe. This is a policy decision, not a failure. Please see the nested cause Exception for more details.";
+    }
+    public static String unsafeInitialContextEnvFilterUnavailableMessage( ResolvingEntry<UnsafeInitialContextEnvFilter> entry )
+    {
+        return
+            "A JNDI lookup against an InitialContext with an untrusted environment could not be performed, " +
+            "because we failed to instantiate the UnsafeInitialContextEnvFilter of class '" + entry.getValue() +
+            "' (specified by config key '" + entry.getKey() + "'), " +
+            "which we required to render the lookup safe. Please see the nested cause Exception for more details.";
     }
 
     public static void assertAcceptableName( Object jndiName, PropertiesConfig pcfg ) throws NamingException
