@@ -9,8 +9,9 @@ import com.mchange.v2.util.IterableUtils;
 
 public class PropertiesConfigUtils
 {
+    // nonpublic for now, we've superceded this with other constructs, no one calls it, but we'll keep it in case we someday have a use.
     // pcfg can be null
-    public static boolean securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled, MLogger logger )
+    static boolean securitySensitiveFalseBiasedLookupSyspropsPropertiesConfig( String propStyleKey, PropertiesConfig pcfg, String whatWillBeDisabled, MLogger logger )
     {
         String systemPropertiesBasedShouldSupportStr = System.getProperty( propStyleKey );
         Boolean systemPropertiesBasedShouldSupport = systemPropertiesBasedShouldSupportStr == null ? null : Boolean.valueOf( systemPropertiesBasedShouldSupportStr );
