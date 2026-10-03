@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.PropertiesConfig;
 import com.mchange.v2.naming.AnyNameNameGuard;
+import com.mchange.v2.naming.NameGuard;
 import com.mchange.v2.naming.ApparentlyLocalNameGuard;
 import com.mchange.v2.naming.ApparentlyLocalOrFirstComponentIsJavaIdentifierNameGuard;
 import com.mchange.v2.naming.FirstComponentIsJavaIdentifierNameGuard;
@@ -64,11 +65,34 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
      */
     @Override
     protected void setUp() throws Exception
-    { SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class ); }
+    { freshJvmState(); }
 
     @Override
     protected void tearDown() throws Exception
-    { SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class ); }
+    { freshJvmState(); }
+
+    /**
+     *  NameGuards are resolved once per class name and the instance is kept, since the interface
+     *  contracts them to be stateless and substitutable. That cache is static and lives as long
+     *  as the JVM, so without clearing it a case can be satisfied by an instance some earlier
+     *  case created -- and any case about how guards are <i>resolved</i> would quietly stop
+     *  exercising resolution at all. That is not hypothetical: the filter suite had exactly this
+     *  defect, and only a mutation that should have broken it revealed the tests were idle.
+     */
+    private static void freshJvmState() throws Exception
+    {
+        SecurityRatchetTestSupport.resetAll( ReferenceableUtils.class );
+
+        // enforceWhitelist lives in ByNameInstantiationUtils rather than here, so resetting only
+        // ReferenceableUtils would leave it latched at whatever an earlier case left it -- which
+        // is how the filter suite's enforcement test came to pass while exercising nothing.
+        SecurityRatchetTestSupport.resetAll( com.mchange.v2.reflect.ByNameInstantiationUtils.class );
+
+        java.lang.reflect.Field f =
+            ReferenceableUtils.class.getDeclaredField( "nameGuardClassNameToInstance" );
+        f.setAccessible( true );
+        ((Map<?,?>) f.get( null )).clear();
+    }
 
     private static void restoreSystemProperty( String key, String savedValue )
     {
@@ -487,64 +511,90 @@ public final class ReferenceableUtilsJUnitTestCase extends TestCase
                     hsf.getBoolean( prop ) );
     }
 
-    /** A NameGuard that cannot be constructed, to stand in for a default that has gone missing. */
-    public static final class ExplodingNameGuard implements com.mchange.v2.naming.NameGuard
+    /**
+     *  NameGuards are resolved once and shared. That is a constraint on implementations -- they
+     *  must be stateless and substitutable -- and worth pinning, because the contract used to be
+     *  the opposite: a Constructor was cached and a fresh guard built for every name checked.
+     *  Anything that silently went back to per-call construction would cost a reflective
+     *  newInstance on every JNDI name check without failing anything.
+     */
+    public void testTheNameGuardInstanceIsShared() throws Exception
     {
-        public ExplodingNameGuard() { throw new UnsupportedOperationException( "boom" ); }
-        @Override public boolean nameIsAcceptable( Name name )   { return false; }
-        @Override public boolean nameIsAcceptable( String name ) { return false; }
-        @Override public String onlyAcceptableWhen()             { return "never"; }
+        PropertiesConfig cfg = pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME, AnyNameNameGuard.class.getName() );
+
+        NameGuard first = nameGuardFor( cfg );
+        assertSame( "A second resolution of the same class name should hand back the same instance.",
+                    first, nameGuardFor( cfg ) );
+
+        freshJvmState();
+        assertNotSame( "and clearing the cache must force a fresh one -- which the rest of this "
+                       + "case depends on, since a cached instance means resolution is not happening.",
+                       first, nameGuardFor( cfg ) );
     }
 
     /**
-     *  The other half of the attribution: when it is the <i>default</i> guard that will not
-     *  construct, that is our bug and not the deployer's, and it raises InternalError rather
-     *  than a NamingException blaming configuration they never wrote.
-     *
-     *  <p>ApparentlyLocalNameGuard ships in the same jar as the code under test, so the only way
-     *  to reach this branch is to make its construction fail artificially. ReferenceableUtils
-     *  caches Constructors by class name; we put one that throws under the default guard's name,
-     *  and restore the cache afterward. Invasive, but this branch is otherwise unreachable, and
-     *  it is a branch that has already rotted once unnoticed.</p>
+     *  Resolution must survive whitelist enforcement. The guard class name comes from deployment
+     *  configuration rather than from an untrusted object, which is the documented case for
+     *  instantiating ungated -- and gating it would leave the shipped default unusable in exactly
+     *  the deployments that had hardened themselves.
      */
-    @SuppressWarnings("unchecked")
-    public void testAFailureToConstructTheDefaultGuardIsOurBugNotTheDeployersFault() throws Exception
+    public void testNameGuardResolutionIsNotSubjectToTheByNameWhitelist() throws Exception
     {
-        java.lang.reflect.Field f = ReferenceableUtils.class.getDeclaredField( "nameGuardClassNameToConstructor" );
-        f.setAccessible( true );
-        Map<String,java.lang.reflect.Constructor<?>> cache =
-            (Map<String,java.lang.reflect.Constructor<?>>) f.get( null );
-
-        Map<String,java.lang.reflect.Constructor<?>> savedCache;
-        java.lang.reflect.Constructor<?> exploding = ExplodingNameGuard.class.getDeclaredConstructor();
-        synchronized ( cache )
-        {
-            savedCache = new HashMap<String,java.lang.reflect.Constructor<?>>( cache );
-            cache.put( DEFAULT_NAME_GUARD_CLASS_NAME, exploding );
-        }
-        String saved = System.getProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+        String key = "com.mchange.v2.reflect.byNameInstantiation.enforceWhitelist";
+        String saved = System.getProperty( key );
         try
         {
-            System.clearProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME );
+            System.setProperty( key, "true" );
+            freshJvmState(); // so the seal, and enforceWhitelist, pick it up
+
+            // unconfigured, so this resolves the shipped default
             ReferenceableUtils.assertAcceptableName( "java:comp/env/myDS", null );
-            fail( "Expected InternalError: the default guard could not be constructed" );
-        }
-        catch (InternalError e)
-        {
-            assertTrue( "Should name the default guard: " + e.getMessage(),
-                        e.getMessage().contains( DEFAULT_NAME_GUARD_CLASS_NAME ) );
-        }
-        catch (NamingException e)
-        {
-            fail( "This is our failure, not the deployer's; it should not arrive as a NamingException "
-                  + "blaming configuration: " + e.getMessage() );
+
+            assertEquals( "A guard the deployment named must resolve too.",
+                          AnyNameNameGuard.class,
+                          nameGuardFor( pcfg( SecurityConfigKey.NAME_GUARD_CLASS_NAME,
+                                              AnyNameNameGuard.class.getName() ) ).getClass() );
         }
         finally
         {
-            restoreSystemProperty( SecurityConfigKey.NAME_GUARD_CLASS_NAME, saved );
-            synchronized ( cache ) { cache.clear(); cache.putAll( savedCache ); }
+            restoreSystemProperty( key, saved );
         }
     }
+
+    /** Resolve a NameGuard the way assertAcceptableName does, so the cache is exercised. */
+    private static NameGuard nameGuardFor( PropertiesConfig cfg ) throws Exception
+    {
+        java.lang.reflect.Method m =
+            ReferenceableUtils.class.getDeclaredMethod( "nameGuardForClassName", String.class );
+        m.setAccessible( true );
+
+        java.lang.reflect.Field pf =
+            ReferenceableUtils.class.getDeclaredField( "nameGuardClassNameProperty" );
+        pf.setAccessible( true );
+        Object prop = pf.get( null );
+        java.lang.reflect.Method gv = prop.getClass().getMethod(
+            "getValue", PropertiesConfig.class, com.mchange.v2.log.MLogger.class );
+        gv.setAccessible( true );
+        String fqcn = (String) gv.invoke( prop, cfg, com.mchange.v2.log.MLog.getLogger( ReferenceableUtils.class ) );
+
+        return (NameGuard) m.invoke( null, fqcn );
+    }
+
+    // There is deliberately no test for the InternalError branch of assertAcceptableName, the one
+    // that fires when the *default* NameGuard itself will not construct -- our bug rather than the
+    // deployer's. Reaching it requires construction of ApparentlyLocalNameGuard to fail, and that
+    // class ships in the same jar as the code under test.
+    //
+    // There was one, which poisoned ReferenceableUtils' Constructor cache with a constructor that
+    // throws. That cache now holds already-constructed instances, so there is nothing left to
+    // poison: planting an instance makes construction succeed, which is the opposite of what the
+    // test needed. Nor is there another seam -- the cache's get/put cannot throw checked
+    // exceptions, and ByNameInstantiationUtils resolves against its own ClassLoader rather than
+    // the thread context one.
+    //
+    // The other half of the attribution is still covered:
+    // testAFailureToConstructAConfiguredGuardIsAttributedToConfiguration pins that a guard the
+    // deployment named, and which cannot be constructed, is reported as theirs and not ours.
 
     /**
      *  Provenance is decided by comparing class names, so explicitly configuring the very class
