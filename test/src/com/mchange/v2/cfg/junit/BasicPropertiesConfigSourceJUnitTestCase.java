@@ -14,6 +14,7 @@ import java.util.concurrent.Future;
 import junit.framework.TestCase;
 
 import com.mchange.v2.cfg.BasicPropertiesConfigSource;
+import com.mchange.v2.cfg.DelayedLogItem;
 import com.mchange.v2.cfg.PropertiesConfigSource;
 
 /**
@@ -93,19 +94,31 @@ public class BasicPropertiesConfigSourceJUnitTestCase extends TestCase
     }
 
     /**
-     *  Resolution goes through Class.getResourceAsStream rather than the ClassLoader's, so a
-     *  relative identifier resolves against the package of com.mchange.v2.cfg.MultiPropertiesConfig
-     *  and an absolute one against the classpath root. Both reach the same file here. Worth
-     *  pinning: switching to ClassLoader.getResourceAsStream would quietly break every relative
-     *  identifier, and it is the kind of substitution that looks like a cleanup.
+     *  Identifiers must be absolute. Resolution now goes through ClassLoader.getResources, which
+     *  has no notion of an absolute path -- a leading slash is taken as part of the name and
+     *  matches nothing -- so the slash is required and then stripped. Every resource path the
+     *  library ships is written that way, and MConfig routes only slash-leading identifiers here.
+     *
+     *  <p>This replaces the older Class.getResourceAsStream behaviour, under which a
+     *  <i>relative</i> identifier resolved against the package of MultiPropertiesConfig. That is
+     *  deliberately gone: a source that merges every resource at a path has no business resolving
+     *  relative to one class's package.</p>
      */
-    public void testARelativeIdentifierResolvesAgainstTheCfgPackage() throws Exception
+    public void testAnIdentifierMustBeAbsolute() throws Exception
     {
-        Properties viaAbsolute = propsFrom( BASIC_ABS );
-        Properties viaRelative = propsFrom( "junit/bpcs-basic.properties" );
-
-        assertEquals( viaAbsolute, viaRelative );
-        assertFalse( "Precondition: this is a real read, not two empty ones.", viaAbsolute.isEmpty() );
+        assertFalse( "Precondition: an absolute identifier reads normally.",
+                     propsFrom( BASIC_ABS ).isEmpty() );
+        try
+        {
+            source.propertiesFromSource( "com/mchange/v2/cfg/junit/bpcs-basic.properties" );
+            fail( "An identifier without a leading slash should be rejected, even though the "
+                  + "ClassLoader would happily resolve it -- routing it here is a programming error." );
+        }
+        catch ( IllegalArgumentException e )
+        {
+            assertTrue( "and the message should name the class and the offending identifier: " + e.getMessage(),
+                        e.getMessage().indexOf( "BasicPropertiesConfigSource" ) >= 0 );
+        }
     }
 
     // ==================== how it reports an absence ====================
@@ -131,42 +144,55 @@ public class BasicPropertiesConfigSourceJUnitTestCase extends TestCase
     }
 
     /**
-     *  A resource java.util.Properties cannot parse is a failure of the whole read, not a
-     *  partial one. That matters because load() populates as it goes and only then throws, so
-     *  the Properties it was filling holds everything before the bad line -- here, one of three
-     *  keys. Handing that back would be configuration silently truncated at the first
-     *  typo, which is worse than refusing it.
+     *  A resource java.util.Properties cannot parse contributes nothing, and says so at WARNING.
+     *  It does not contribute what loaded before the bad line, which matters because load()
+     *  populates as it goes and only then throws -- so the Properties it was filling holds
+     *  everything up to the malformed escape. Here that is one of three keys.
      *
-     *  <p>This is also the one case that can tell apart assigning the Properties before the
-     *  load from assigning it only on success, so it pins an ordering that is otherwise
-     *  invisible.</p>
+     *  <p>Not failing the whole read is deliberate now that a path may name several resources:
+     *  one unreadable file in one jar should not deny a deployment the others. What makes that
+     *  safe rather than merely lenient is that the bad file contributes <i>nothing</i>, so the
+     *  result is never configuration silently truncated at the first typo.</p>
      */
-    public void testAnUnparseableResourceFailsRatherThanYieldingPartialProperties() throws Exception
+    public void testAnUnparseableResourceContributesNothingAndIsReported() throws Exception
     {
-        try
-        {
-            source.propertiesFromSource( MALFORMED );
-            fail( "Expected the malformed escape to fail the read." );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            assertTrue( "java.util.Properties reports a malformed escape this way: " + e.getMessage(),
-                        String.valueOf( e.getMessage() ).indexOf( "Malformed" ) >= 0 );
-        }
+        PropertiesConfigSource.Parse parse = source.propertiesFromSource( MALFORMED );
+
+        assertTrue( "not even the keys that loaded before the bad line: " + parse.getProperties(),
+                    parse.getProperties().isEmpty() );
+        assertTrue( "and the failure must be reported, not swallowed: " + parse.getDelayedLogItems(),
+                    hasWarningMentioning( parse, "bpcs-malformed-escape.properties" ) );
     }
 
-    /** A FileNotFoundException means absent; an unparseable resource must not look absent. */
+    /**
+     *  Absent and present-but-unreadable are different, and must stay distinguishable. An
+     *  absence throws, which the framework reports as a FINE skip and files under not-found. An
+     *  unreadable resource returns -- empty, with a WARNING -- because the path really did name
+     *  something, and reporting it as absent would skip a broken configuration file quietly.
+     */
     public void testAnUnparseableResourceIsNotReportedAsAbsent() throws Exception
     {
         try
         {
-            source.propertiesFromSource( MALFORMED );
-            fail( "Expected a failure." );
+            source.propertiesFromSource( MISSING );
+            fail( "Precondition: an absence throws." );
         }
+        catch ( FileNotFoundException expected ) { /* that is the absent case */ }
+
+        try
+        { source.propertiesFromSource( MALFORMED ); }
         catch ( FileNotFoundException e )
         { fail( "An unparseable resource is present but bad; reporting it as not-found would drop "
                 + "the path at FINE and hide a broken configuration file." ); }
-        catch ( Exception e ) { /* anything else is the right shape */ }
+    }
+
+    private static boolean hasWarningMentioning( PropertiesConfigSource.Parse parse, String fragment )
+    {
+        for ( DelayedLogItem item : parse.getDelayedLogItems() )
+            if ( DelayedLogItem.Level.WARNING.equals( item.getLevel() )
+                 && item.getText() != null && item.getText().indexOf( fragment ) >= 0 )
+                return true;
+        return false;
     }
 
     // ==================== what it reports alongside a successful read ====================
