@@ -109,7 +109,7 @@ public class JavaBeanObjectFactory implements ObjectFactory
                                         {
                                             out.put( propertyName, SecurelyStringifiable.constructSecurelyStringified( content, pcfg ) );
                                         }
-                                        catch (InstantiationNotPermittedException e)
+                                        catch (SecurelyStringifiableConstructionForbiddenException e)
                                         {
                                             if (logger.isLoggable( MLevel.WARNING ))
                                                 logger.log(

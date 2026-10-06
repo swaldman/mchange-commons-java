@@ -25,5 +25,7 @@ public class SecurityConfigKey {
 
     public final static String UNSAFE_INITIAL_CONTEXT_ENV_FILTER_CLASS_NAME = "com.mchange.v2.naming.unsafeInitialContextEnvFilterClassName";
 
+    public final static String SECURELY_STRINGIFIABLE_BASE_KEY = "com.mchange.v2.naming.securelyStringifiable";
+
     private SecurityConfigKey() {}
 }

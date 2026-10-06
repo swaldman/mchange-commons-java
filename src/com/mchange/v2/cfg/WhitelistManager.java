@@ -115,12 +115,29 @@ public class WhitelistManager
     final static String DENY_ALL = "[]";
 
     final static Set<String> ACCEPT_ANY_WHITELIST;
+    final static Set<WhitelistInfo.Source> ACCEPTABLE_WHITELIST_SOURCES;
     static
     {
         Set<String> tmp = new HashSet<String>();
         tmp.add(WILDCARD);
         ACCEPT_ANY_WHITELIST = Collections.unmodifiableSet(tmp);
+
+        Set<WhitelistInfo.Source> tmp1 = new HashSet<WhitelistInfo.Source>();
+        tmp1.add(WhitelistInfo.Source.MAIN_WHITELIST);
+        tmp1.add(WhitelistInfo.Source.OVERRIDE);
+        tmp1.add(WhitelistInfo.Source.DEPRECATED);
+        ACCEPTABLE_WHITELIST_SOURCES = Collections.unmodifiableSet(tmp1);
     }
+
+    public static boolean actuallyConfiguredWhitelist(WhitelistInfo info)
+    { return ACCEPTABLE_WHITELIST_SOURCES.contains(info.getSource()); }
+
+    public static boolean whitelistIsDisabled(WhitelistInfo info)
+    { return info.getWhitelist().equals(ACCEPT_ANY_WHITELIST) && actuallyConfiguredWhitelist(info); }
+
+    private static boolean _whitelistAccepts(WhitelistInfo info, String fqcn)
+    { return whitelistIsDisabled(info) || info.getWhitelist().contains(fqcn); }
+
 
     final String baseKey;
     final String deprecatedKey;
@@ -158,6 +175,51 @@ public class WhitelistManager
 
     public WhitelistInfo collectWhitelistInfoSyspropsPropertiesConfig(PropertiesConfig pcfg, MLogger logger)
     { return collectWhitelistInfoSyspropsPropertiesConfig(null, pcfg, logger); }
+
+    public boolean whitelistAccepts(String fqcn, PropertiesConfig pcfg, MLogger logger)
+    {
+        WhitelistInfo info = this.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger);
+        return _whitelistAccepts( info, fqcn );
+    }
+
+    /**
+     * @return null if there is no reason why not! that is, if the whitelist
+     *         is good and the item is whitelisted.
+     */
+    public String whitelistWhyNot(String fqcn, PropertiesConfig pcfg, MLogger logger, String ofWhatPhrase)
+    {
+        WhitelistInfo info = this.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger);
+        if (actuallyConfiguredWhitelist(info))
+        {
+            if (!whitelistIsDisabled(info) && !info.getWhitelist().contains(fqcn))
+            {
+                return
+                    "The whitelist of " + ofWhatPhrase + " does not contain class '" + fqcn + "'. " +
+                    "Please add that class to comma-separated list at config key '" + whitelistBaseKey + "' (and/or subkeys) if " +
+                    "you trust this class. " +
+                    "(If this denial is unexpected, note that if you have set the same whitelist key or subkey in both System properties and other config to distinct values, only the INTERSECTION becomes whitelisted.) " +
+                    "Current whitelist: " + info + " -- " + "Missing class: " + fqcn;
+            }
+            else
+                return null; // if the whitelist is disabled or it contains fqcn, then all good, no reason why not!
+        }
+        else
+        {
+            if (info.getSource() == WhitelistInfo.Source.MISSING)
+                return
+                    "No whitelist is set for " + ofWhatPhrase + ". If you trust the class, please set '" + whitelistBaseKey +
+                    "' (and/or subkeys) to a comma-separated list that includes '" + fqcn +
+                    "'. " +
+                    "No classes are currently whitelisted. -- Missing class: " + fqcn;
+            else
+            {
+                // at present this can't happen, but in case the WhitelistInfo.Source enum grows
+                return
+                    "The whitelist of " + ofWhatPhrase + " was derived from an unexpected source, and will not be honored. Current whitelist: " + info +
+                    "; source " + info.getSource();
+            }
+        }
+    }
 
     /**
      * @param syspropsConfig null means use the cuurrent system properties

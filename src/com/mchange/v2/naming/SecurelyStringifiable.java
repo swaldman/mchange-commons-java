@@ -3,12 +3,11 @@ package com.mchange.v2.naming;
 import com.mchange.v2.log.*;
 
 import com.mchange.v2.cfg.PropertiesConfig;
-import com.mchange.v2.reflect.ByNameInstantiationUtils;
-import com.mchange.v2.reflect.InstantiationNotPermittedException;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
 
 // we might consider caching Method objects here, but we expect this to be a rare,
 // not-performace-critical application, so for now we'll just lookup on demand
@@ -24,6 +23,7 @@ public final class SecurelyStringifiable
     private final static String SECURELY_STRINGIFIED_PFX     = "Securely Stringified: ";
     private final static int    SECURELY_STRINGIFIED_PFX_LEN = SECURELY_STRINGIFIED_PFX.length();
 
+    private final static SealedSystemPropertiesWhitelistManager whitelistManager = new SealedSystemPropertiesWhitelistManager( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY, null );
 
     private static Method getExpectedPublicStaticMethod(Class<?> cl, String methodName, Class<?>[] argTypes, Class<?> expectedReturnType)
     {
@@ -117,7 +117,7 @@ public final class SecurelyStringifiable
         }
     }
 
-    public static Object constructSecurelyStringified( String stringified, PropertiesConfig pcfg ) throws SecurelyStringifiableException, InstantiationNotPermittedException
+    public static Object constructSecurelyStringified( String stringified, PropertiesConfig pcfg ) throws SecurelyStringifiableException
     {
         try
         {
@@ -133,29 +133,29 @@ public final class SecurelyStringifiable
                 {
                     String fqcn = noPfx.substring(0, newLineIndex);
 
-                    // what follows is essentially a by-name instantiation broken into several steps, so we apply
-                    // enforcement of our by-name instantiation whitelist
-                    ByNameInstantiationUtils.checkWarnThrowForInstantiateByNameGated( fqcn, pcfg );
+                    String whyNot = whitelistManager.whitelistWhyNot(fqcn, pcfg, logger, "classes acceptable to reconstitute via SecurelyStringifiable");
+                    if (whyNot != null)
+                        throw new SecurelyStringifiableConstructionForbiddenException(whyNot);
+                    else
+                    {
+                        String stringifiedPostHeader = noPfx.substring(newLineIndex+1);
 
-                    String stringifiedPostHeader = noPfx.substring(newLineIndex+1);
+                        // we refrain from initializing the class until it duck-types as something we can reconstruct
+                        // no need to run potentially dangerous static initializers if it's visibly an unsuitable class
+                        Class<?> uninitializedClass = Class.forName(fqcn, false, SecurelyStringifiable.class.getClassLoader());
 
-                    // we refrain from initializing the class until it duck-types as something we can reconstruct
-                    // no need to run potentially dangerous static initializers if it's visibly an unsuitable class
-                    Class<?> uninitializedClass = Class.forName(fqcn, false, SecurelyStringifiable.class.getClassLoader());
-
-                    return constructSecurelyStringifiedPostHeader( uninitializedClass, stringified, stringifiedPostHeader, pcfg );
+                        return constructSecurelyStringifiedPostHeader( uninitializedClass, stringified, stringifiedPostHeader, pcfg );
+                    }
                 }
             }
         }
-        catch (InstantiationNotPermittedException e)
-        { throw e; }
         catch (SecurelyStringifiableException e)
         { throw e; }
         catch (Exception e)
         { throw new SecurelyStringifiableException( "An Exception occurred while trying to reconstruct a SecurelyStringified object.", e ); }
     }
 
-    private static Object constructSecurelyStringifiedPostHeader( Class<?> cl, String stringified, String stringifiedPostHeader, PropertiesConfig pcfg ) throws SecurelyStringifiableException, InstantiationNotPermittedException
+    private static Object constructSecurelyStringifiedPostHeader( Class<?> cl, String stringified, String stringifiedPostHeader, PropertiesConfig pcfg ) throws SecurelyStringifiableException
     {
         // always check both!
         Method mStringify = getGoodSecurelyStringifyMethod(cl);
@@ -168,14 +168,14 @@ public final class SecurelyStringifiable
             catch (InvocationTargetException e)
             {
                 Throwable te = e.getTargetException();
-                if (te instanceof InstantiationNotPermittedException)
-                    throw (InstantiationNotPermittedException) te;
+                if (te instanceof SecurelyStringifiableException)
+                    throw (SecurelyStringifiableException) te;
                 else
-                   throw new SecurelyStringifiableException(
-                       "Attempt to securely construct " + cl.getName() +
-                       " from stringified representation  failed with an Exception. Stringified:\n" + stringified,
-                       te
-                   );
+                    throw new SecurelyStringifiableException(
+                        "Attempt to securely construct " + cl.getName() +
+                        " from stringified representation  failed with an Exception. Stringified:\n" + stringified,
+                        te
+                    );
             }
             catch (Exception e)
             {
