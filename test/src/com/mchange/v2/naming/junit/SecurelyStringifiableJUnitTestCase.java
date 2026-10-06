@@ -8,7 +8,8 @@ import com.mchange.v2.cfg.SecurityRatchetTestSupport;
 import com.mchange.v2.naming.SecurelyStringifiable;
 import com.mchange.v2.naming.SecurelyStringifiableException;
 import com.mchange.v2.reflect.ByNameInstantiationUtils;
-import com.mchange.v2.reflect.InstantiationNotPermittedException;
+import com.mchange.v2.naming.SecurelyStringifiableConstructionForbiddenException;
+import com.mchange.v2.naming.SecurityConfigKey;
 import junit.framework.TestCase;
 
 public final class SecurelyStringifiableJUnitTestCase extends TestCase
@@ -134,8 +135,12 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     private static String stringifiedOf( Class<?> cl, String payload )
     { return "Securely Stringified: " + cl.getName() + "\n" + payload; }
 
-    /** Enforcement and a whitelist, supplied the way an application supplies configuration. */
-    private static PropertiesConfig enforcing( Class<?>... whitelisted )
+    /**
+     *  A whitelist permitting exactly these classes, supplied the way an application supplies
+     *  configuration. There is no enforcement flag to set: unlike the by-name instantiation
+     *  whitelist, this one is always enforced, so an unconfigured path refuses everything.
+     */
+    private static PropertiesConfig permitting( Class<?>... whitelisted )
     {
         StringBuilder sb = new StringBuilder();
         for ( int i = 0; i < whitelisted.length; ++i )
@@ -144,8 +149,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
             sb.append( whitelisted[i].getName() );
         }
         Properties p = new Properties();
-        p.setProperty( "com.mchange.v2.reflect.byNameInstantiation.enforceWhitelist", "true" );
-        p.setProperty( "com.mchange.v2.reflect.byNameInstantiation.whitelist", sb.toString() );
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".whitelist", sb.toString() );
         return MultiPropertiesConfig.fromProperties( "/notional-test-resource", p );
     }
 
@@ -225,7 +229,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     public void testConstructSecurelyStringifiedConformingClass() throws Exception
     {
         String stringified = "Securely Stringified: " + Point.class.getName() + "\n" + "5,11";
-        Object result = SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+        Object result = SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( Point.class ) );
         assertTrue( result instanceof Point );
         Point p = (Point) result;
         assertEquals( 5, p.x );
@@ -237,7 +241,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
         try
         {
             String stringified = "Securely Stringified: " + StringifyOnly.class.getName() + "\n" + "hello";
-            SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+            SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( StringifyOnly.class ) );
             fail( "Expected SecurelyStringifiableException: missing constructSecurelyStringified" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
@@ -248,7 +252,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
         try
         {
             String stringified = "Securely Stringified: " + ConstructOnly.class.getName() + "\n" + "hello";
-            SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+            SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( ConstructOnly.class ) );
             fail( "Expected SecurelyStringifiableException: missing securelyStringify" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
@@ -259,7 +263,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
         try
         {
             String stringified = "Securely Stringified: " + NoMethods.class.getName() + "\n" + "hello";
-            SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+            SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( NoMethods.class ) );
             fail( "Expected SecurelyStringifiableException: no methods at all" );
         }
         catch ( SecurelyStringifiableException e ) { /* expected */ }
@@ -293,7 +297,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( -42, 100 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( Point.class ) );
         assertEquals( original, reconstructed );
     }
 
@@ -301,7 +305,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( 0, 0 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( Point.class ) );
         assertEquals( original, reconstructed );
     }
 
@@ -344,10 +348,10 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
         try
         {
             SecurelyStringifiable.constructSecurelyStringified( stringifiedOf( Gadget.class, "payload" ),
-                                                               enforcing( Point.class ) );
-            fail( "Expected InstantiationNotPermittedException" );
+                                                               permitting( Point.class ) );
+            fail( "Expected SecurelyStringifiableConstructionForbiddenException" );
         }
-        catch (InstantiationNotPermittedException e)
+        catch (SecurelyStringifiableConstructionForbiddenException e)
         {
             assertTrue( "Should name what was refused: " + e.getMessage(),
                         e.getMessage().contains( Gadget.class.getName() ) );
@@ -359,7 +363,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     public void testAWhitelistedClassIsStillReconstructedUnderEnforcement() throws Exception
     {
         Object out = SecurelyStringifiable.constructSecurelyStringified(
-            stringifiedOf( Point.class, "5,11" ), enforcing( Point.class ) );
+            stringifiedOf( Point.class, "5,11" ), permitting( Point.class ) );
 
         assertEquals( new Point( 5, 11 ), out );
     }
@@ -377,7 +381,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     public void testAConfiguredWhitelistReachesANestedReconstruction() throws Exception
     {
         Object out = SecurelyStringifiable.constructSecurelyStringified(
-            stringifiedOf( Outer.class, "outer-payload" ), enforcing( Outer.class, Inner.class ) );
+            stringifiedOf( Outer.class, "outer-payload" ), permitting( Outer.class, Inner.class ) );
 
         assertTrue( "Both were whitelisted, in configuration alone.", out instanceof Outer );
     }
@@ -387,10 +391,10 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
         try
         {
             SecurelyStringifiable.constructSecurelyStringified(
-                stringifiedOf( Outer.class, "outer-payload" ), enforcing( Outer.class ) );
-            fail( "Expected InstantiationNotPermittedException for the nested class" );
+                stringifiedOf( Outer.class, "outer-payload" ), permitting( Outer.class ) );
+            fail( "Expected SecurelyStringifiableConstructionForbiddenException for the nested class" );
         }
-        catch (InstantiationNotPermittedException e)
+        catch (SecurelyStringifiableConstructionForbiddenException e)
         {
             assertTrue( "Whitelisting the outer class must not whitelist what it reconstructs: " + e.getMessage(),
                         e.getMessage().contains( Inner.class.getName() ) );
@@ -403,6 +407,118 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     // The pre-0.7.0 contract
     // ==========================================
 
+    // ==========================================
+    // The two whitelists are independent
+    //
+    // SecurelyStringifiable reconstruction used to be gated by the by-name instantiation
+    // whitelist, which was wrong in kind: that whitelist's contract is that entries are
+    // stateless and interchangeable, so any instance may substitute for any other and they may
+    // be cached. A SecurelyStringifiable object is none of those -- it carries deserialized
+    // state, and its static factory may run arbitrary code with an attacker-supplied payload.
+    // Separating them means neither can be relaxed by relaxing the other.
+    // ==========================================
+
+    /** Permitting a class for by-name instantiation must not permit reconstructing it. */
+    public void testTheByNameWhitelistDoesNotPermitReconstruction() throws Exception
+    {
+        Properties p = new Properties();
+        p.setProperty( "com.mchange.v2.reflect.byNameInstantiation.whitelist", Point.class.getName() );
+        p.setProperty( "com.mchange.v2.reflect.byNameInstantiation.enforceWhitelist", "false" );
+        PropertiesConfig byNameOnly = MultiPropertiesConfig.fromProperties( "/notional-test-resource", p );
+
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified(
+                SecurelyStringifiable.securelyStringify( new Point( 1, 2 ) ), byNameOnly );
+            fail( "The by-name whitelist must not stand in for the SecurelyStringifiable one." );
+        }
+        catch ( SecurelyStringifiableConstructionForbiddenException e )
+        {
+            assertTrue( "and the refusal should point at the right key: " + e.getMessage(),
+                        e.getMessage().indexOf( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY ) >= 0 );
+        }
+    }
+
+    /**
+     *  And the converse: this whitelist is always enforced, where the by-name one still defaults
+     *  to warn-only. So an unconfigured reconstruction refuses rather than warning -- which is
+     *  the deliberate difference, SecurelyStringifiable being both rarer and more dangerous.
+     */
+    public void testReconstructionIsRefusedWithNoWhitelistAtAll() throws Exception
+    {
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified(
+                SecurelyStringifiable.securelyStringify( new Point( 1, 2 ) ), null );
+            fail( "With no whitelist configured, reconstruction must refuse rather than warn." );
+        }
+        catch ( SecurelyStringifiableConstructionForbiddenException e )
+        {
+            assertTrue( "the refusal should say no whitelist is set: " + e.getMessage(),
+                        e.getMessage().indexOf( "No whitelist is set" ) >= 0 );
+        }
+    }
+
+    /**
+     *  The standard whitelist mechanism applies here too, not just the base ".whitelist" key.
+     *  The CHANGELOG documents overrideWhitelist, "*" and "[]" as properties of every whitelist,
+     *  so these pin that the new key is not a partial participant in that machinery.
+     */
+    public void testOverrideWhitelistSupersedesTheUnionForThisKeyToo() throws Exception
+    {
+        Properties p = new Properties();
+        // The union would permit Point; the override replaces it with a list that does not.
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".whitelist", Point.class.getName() );
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".overrideWhitelist", Inner.class.getName() );
+        PropertiesConfig overridden = MultiPropertiesConfig.fromProperties( "/notional-test-resource", p );
+
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified(
+                SecurelyStringifiable.securelyStringify( new Point( 1, 2 ) ), overridden );
+            fail( "overrideWhitelist should supersede the .whitelist union, dropping Point." );
+        }
+        catch ( SecurelyStringifiableConstructionForbiddenException e )
+        { /* expected */ }
+
+        // and the class the override DOES name is permitted, so this is a replacement, not a ban
+        Object back = SecurelyStringifiable.constructSecurelyStringified(
+            stringifiedOf( Inner.class, "payload" ), overridden );
+        assertEquals( Inner.class, back.getClass() );
+    }
+
+    /** "[]" anywhere renders the whitelist deny-all, trumping an otherwise permissive union. */
+    public void testDenyAllSentinelTrumpsAPermissiveUnionForThisKeyToo() throws Exception
+    {
+        Properties p = new Properties();
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".whitelist", Point.class.getName() );
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".whitelist.someLibrary", "[]" );
+        PropertiesConfig denyAll = MultiPropertiesConfig.fromProperties( "/notional-test-resource", p );
+
+        try
+        {
+            SecurelyStringifiable.constructSecurelyStringified(
+                SecurelyStringifiable.securelyStringify( new Point( 1, 2 ) ), denyAll );
+            fail( "A '[]' entry in any subkey should render the whitelist DENY ALL." );
+        }
+        catch ( SecurelyStringifiableConstructionForbiddenException e )
+        { /* expected */ }
+    }
+
+    /** A sole '*' disables this whitelist, as it does the others. */
+    public void testAWildcardWhitelistPermitsAnything() throws Exception
+    {
+        Properties p = new Properties();
+        p.setProperty( SecurityConfigKey.SECURELY_STRINGIFIABLE_BASE_KEY + ".whitelist", "*" );
+        PropertiesConfig wildcard = MultiPropertiesConfig.fromProperties( "/notional-test-resource", p );
+
+        Point original = new Point( 3, 4 );
+        Object back = SecurelyStringifiable.constructSecurelyStringified(
+            SecurelyStringifiable.securelyStringify( original ), wildcard );
+
+        assertEquals( original, back );
+    }
+
     /** Deliberately incompatible: a class that cannot take a PropertiesConfig cannot be gated. */
     public void testTheOldSingleArgumentContractIsNoLongerRecognized() throws Exception
     {
@@ -413,7 +529,7 @@ public final class SecurelyStringifiableJUnitTestCase extends TestCase
     {
         Point original = new Point( -1, -2 );
         String stringified = SecurelyStringifiable.securelyStringify( original );
-        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, null );
+        Object reconstructed = SecurelyStringifiable.constructSecurelyStringified( stringified, permitting( Point.class ) );
         assertEquals( original, reconstructed );
     }
 }

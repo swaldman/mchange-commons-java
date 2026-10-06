@@ -340,10 +340,16 @@ public class NamingWhitelistWiringJUnitTestCase extends TestCase
         assertNotNull( "A configured deny-all must also refuse.", emptyMsg );
         assertFalse( "but must not claim the whitelist is unset: " + emptyMsg,
                      emptyMsg.contains( "No whitelist is set" ) );
+        // The wording is now generic: WhitelistManager composes the refusal from a caller-supplied
+        // phrase, so what identifies this as the ordinary not-on-the-whitelist refusal is the
+        // generic clause plus the phrase ReferenceableUtils passes in. Asserting only the absence
+        // of the missing-whitelist wording would also pass for the unreachable unexpected-source
+        // error, which is why both halves are checked.
         assertTrue( "It must be the ordinary not-on-the-whitelist refusal, since the whitelist " +
-                    "was configured -- asserting only the absence of the missing-whitelist wording " +
-                    "would also pass for the unreachable unexpected-source error: " + emptyMsg,
-                    emptyMsg.contains( "does not contain referenced class" ) );
+                    "was configured: " + emptyMsg,
+                    emptyMsg.contains( "does not contain class" ) );
+        assertTrue( "and it must still say what kind of class it is talking about: " + emptyMsg,
+                    emptyMsg.contains( "JavaBean" ) );
     }
 
     private String beanRefusalMessage()
