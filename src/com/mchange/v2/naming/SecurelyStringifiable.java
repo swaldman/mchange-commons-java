@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import com.mchange.v2.cfg.SealedSystemPropertiesWhitelistManager;
+import com.mchange.v2.cfg.WhitelistInfo;
 
 // we might consider caching Method objects here, but we expect this to be a rare,
 // not-performace-critical application, so for now we'll just lookup on demand
@@ -116,6 +117,9 @@ public final class SecurelyStringifiable
             }
         }
     }
+
+    public static WhitelistInfo whitelistInfo(PropertiesConfig pcfg)
+    { return whitelistManager.collectWhitelistInfoSyspropsPropertiesConfig(pcfg, logger); }
 
     public static Object constructSecurelyStringified( String stringified, PropertiesConfig pcfg ) throws SecurelyStringifiableException
     {

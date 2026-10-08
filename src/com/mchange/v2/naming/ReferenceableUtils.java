@@ -413,10 +413,16 @@ public final class ReferenceableUtils
         if (whyNot != null) throw new NamingException(whyNot);
     }
 
+    public static WhitelistInfo referenceableJavaBeanClassWhitelistInfo(PropertiesConfig pcfg)
+    { return referenceableJavaBeanClassWhitelistManager.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger ); }
+
+    public static WhitelistInfo objectFactoryWhitelistInfo(PropertiesConfig pcfg)
+    { return objectFactoryWhitelistManager.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger ); }
+
     // pcfg can be null
     private static Set<String> findMandatoryObjectFactoryWhitelist( PropertiesConfig pcfg ) throws NamingException
     {
-        WhitelistInfo info = objectFactoryWhitelistManager.collectWhitelistInfoSyspropsPropertiesConfig( pcfg, logger );
+        WhitelistInfo info = objectFactoryWhitelistInfo(pcfg);
         if (!WhitelistManager.actuallyConfiguredWhitelist(info))
         {
             if (info.getWhitelist().isEmpty() && info.getSource().equals(WhitelistInfo.Source.MISSING))

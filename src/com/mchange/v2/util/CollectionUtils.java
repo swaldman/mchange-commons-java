@@ -14,7 +14,7 @@ public final class CollectionUtils
     /**
      *  Left raw deliberately, as java.util.Collections leaves EMPTY_LIST and EMPTY_SET raw:
      *  a raw empty constant can be assigned to a SortedSet of any element type, where a
-     *  SortedSet<?> could not be assigned to anything. The initializer is parameterized so
+     *  SortedSet&lt;?&gt; could not be assigned to anything. The initializer is parameterized so
      *  that the rawness costs no unchecked operation.
      */
     public final static SortedSet EMPTY_SORTED_SET = Collections.unmodifiableSortedSet( new TreeSet<Object>() );

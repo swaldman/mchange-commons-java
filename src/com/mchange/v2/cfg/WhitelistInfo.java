@@ -48,6 +48,8 @@ public class WhitelistInfo
     public int hashCode()
     { return whitelist.hashCode() ^ fromKeys.hashCode() ^ source.hashCode(); }
 
+    // Note: We're embedding toString() in larger messages that expect this format (in C3P0Registry)
+    //       Try not to mess with it
     @Override
     public String toString()
     {

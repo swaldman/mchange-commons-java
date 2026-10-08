@@ -14,7 +14,7 @@ public final class ByNameInstantiationUtils
 
     private final static SealedSystemPropertiesWhitelistManager whitelistManager = new SealedSystemPropertiesWhitelistManager( COMMON_KEY_PFX, null );
 
-    private final static String ENFORCE_WHITELIST_KEY = whitelistManager.getTopLevelBaseKey() + ".enforceWhitelist";
+    public final static String ENFORCE_WHITELIST_KEY = whitelistManager.getTopLevelBaseKey() + ".enforceWhitelist";
 
     private final static SealedSystemPropertiesBooleanProperty _enforceWhiteList = new SealedSystemPropertiesBooleanProperty( ENFORCE_WHITELIST_KEY, true, false );
 
@@ -138,6 +138,9 @@ public final class ByNameInstantiationUtils
 
     public static WhitelistInfo currentWhitelistInfo(PropertiesConfig pcfg)
     { return collectWhitelistSyspropsPropertiesConfig(pcfg); }
+
+    public static boolean isEnforcingWhitelist(PropertiesConfig pcfg)
+    { return _enforceWhiteList.getValue(pcfg, logger, null); }
 
     private static Object doInstantiate(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
