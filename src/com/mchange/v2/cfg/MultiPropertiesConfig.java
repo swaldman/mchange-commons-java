@@ -3,6 +3,7 @@ package com.mchange.v2.cfg;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import com.mchange.v2.uid.UidUtils;
 
 /**
  * MultiPropertiesConfig allows applications to accept configuration data
@@ -54,7 +55,7 @@ import java.util.Set;
  */
 public abstract class MultiPropertiesConfig implements PropertiesConfig
 {
-    private static String PROGRAMMATICALLY_SUPPLIED_PROPERTIES = "PROGRAMMATICALLY_SUPPLIED_PROPERTIES";
+    private final static String PROGRAMMATICALLY_SUPPLIED_PROPERTIES_PFX = "PROGRAMMATICALLY_SUPPLIED_PROPERTIES-";
 
     /**
      * @deprecated Please use the MConfig facade class to acquire configuration
@@ -74,7 +75,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     { return new BasicMultiPropertiesConfig( notionalResourcePath, props ); }
 
     public static MultiPropertiesConfig fromProperties(Properties props)
-    { return fromProperties( PROGRAMMATICALLY_SUPPLIED_PROPERTIES, props ); }
+    { return fromProperties( PROGRAMMATICALLY_SUPPLIED_PROPERTIES_PFX + UidUtils.allocateWithinVmSequential(), props ); }
 
     public abstract String[] getPropertiesResourcePaths();
 
