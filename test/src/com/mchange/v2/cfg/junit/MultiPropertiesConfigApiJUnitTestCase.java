@@ -8,7 +8,9 @@ import com.mchange.v2.cfg.MultiPropertiesConfig;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *  The parts of the MultiPropertiesConfig surface that do not depend on what is
@@ -91,15 +93,66 @@ public final class MultiPropertiesConfigApiJUnitTestCase extends TestCase
         assertEquals( 0, p.size() );
     }
 
-    /** fromProperties uses a documented sentinel notional resource path. */
-    public void testFromPropertiesUsesSentinelPath()
+    /**
+     *  fromProperties names a sentinel notional resource path, distinct per call.
+     *
+     *  <p>It used to name one constant path, which made it easy to combine two such configs
+     *  accidentally and land in the case MConfig.combine declines to define: a resource path
+     *  holds exactly one precedence, so where two combined elements claim the same path, which
+     *  of them that path's position belongs to is undefined. A per-call suffix makes the
+     *  collision unreachable from this method. The path remains opaque -- callers should read it
+     *  from getPropertiesResourcePaths rather than construct it.</p>
+     */
+    public void testFromPropertiesUsesADistinctSentinelPathPerCall()
     {
         MultiPropertiesConfig mpc = MultiPropertiesConfig.fromProperties( props( "a", "1" ) );
-        assertEquals( Arrays.asList( "PROGRAMMATICALLY_SUPPLIED_PROPERTIES" ),
-                      Arrays.asList( mpc.getPropertiesResourcePaths() ) );
+
+        String[] paths = mpc.getPropertiesResourcePaths();
+        assertEquals( "One Properties object yields one notional resource path.", 1, paths.length );
+        assertTrue( "The path should carry the sentinel prefix: " + paths[0],
+                    paths[0].startsWith( "PROGRAMMATICALLY_SUPPLIED_PROPERTIES-" ) );
+        assertTrue( "and a per-call suffix beyond the prefix: " + paths[0],
+                    paths[0].length() > "PROGRAMMATICALLY_SUPPLIED_PROPERTIES-".length() );
+
         assertEquals( "1", mpc.getProperty( "a" ) );
-        assertEquals( "1", mpc.getPropertiesByResourcePath( "PROGRAMMATICALLY_SUPPLIED_PROPERTIES" )
-                              .getProperty( "a" ) );
+        assertEquals( "The properties must be retrievable at the path the config reports.",
+                      "1", mpc.getPropertiesByResourcePath( paths[0] ).getProperty( "a" ) );
+    }
+
+    /**
+     *  The point of the suffix. Two configs built this way must never share a path, or combining
+     *  them leaves their relative precedence undefined.
+     */
+    public void testTwoFromPropertiesConfigsNeverShareAPath()
+    {
+        Set<String> seen = new HashSet<String>();
+        for ( int i = 0; i < 50; ++i )
+        {
+            String[] paths = MultiPropertiesConfig.fromProperties( props( "a", String.valueOf( i ) ) )
+                                                  .getPropertiesResourcePaths();
+            assertEquals( 1, paths.length );
+            assertTrue( "Each fromProperties config needs its own notional resource path, " +
+                        "but this one repeated: " + paths[0],
+                        seen.add( paths[0] ) );
+        }
+    }
+
+    /**
+     *  And the consequence that matters: combined, the later element wins outright, by position
+     *  rather than by a tiebreak MConfig.combine does not promise.
+     */
+    public void testCombiningTwoFromPropertiesConfigsIsOrdered()
+    {
+        MultiPropertiesConfig first  = MultiPropertiesConfig.fromProperties( props( "k", "first" ) );
+        MultiPropertiesConfig second = MultiPropertiesConfig.fromProperties( props( "k", "second" ) );
+
+        MultiPropertiesConfig combined =
+            MConfig.combine( new MultiPropertiesConfig[] { first, second } );
+
+        assertEquals( "Two distinct paths, so both elements are represented.",
+                      2, combined.getPropertiesResourcePaths().length );
+        assertEquals( "The later element in the combination must win.",
+                      "second", combined.getProperty( "k" ) );
     }
 
     /** An explicit notional resource path is honored. */
