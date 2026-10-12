@@ -82,7 +82,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
      */
     public void testEachOutcomeLandsInItsOwnBucket()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { READS, NOT_FOUND, FAULTY }, new ArrayList() );
 
         assertTrue(  "the readable resource should be read: "   + describe( mpc ), mpc.wasRead( READS ) );
@@ -103,7 +103,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig mpc = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { READS, vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { READS, vetoing }, new ArrayList() );
 
         assertTrue( "the read must have succeeded despite the veto", mpc.wasRead( READS ) );
         assertTrue( "the tolerated veto must be visible: " + describe( mpc ), mpc.wasVetoed( vetoing ) );
@@ -118,9 +118,9 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
     {
         if ( !posixSupported() ) return;
 
-        assertDisjoint( MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        assertDisjoint( MConfig.AsProvided.readUncachedResourceConfig(
                             NONE, new String[] { READS, NOT_FOUND, FAULTY }, new ArrayList() ) );
-        assertDisjoint( MConfig.WithTraditionalDefaultSources.readUncachedClassloaderResourceConfig(
+        assertDisjoint( MConfig.WithTraditionalDefaultSources.readUncachedResourceConfig(
                             NONE, new String[] { READS, NOT_FOUND, FAULTY, vetoing }, new ArrayList() ) );
     }
 
@@ -130,7 +130,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
      */
     public void testWasEncounteredDistinguishesAttemptedFromNeverNamed()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { READS, NOT_FOUND, FAULTY }, new ArrayList() );
 
         assertTrue( "a path that was read was encountered",     mpc.wasEncountered( READS ) );
@@ -160,7 +160,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig fromRead = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { READS, vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { READS, vetoing }, new ArrayList() );
 
         Properties props = new Properties();
         props.setProperty( "a", "b" );
@@ -179,7 +179,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig fromRead = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
         MultiPropertiesConfig mpc = MConfig.combine( new MultiPropertiesConfig[] { fromRead } );
 
         assertFalse( "precondition", mpc.wasVetoed( NEVER_NAMED ) );
@@ -201,7 +201,7 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig vetoedIt = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
         assertTrue( "precondition", vetoedIt.wasVetoed( vetoing ) );
 
         Properties props = new Properties();
@@ -227,13 +227,13 @@ public final class ConfigHistoryJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig vetoedIt = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
         assertTrue( "precondition: the file is present and insecure", vetoedIt.wasVetoed( vetoing ) );
 
         Files.delete( worldRead );
 
         MultiPropertiesConfig missedIt = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            .readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
         assertTrue( "precondition: the same identifier now finds nothing", missedIt.wasNotFound( vetoing ) );
 
         // asserted both ways round, so it is the priority rule rather than argument order

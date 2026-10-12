@@ -24,14 +24,14 @@ import java.util.List;
 public final class MConfigCachedReadShim
 {
     public static MultiPropertiesConfig traditionalCached( String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut )
-    { return MConfig.WithTraditionalDefaultSources.readCachedClassloaderResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
+    { return MConfig.WithTraditionalDefaultSources.readCachedResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
 
     public static MultiPropertiesConfig asProvidedCached( String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut )
-    { return MConfig.AsProvided.readCachedClassloaderResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
+    { return MConfig.AsProvided.readCachedResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
 
     public static MultiPropertiesConfig asProvidedVetoableCached( String[] defaultResources, String[] preemptingResources, List delayedLogItemsOut )
         throws ConfigVetoedException
-    { return MConfig.AsProvidedVetoable.readCachedClassloaderResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
+    { return MConfig.AsProvidedVetoable.readCachedResourceConfig( defaultResources, preemptingResources, delayedLogItemsOut ); }
 
     private MConfigCachedReadShim() {}
 }

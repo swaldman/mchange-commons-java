@@ -257,7 +257,7 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
             try
             {
                 Class<?> asProvided = load( "com.mchange.v2.cfg.MConfig$AsProvided" );
-                Method read = asProvided.getMethod( "readUncachedClassloaderResourceConfig",
+                Method read = asProvided.getMethod( "readUncachedResourceConfig",
                                                     String[].class, String[].class, List.class );
                 return read.invoke( null, new Object[] { new String[0],
                                                          new String[] { identifier },

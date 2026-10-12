@@ -127,7 +127,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     {
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig(
                 NONE, new String[] { firstPath, secondPath }, itemsOut );
             fail( "expected a ConfigVetoedException from a read with two vetoing identifiers" );
             return null; // unreachable
@@ -217,7 +217,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         List items = new ArrayList();
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, items );
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig( NONE, new String[] { vetoing }, items );
             fail( "expected a ConfigVetoedException" );
         }
         catch ( ConfigVetoedException expected )
@@ -237,7 +237,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
             fail( "expected a ConfigVetoedException" );
         }
         catch ( ConfigVetoedException expected )
@@ -248,7 +248,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     public void testVetoableFacadeReadsNormallyWhenNothingVetoes() throws Exception
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, new String[] { fine }, new ArrayList() );
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig( NONE, new String[] { fine }, new ArrayList() );
         assertEquals( "from-plain", mpc.getProperty( "plain.key" ) );
     }
 
@@ -258,7 +258,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
         try
         {
-            MConfig.AsProvidedVetoable.readCachedClassloaderResourceConfig( new String[] { vetoing } );
+            MConfig.AsProvidedVetoable.readCachedResourceConfig( new String[] { vetoing } );
             fail( "expected a ConfigVetoedException from the cached path" );
         }
         catch ( ConfigVetoedException expected )
@@ -276,7 +276,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     {
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -294,7 +294,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         String absent = dir.resolve( "not-there.properties" ).toUri().toString() + "?required=true";
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { absent }, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { absent }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -306,7 +306,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     {
         try
         {
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { fine, vetoing }, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { fine, vetoing }, new ArrayList() );
             fail( "expected IllegalArgumentException" );
         }
         catch ( IllegalArgumentException expected )
@@ -328,7 +328,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         try
         {
             // no query string at all: nothing here could possibly veto
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { fine }, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { fine }, new ArrayList() );
             fail( "expected IllegalArgumentException even for an option-free file: URL" );
         }
         catch ( IllegalArgumentException expected )
@@ -339,7 +339,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     public void testAsProvidedAcceptsNonVetoableIdentifiers()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( NONE, new String[] { "/" }, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { "/" }, new ArrayList() );
         assertEquals( System.getProperty( "user.home" ), mpc.getProperty( "user.home" ) );
     }
 
@@ -347,7 +347,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
     public void testAsProvidedToleratesNullPathArrays()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( null, null, new ArrayList() );
+            MConfig.AsProvided.readUncachedResourceConfig( null, null, new ArrayList() );
         assertEquals( 0, mpc.getPropertiesResourcePaths().length );
     }
 
@@ -364,7 +364,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig mpc = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( new String[] { fine, vetoing }, NONE, new ArrayList() );
+            .readUncachedResourceConfig( new String[] { fine, vetoing }, NONE, new ArrayList() );
 
         assertEquals( "the non-vetoing source must still load", "from-plain", mpc.getProperty( "plain.key" ) );
         assertNull( "the vetoing source must contribute nothing", mpc.getProperty( "secret.key" ) );
@@ -380,7 +380,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig mpc = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( new String[] { vetoing, fine }, NONE, new ArrayList() );
+            .readUncachedResourceConfig( new String[] { vetoing, fine }, NONE, new ArrayList() );
 
         assertEquals( "from-plain", mpc.getProperty( "plain.key" ) );
         assertNull( mpc.getProperty( "secret.key" ) );
@@ -392,7 +392,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
         // no throws clause on this facade at all; this compiles only because nothing checked escapes
         MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( new String[] { vetoing }, NONE, new ArrayList() );
+            .readUncachedResourceConfig( new String[] { vetoing }, NONE, new ArrayList() );
     }
 
     // ================================================ kind-specific messages
@@ -406,7 +406,7 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         if ( !posixSupported() ) return;
 
         MultiPropertiesConfig mpc = MConfig.WithTraditionalDefaultSources
-            .readUncachedClassloaderResourceConfig( new String[] { vetoing }, NONE, new ArrayList() );
+            .readUncachedResourceConfig( new String[] { vetoing }, NONE, new ArrayList() );
 
         assertTrue( "expected a plain 'was ignored' report, got:" + describe( mpc ),
                     hasWarningContaining( mpc, "ignored" ) );
@@ -426,16 +426,16 @@ public final class VetoableConfigJUnitTestCase extends TestCase
         // testVetoabilityIsAPropertyOfTheSourceNotTheIdentifier), so a classpath resource it is
         String[] paths = new String[] { "/com/mchange/v2/cfg/junit/a.properties" };
 
-        Object traditional  = MConfig.WithTraditionalDefaultSources.readCachedClassloaderResourceConfig( paths, NONE );
-        Object asProvided   = MConfig.AsProvided.readCachedClassloaderResourceConfig( paths );
-        Object vetoableRead = MConfig.AsProvidedVetoable.readCachedClassloaderResourceConfig( paths );
+        Object traditional  = MConfig.WithTraditionalDefaultSources.readCachedResourceConfig( paths, NONE );
+        Object asProvided   = MConfig.AsProvided.readCachedResourceConfig( paths );
+        Object vetoableRead = MConfig.AsProvidedVetoable.readCachedResourceConfig( paths );
 
         assertTrue( "traditional and as-provided must not share an entry", traditional != asProvided );
         assertTrue( "as-provided and vetoable must not share an entry",   asProvided != vetoableRead );
 
         assertSame( "repeats within one kind still share",
-                    asProvided, MConfig.AsProvided.readCachedClassloaderResourceConfig( paths ) );
+                    asProvided, MConfig.AsProvided.readCachedResourceConfig( paths ) );
         assertSame( "...and within the vetoable kind too",
-                    vetoableRead, MConfig.AsProvidedVetoable.readCachedClassloaderResourceConfig( paths ) );
+                    vetoableRead, MConfig.AsProvidedVetoable.readCachedResourceConfig( paths ) );
     }
 }

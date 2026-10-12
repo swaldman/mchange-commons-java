@@ -78,7 +78,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
         List<DelayedLogItem> captured = new ArrayList<DelayedLogItem>();
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig(
                 NONE, new String[] { vetoingAbsentUrl() }, captured );
             fail( "expected a veto" );
         }
@@ -96,7 +96,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
 
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig(
                 NONE, new String[] { vetoingAbsentUrl() }, new ArrayList() );
             fail( "expected a veto" );
         }
@@ -117,7 +117,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
 
         try
         {
-            MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig(
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig(
                 NONE, new String[] { vetoingAbsentUrl() }, new ArrayList() );
             fail( "expected a veto" );
         }
@@ -135,7 +135,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
      */
     public void testHoconPerResourceDiagnosticsSurviveItsThrow()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
 
         assertTrue( "the per-resource diagnostic accumulated before the throw was lost: " + itemsOf( mpc ),
@@ -145,7 +145,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     /** The throw site's own summary comes through as well, alongside the accumulated detail. */
     public void testHoconReportsBothTheDetailAndTheSummary()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { "hocon:no-such-hocon-resource" }, new ArrayList() );
 
         List<DelayedLogItem> items = itemsOf( mpc );
@@ -156,7 +156,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
     /** A source that throws must still drop only its own path, not disturb the read. */
     public void testAThrowingSourceDoesNotDisturbTheSourcesAroundIt()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { "hocon:no-such-hocon-resource", "/com/mchange/v2/cfg/junit/a.properties" },
             new ArrayList() );
 
@@ -171,7 +171,7 @@ public final class ConfigParseReportingJUnitTestCase extends TestCase
      */
     public void testOrdinaryAbsenceIsStillReportedByTheFramework()
     {
-        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedClassloaderResourceConfig(
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
             NONE, new String[] { "/no-such-resource-anywhere.properties" }, new ArrayList() );
 
         assertTrue( "the generic skip report should be unaffected: " + itemsOf( mpc ),

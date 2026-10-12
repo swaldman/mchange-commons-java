@@ -172,7 +172,7 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
 
     /** file: sources are vetoable, so reads of them go through the vetoable facade. */
     private static MultiPropertiesConfig read( String... paths ) throws ConfigVetoedException
-    { return MConfig.AsProvidedVetoable.readUncachedClassloaderResourceConfig( NONE, paths, new ArrayList() ); }
+    { return MConfig.AsProvidedVetoable.readUncachedResourceConfig( NONE, paths, new ArrayList() ); }
 
     private static List<String> pathsOf( MultiPropertiesConfig mpc )
     { return Arrays.asList( mpc.getPropertiesResourcePaths() ); }

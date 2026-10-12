@@ -240,7 +240,7 @@ public final class CfgScenario implements Closeable
 
     public Object asProvidedUncached( String[] defaults, String[] preempts, List delayedLogItemsOut )
     {
-        return call( load( CN_ASPROVIDED ), "readUncachedClassloaderResourceConfig",
+        return call( load( CN_ASPROVIDED ), "readUncachedResourceConfig",
                      new Class[] { String[].class, String[].class, List.class },
                      new Object[] { defaults, preempts, delayedLogItemsOut } );
     }
@@ -258,13 +258,13 @@ public final class CfgScenario implements Closeable
     /** The zero-argument form: no caller-supplied paths at all. */
     public Object traditionalCached()
     {
-        return call( load( CN_TRADITIONAL ), "readCachedClassloaderResourceConfig",
+        return call( load( CN_TRADITIONAL ), "readCachedResourceConfig",
                      new Class[] {}, new Object[] {} );
     }
 
     public Object traditionalUncached( String[] defaults, String[] preempts, List delayedLogItemsOut )
     {
-        return call( load( CN_TRADITIONAL ), "readUncachedClassloaderResourceConfig",
+        return call( load( CN_TRADITIONAL ), "readUncachedResourceConfig",
                      new Class[] { String[].class, String[].class, List.class },
                      new Object[] { defaults, preempts, delayedLogItemsOut } );
     }

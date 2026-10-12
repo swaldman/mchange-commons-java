@@ -49,21 +49,21 @@ public final class MConfigJUnitTestCase extends TestCase
     public void testNoSystemConfigAsProvided()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readCachedClassloaderResourceConfig( new String[] {RP_A, RP_B} );
+            MConfig.AsProvided.readCachedResourceConfig( new String[] {RP_A, RP_B} );
         assertEquals( "/b/home", mpc.getProperty( "user.home" ) );
     }
 
     public void testSystemShadowsAsProvided()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readCachedClassloaderResourceConfig( new String[] {RP_A, RP_B, "/"} );
+            MConfig.AsProvided.readCachedResourceConfig( new String[] {RP_A, RP_B, "/"} );
         assertEquals( System.getProperty( "user.home" ), mpc.getProperty( "user.home" ) );
     }
 
     public void testSystemShadowedAsProvided()
     {
         MultiPropertiesConfig mpc =
-            MConfig.AsProvided.readCachedClassloaderResourceConfig( new String[] {RP_A, "/", RP_B} );
+            MConfig.AsProvided.readCachedResourceConfig( new String[] {RP_A, "/", RP_B} );
         assertEquals( "/b/home", mpc.getProperty( "user.home" ) );
     }
 
@@ -71,9 +71,9 @@ public final class MConfigJUnitTestCase extends TestCase
     public void testAsProvidedUncachedReadsWork()
     {
         MultiPropertiesConfig first =
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] {RP_A, RP_B} );
+            MConfig.AsProvided.readUncachedResourceConfig( new String[] {RP_A, RP_B} );
         MultiPropertiesConfig second =
-            MConfig.AsProvided.readUncachedClassloaderResourceConfig( new String[] {RP_A, RP_B} );
+            MConfig.AsProvided.readUncachedResourceConfig( new String[] {RP_A, RP_B} );
 
         assertEquals( "/b/home", first.getProperty( "user.home" ) );
         assertTrue( "uncached reads should not be shared", first != second );
@@ -81,12 +81,12 @@ public final class MConfigJUnitTestCase extends TestCase
 
     // -------------------------------------- deprecated shims delegate correctly
 
-    /** MConfig.readConfig is exactly MConfig.AsProvided.readCachedClassloaderResourceConfig. */
+    /** MConfig.readConfig is exactly MConfig.AsProvided.readCachedResourceConfig. */
     @SuppressWarnings("deprecation")
     public void testReadConfigDelegatesToAsProvidedCached()
     {
         String[] paths = new String[] { RP_A, RP_B };
-        assertSame( MConfig.AsProvided.readCachedClassloaderResourceConfig( paths ),
+        assertSame( MConfig.AsProvided.readCachedResourceConfig( paths ),
                     MConfig.readConfig( paths ) );
     }
 
@@ -94,7 +94,7 @@ public final class MConfigJUnitTestCase extends TestCase
     @SuppressWarnings("deprecation")
     public void testReadVmConfigDelegatesToTraditionalCached()
     {
-        assertSame( MConfig.WithTraditionalDefaultSources.readCachedClassloaderResourceConfig(),
+        assertSame( MConfig.WithTraditionalDefaultSources.readCachedResourceConfig(),
                     MConfig.readVmConfig() );
     }
 }
