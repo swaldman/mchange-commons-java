@@ -13,7 +13,7 @@ import java.util.List;
 public final class MLogConfigSource
 {
     /**
-     * @deprecated The vmConfig APIs are confusing. Use readUncachedClassloaderResourceConfig(...)
+     * @deprecated The vmConfig APIs are confusing. Use readUncachedResourceConfig(...)
      */
     @Deprecated
     public static MultiPropertiesConfig readVmConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)

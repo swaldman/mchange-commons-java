@@ -87,7 +87,7 @@ public final class SealedSystemProperties
     {
         if (theProperties == null)
         {
-            theProperties = MConfig.AsProvided.readUncachedClassloaderResourceConfig(new String[]{"/"});
+            theProperties = MConfig.AsProvided.readUncachedResourceConfig(new String[]{"/"});
             if (logger().isLoggable( MLevel.INFO ))
                 logger().log(MLevel.INFO, "Sealed snapshot of System properties.");
             if (logger().isLoggable( MLevel.FINE ))
