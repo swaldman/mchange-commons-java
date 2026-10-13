@@ -1,0 +1,27 @@
+val year = java.time.ZonedDateTime.now().getYear
+
+(input : DocSite.MainLayoutInput)[]~()>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="mchange-commons-java &mdash; some Java utilities">
+    <title>mchange-commons-java</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+    <h1>mchange-commons-java</h1>
+    <h2>Some Java utilities</h2>
+    <p class="version">version <( input.version )></p>
+    <p>
+      For the moment, the only documentation available is the
+      <a href="apidocs/index.html">javadocs</a>.
+    </p>
+    <p class="footer">
+      <a href="https://github.com/swaldman/mchange-commons-java">source on github</a>
+      &nbsp;&middot;&nbsp;
+      &copy; <( year )> Machinery For Change LLC
+    </p>
+  </body>
+</html>

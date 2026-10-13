@@ -1,0 +1,50 @@
+/* mchange-commons-java microsite -- one page, so one short stylesheet. */
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    max-width: 34rem;
+    margin: 4rem auto;
+    padding: 0 1.25rem;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.05rem;
+    line-height: 1.55;
+    color: #222;
+    background: #fdfdfb;
+}
+
+h1 { font-size: 1.9rem; margin-bottom: 0.1rem; }
+
+h2 {
+    font-size: 1.05rem;
+    font-weight: normal;
+    font-style: italic;
+    color: #555;
+    margin-top: 0;
+}
+
+p.version {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+a         { color: #1a4f7a; }
+a:hover   { color: #2d7fb8; }
+
+p.footer {
+    margin-top: 3rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e2dc;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+    body    { color: #ddd; background: #1b1b1a; }
+    h2      { color: #aaa; }
+    p.version, p.footer { color: #999; }
+    a       { color: #7fb6dd; }
+    a:hover { color: #a5cdea; }
+    p.footer { border-top-color: #333; }
+}
