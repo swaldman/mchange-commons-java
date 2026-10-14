@@ -4,19 +4,60 @@ package build
 // This third meta-level exists for one reason: so that mill-build/build.mill can
 // say `import untemplate.mill.UntemplateModule`.
 //
-// It is not possible to get that dependency there any other way.
+// As of mill 1.1.0, there is no other way to get a dependency there.
 //
-//   - A `//| mvnDeps` header in mill-build/build.mill does not work. Mill parses
-//     nested build headers, but only for a boolean it needs during build-file
-//     discovery; mvnDeps there is read and discarded, silently.
-//   - The root build.mill's `//| mvnDeps` header cannot supply it either, because
-//     that header *is* mill-build's mvnDeps -- sugar for the task below one level
-//     up. Declare both and mill refuses outright: "Build header config conflicts
-//     with task defined in mill-build/build.mill".
+//   - A `//| mvnDeps` header in mill-build/build.mill does nothing. Mill does
+//     parse nested build headers -- put invalid YAML in one and it complains --
+//     but only for a boolean it needs during build-file discovery. mvnDeps at
+//     that level is read and discarded, with no diagnostic. The failure you get
+//     is "Not found: untemplate" at the import, pointing nowhere useful.
+//   - The root build.mill's `//| mvnDeps` header cannot supply it either. That
+//     header *is* mill-build's mvnDeps -- not an addition to it but an override
+//     of it -- so it configures the level below this one. Declare both the header
+//     and a mvnDeps task in mill-build/build.mill and mill refuses outright:
+//     "Build header config conflicts with task defined in mill-build/build.mill".
 //
 // So the header shortcut exists only for the level mill generates for you. Own
-// that level and you own its mvnDeps; give it dependencies of its own and this is
-// the mechanism. Deleting this file breaks the build with "Not found: untemplate".
+// that level, as mill-build/build.mill does, and you own its mvnDeps; to give it
+// dependencies of its own, this file is the mechanism. Deleting it breaks the
+// build.
+//
+// This is version-specific, and worth re-testing on a mill upgrade. A header in
+// mill-build/build.mill worked in mill 1.0.6 -- the last 1.0.x release -- and has
+// not worked in any release since. Bisected with the same four files, out/ wiped
+// before each run, classified on exit status and on whether the import resolved:
+//
+//     1.0.6   exit 0   honored
+//     1.1.0   exit 1   IGNORED
+//     1.1.10  exit 1   IGNORED
+//     1.3.0   exit 1   IGNORED
+//
+// So it is not fixed as of 1.3.0, the current release. (There is no 1.0.7 or
+// 1.0.9, and no 1.2.0 final -- 1.0.6 is followed by 1.1.0-RC1, and 1.2.0 stopped
+// at RC1.)
+//
+// 1.1.0 is where build headers were reworked, and where
+// https://github.com/com-lihaoyi/mill/issues/6202 was fixed -- the mirror-image
+// complaint that a *root* header was silently ignored when a meta-build existed.
+// The fix established the override semantics above ("YAML overwriting its
+// meta-build is the correct mental model of the status quo") and replaced that
+// silent failure with the conflict error. The symmetric case, a header one level
+// down, is not discussed there and silently does nothing. If that is ever made to
+// work, this file and its sibling header can both go away.
+//
+// Two dead ends, so they need not be retried:
+//
+//   - mill-build/build.mill.yaml does not help. Mill treats a .mill.yaml as a
+//     replacement for the .mill file, not a companion -- "Multiple root build
+//     files found: build.mill.yaml,build.mill, picking build.mill.yaml" -- so it
+//     cannot serve a file that needs Scala, as mill-build/build.mill does.
+//   - The YAML form is irrelevant. Inline `["..."]` and a block list behave
+//     identically, at every level.
+//
+// One trap, since the sibling unstatic projects are all pinned to 1.0.6: because
+// the resolved meta-build classpath persists in out/, bumping one of them to
+// 1.1.x keeps building until something clears out/, and only then fails with
+// "Not found: untemplate" for no apparent reason.
 //
 
 import mill.*, scalalib.*
