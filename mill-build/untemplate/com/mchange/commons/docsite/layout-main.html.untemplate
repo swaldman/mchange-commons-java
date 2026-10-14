@@ -1,6 +1,6 @@
 val year = java.time.ZonedDateTime.now().getYear
 
-(input : DocSite.MainLayoutInput)[]~()>
+(input : MainLayoutInput)[]~()>
 <!DOCTYPE html>
 <html lang="en">
   <head>

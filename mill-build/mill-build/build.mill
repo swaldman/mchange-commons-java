@@ -1,0 +1,29 @@
+package build
+
+//
+// This third meta-level exists for one reason: so that mill-build/build.mill can
+// say `import untemplate.mill.UntemplateModule`.
+//
+// It is not possible to get that dependency there any other way.
+//
+//   - A `//| mvnDeps` header in mill-build/build.mill does not work. Mill parses
+//     nested build headers, but only for a boolean it needs during build-file
+//     discovery; mvnDeps there is read and discarded, silently.
+//   - The root build.mill's `//| mvnDeps` header cannot supply it either, because
+//     that header *is* mill-build's mvnDeps -- sugar for the task below one level
+//     up. Declare both and mill refuses outright: "Build header config conflicts
+//     with task defined in mill-build/build.mill".
+//
+// So the header shortcut exists only for the level mill generates for you. Own
+// that level and you own its mvnDeps; give it dependencies of its own and this is
+// the mechanism. Deleting this file breaks the build with "Not found: untemplate".
+//
+
+import mill.*, scalalib.*
+import mill.meta.MillBuildRootModule
+
+object `package` extends MillBuildRootModule:
+
+  override def mvnDeps = Seq(
+    mvn"com.mchange::untemplate-mill:0.3.0",
+  )
