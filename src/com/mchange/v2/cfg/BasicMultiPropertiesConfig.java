@@ -56,8 +56,8 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         try
         {
             String[] safeResourcePaths = ConfigUtils.nullCheckPathArguments("resourcePaths", resourcePaths, dlis);
-            if (kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
-                throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
+            if (kind != MConfig.Kind.AsProvidedIgnoreVetoed && kind != MConfig.Kind.AsProvided && kind != MConfig.Kind.Traditional)
+                throw new IllegalArgumentException("Non-veto-throwing package private constructor must be of MConfig.Kind.AsProvidedIgnoreVetoed or MConfig.Kind.AsProvided or MConfig.Kind.Traditional.");
             firstInitNotVetoThrowing( kind, safeResourcePaths, dlis );
             finishInit( dlis );
         }
@@ -174,7 +174,13 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
         delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, cve ) );
     }
 
+    private void logCveForAsProvidedIgnoreVetoed(ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
+    { logCveForVetoIgnoringKind( cve, delayedLogItems); }
+
     private void logCveForTraditional(ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
+    { logCveForVetoIgnoringKind( cve, delayedLogItems); }
+
+    private void logCveForVetoIgnoringKind(ConfigVetoedException cve, List<DelayedLogItem> delayedLogItems)
     {
         String identifier = cve.getIdentifier();
         String identifierPart = identifier == null ? "." : " while handling identifier '" + identifier + "'.";
@@ -265,6 +271,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
                 }
                 throw first;
             }
+            else if (kind == MConfig.Kind.AsProvidedIgnoreVetoed)
+                for (ConfigVetoedException cve : cves)
+                    logCveForAsProvidedIgnoreVetoed(cve, delayedLogItems);
             else if (kind == MConfig.Kind.Traditional)
                 for (ConfigVetoedException cve : cves)
                     logCveForTraditional(cve, delayedLogItems);

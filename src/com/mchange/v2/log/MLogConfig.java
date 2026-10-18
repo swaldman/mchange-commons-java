@@ -14,17 +14,51 @@ public final class MLogConfig
     private static List<DelayedLogItem>  bootstrapLogItems   = null;
     private static Method                delayedDumpToLogger = null;
 
+    // this is very inelegant. in c3p0, mlog should be entirely independent of and prior to c3p0,
+    // conceptually, c3p0 is just a random user of the library.
+    // but in practice c3p0 is the most prominent user of the library,
+    // and we want to ease the transition from MConfig.WithTraditionalDefaultSources with minimum
+    // disruption to c3p0 users. so we are going to keep the default load paths between the two libraries
+    // in sync
+    public static String[] mlogC3p0Defaults()
+    { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties"}; }
+
+    public static String[] mlogC3p0Preempts()
+    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties", "/"}; }
+
+    public static String[] mlogC3p0Unified()
+    { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties","hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
+
     public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
-	String[] defaults = new String[] { "/com/mchange/v2/log/default-mchange-log.properties"  };
-	String[] preempts = new String[] { "/mchange-log.properties", "/" };
-
 	List<DelayedLogItem> bli = new ArrayList<>();
 
-        // note that it's important that we read the config uncached here, because we call this from MLog's class init,
-        // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
-        // or deadlocks
-	MultiPropertiesConfig tmpConfig = MConfig.WithTraditionalDefaultSources.readUncachedResourceConfig( defaults, preempts, bli );
+        MultiPropertiesConfig tmpConfig;
+
+        if (MConfig.WithTraditionalDefaultSources.traditionalPathFileSourcedPathsFound(bli))
+        {
+            bli.add(new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                       "At least one of the following resources " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() +
+                                       " has been found, so mlog will configure itself using the traditional mechanism that honored these files. " +
+                                       "However, mlog is transitioning from this mechanism, which is fragile and obscure. The supported way to customize configuration is " +
+                                       "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
+            String[] defaults = mlogC3p0Defaults();
+            String[] preempts = mlogC3p0Preempts();
+
+            // note that it's important that we read the config uncached here, because we call this from MLog's class init,
+            // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
+            // or deadlocks
+            tmpConfig = MConfig.WithTraditionalDefaultSources.readUncachedResourceConfig( defaults, preempts, bli );
+        }
+        else
+        {
+            String[] resources = mlogC3p0Unified();
+
+            // note that it's important that we read the config uncached here, because we call this from MLog's class init,
+            // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
+            // or deadlocks
+            tmpConfig = MConfig.AsProvided.readUncachedResourceConfig(null, resources, bli);
+        }
 
 	boolean firstLoad = (config == null);
 
@@ -45,6 +79,10 @@ public final class MLogConfig
 		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without overrides.") );
 	    config = tmpConfig;
 	}
+        bli.add(new DelayedLogItem(DelayedLogItem.Level.INFO,
+                                   "mlog config is now drawn from the following configuration sources: " +
+                                   Arrays.toString(config.getPropertiesResourcePaths()) +
+                                   " Later paths shadow earlier paths where values conflict."));
 	bootstrapLogItems = bli;
     }
 

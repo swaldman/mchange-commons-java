@@ -13,15 +13,23 @@ final class ConfigUtils
 {
     // we retain "/com/mchange/v2/cfg/vmConfigResourcePaths.txt" for backwards compatibility,
     // but we are trying to get rid of the ill-defined concept of "vmConfig"
-    private final static String[] DFLT_RSRC_PATHFILES       = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/com/mchange/v2/cfg/defaultConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+    private final static String[] DFLT_RSRC_PATHFILES = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/com/mchange/v2/cfg/defaultConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+
+    private final static Set<String> DFLT_RSRC_PATHFILES_SET;
+    static
+    {
+        Set<String> tmp = new HashSet<>();
+        Collections.addAll(tmp, DFLT_RSRC_PATHFILES);
+        DFLT_RSRC_PATHFILES_SET = Collections.unmodifiableSet(tmp);
+    }
 
     // later paths override earlier paths
     private final static String[] HARDCODED_DFLT_RSRC_PATHS = new String[]
-	{
-	    "/mchange-commons.properties",
-	    "hocon:/reference,/application,/",
-	    "/"
-	};
+    {
+        "/mchange-commons.properties",
+        "hocon:/reference,/application,/",
+        "/"
+    };
 
     final static String[] EMPTY_STRING_ARRAY = new String[0];
 
@@ -33,6 +41,26 @@ final class ConfigUtils
     // MT: protected by class' lock (currently never modified after construction, but that might change)
     //     we build lazily, so we can have log items
     final static Map<Class<?>,PropertiesConfigSource> pcsInstances = new HashMap<>();
+
+    static Set<String> traditionalPathFileResourcesSearched()
+    { return DFLT_RSRC_PATHFILES_SET; }
+
+    static boolean traditionalPathFileResourcePresent()
+    {
+        for (String rsrc : DFLT_RSRC_PATHFILES)
+            if (ConfigUtils.class.getResource(rsrc) != null)
+                return true;
+        return false;
+    }
+
+    static List<String> traditionalPathFileSourcedPaths(List<DelayedLogItem> delayedLogItemsOut)
+    { return readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut ); }
+
+    static boolean traditionalPathFileSourcedPathsFound(List<DelayedLogItem> delayedLogItemsOut)
+    {
+        List<String> paths = traditionalPathFileSourcedPaths(delayedLogItemsOut);
+        return paths != null && paths.size() > 0;
+    }
 
     synchronized static PropertiesConfigSource propertiesConfigSource(String fqcn, List<DelayedLogItem> delayedLogItems)
     {
@@ -127,6 +155,25 @@ final class ConfigUtils
         }
     }
 
+    static String[] removeVetoableConfig(String[] identifiers,  List<DelayedLogItem> delayedLogItems)
+    {
+        if (identifiers != null)
+        {
+           Set<String> vetoable = new HashSet<>();
+           List<String> good = new ArrayList<>();
+           for( String id : identifiers )
+               if (pointsToVetoableConfig(id, delayedLogItems))
+                   vetoable.add(id);
+               else
+                   good.add(id);
+           if (vetoable.size() > 0)
+               delayedLogItems.add(new DelayedLogItem(Level.WARNING, "The following vetoable configuration has been removed and will be ignored! " + vetoable));
+           return good.toArray(EMPTY_STRING_ARRAY);
+        }
+        else
+            return EMPTY_STRING_ARRAY;
+    }
+
     static boolean containsVetoableConfig(String[] identifiers, List<DelayedLogItem> delayedLogItems)
     {
         if (identifiers == null) return false;
@@ -136,7 +183,7 @@ final class ConfigUtils
         return false;
     }
 
-    private static List<String> listVetoableConfigFrom(String[] identifiers, List<DelayedLogItem> delayedLogItems)
+    static List<String> listVetoableConfigFrom(String[] identifiers, List<DelayedLogItem> delayedLogItems)
     {
         List<String> out = new ArrayList<>();
         if (identifiers == null) return out; // callers may pass null; condenseResources normalizes, but it runs later
@@ -150,12 +197,15 @@ final class ConfigUtils
         return out;
     }
 
-    private static List<String> listVetoableConfigFrom(String[] defaults, String[] preempts, List<DelayedLogItem> delayedLogItems)
+    static List<String> listVetoableConfigFrom(String[] defaults, String[] preempts, List<DelayedLogItem> delayedLogItems)
     {
         List<String> out = listVetoableConfigFrom(defaults,delayedLogItems);
         out.addAll( listVetoableConfigFrom(preempts,delayedLogItems) );
         return out;
     }
+
+    static String[] vetoableConfigFrom(String[] identifiers, List<DelayedLogItem> delayedLogItems)
+    { return listVetoableConfigFrom( identifiers, delayedLogItems).toArray(EMPTY_STRING_ARRAY); }
 
     static String[] vetoableConfigFrom(String[] defaults, String[] preempts, List<DelayedLogItem> delayedLogItems)
     { return listVetoableConfigFrom( defaults, preempts, delayedLogItems).toArray(EMPTY_STRING_ARRAY); }
@@ -346,7 +396,7 @@ final class ConfigUtils
     // the method is called.
     private static List<String> configuredOrHardcodedDefaultResourcePathList( List<DelayedLogItem> delayedLogItemsOut )
     {
-	List<String> pathsFromFiles = readResourcePathsFromResourcePathsTextFiles( DFLT_RSRC_PATHFILES, delayedLogItemsOut );
+	List<String> pathsFromFiles = traditionalPathFileSourcedPaths(delayedLogItemsOut);
 	List<String> rps;
 	if ( pathsFromFiles.size() > 0 )
 	    rps = pathsFromFiles;

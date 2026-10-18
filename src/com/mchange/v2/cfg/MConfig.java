@@ -71,7 +71,9 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    warn in the logs under {@link MConfig.WithTraditionalDefaultSources}. Files that
  *    have no security restrictions, or that adhere to them, will be read under both
  *    {@code MConfig.AsProvidedVetoable} and {@link MConfig.WithTraditionalDefaultSources}.
- *    Under no circumstances can file URL targets be read under simple {@code MConfig.AsProvided}.</p>
+ *    Under no circumstances can file URL targets be read under simple {@code MConfig.AsProvided}.
+ *    {@link MConfig.AsProvidedIgnoreVetoed} does read them, and warns rather than aborting when
+ *    one refuses &mdash; see <i>Vetoable configuration</i> below.</p>
  *
  *    <p>A {@code ?} in a file-url path begins a web-url-style query string carrying options.
  *    (Filenames that embed a {@code ?} directly are therefore not supported.) Option <b>keys are
@@ -213,6 +215,17 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    all, since nothing about it could then provoke a veto. That is the price of being able to
  *    decide the question without reading anything.</p></li>
  *
+ *    <li><p>{@link MConfig.AsProvidedIgnoreVetoed} accepts vetoable identifiers like
+ *    {@code AsProvidedVetoable} does, but ignores the refusals: the vetoing source is dropped
+ *    with a WARNING and every other source still loads. Reach for it when {@code file:} config
+ *    is a backstop rather than a requirement &mdash; when you would rather run on whatever
+ *    configuration remains than not start at all. Note what it does <i>not</i> mean: it ignores
+ *    vetoes that <i>occur</i>, not sources that <i>could</i> veto, so a {@code file:} source
+ *    that loads cleanly is honored in full. Weigh it deliberately, because it converts a
+ *    security refusal into a log line: if a credentials file was rejected for being
+ *    world-readable, you proceed without those credentials, possibly falling through to some
+ *    weaker source, and the WARNING is your only notice.</p></li>
+ *
  *    <li><p>{@link MConfig.WithTraditionalDefaultSources} tolerates vetoes. The vetoing source is
  *    dropped with a WARNING and every other source still loads. Its resource paths can come from
  *    text files the application does not control, so a veto there is an end user's choice and
@@ -220,13 +233,15 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *  </ul>
  *
  *  <p>Cache entries are keyed by which of these you called, as well as by the resolved resource
- *  paths, because the three do not agree about what reading those paths means.</p>
+ *  paths, because they do not agree about what reading those paths means.</p>
  *
  *  <h3>Choosing an API</h3>
  *
  *  <p>New code should prefer {@link MConfig.AsProvided}, or
- *  {@link MConfig.AsProvidedVetoable} if it needs {@code file:} URLs. Both read only the
- *  locations you name. {@link MConfig.WithTraditionalDefaultSources} remains, and is not
+ *  {@link MConfig.AsProvidedVetoable} if it needs {@code file:} URLs &mdash; or
+ *  {@link MConfig.AsProvidedIgnoreVetoed} if it needs them and would rather lose that
+ *  configuration than fail to start. All three read only the locations you name.
+ *  {@link MConfig.WithTraditionalDefaultSources} remains, and is not
  *  deprecated, but the resource-path text file machinery it implies is more complex and more
  *  obscure than most applications want. The methods that were traditionally used,
  *  {@code readVmConfig(...)}, remain only for backwards compatibility.</p>
@@ -287,7 +302,8 @@ public final class MConfig
     enum Kind {
         Traditional,
         AsProvided,
-        AsProvidedVetoable
+        AsProvidedVetoable,
+        AsProvidedIgnoreVetoed
     }
 
     final static CachedStore cache = CachedStoreUtils.synchronizedCachedStore( CachedStoreFactory.createNoCleanupCachedStore( new CSManager() ) );
@@ -298,7 +314,7 @@ public final class MConfig
          * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
          * and log the items yourself.
          *
-         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         * This variant is the only one within WithTraditionalDefaultSources suitable for use by MLog. The rest hit loggers.
          */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
@@ -352,6 +368,25 @@ public final class MConfig
         public static MultiPropertiesConfig readCachedResourceConfig()
         { return readCachedResourceConfig( EMPTY_STRING_ARRAY, EMPTY_STRING_ARRAY ); }
 
+        /**
+         *  This method is suitable for use during log initialization, no direct logging.
+         */
+        public static boolean traditionalPathFileSourcedPathsFound(List<DelayedLogItem> delayedLogItems)
+        { return ConfigUtils.traditionalPathFileSourcedPathsFound(delayedLogItems); }
+
+        /**
+         *  This method is NOT suitable for use during log initialization, logs directly.
+         */
+        public static boolean traditionalPathFileSourcedPathsFound()
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return traditionalPathFileSourcedPathsFound(dlis); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
+
+        public static Set<String> traditionalPathFileResourcesSearched()
+        { return ConfigUtils.traditionalPathFileResourcesSearched(); }
+
         private WithTraditionalDefaultSources() {}
     }
 
@@ -361,7 +396,7 @@ public final class MConfig
          * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
          * and log the items yourself.
          *
-         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         * This is the only variant suitable for use by MLog. The rest trigger logging.
          */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
@@ -440,7 +475,7 @@ public final class MConfig
          * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
          * and log the items yourself.
          *
-         * This variant is the only one suitable for use by MLog. The rest hit loggers.
+         * This variant is the only one suitable for use by MLog within AsProvidedVetoable. The rest hit loggers.
          */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut) throws ConfigVetoedException
         { return readForKind( Kind.AsProvidedVetoable, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
@@ -500,6 +535,75 @@ public final class MConfig
         }
 
         private AsProvidedVetoable() {}
+    }
+
+
+
+    public final static class AsProvidedIgnoreVetoed {
+
+        /**
+         * This method DOES NOT trigger any logging directly. If you want logging, capture {@code delayedLogItemsOut}
+         * and log the items yourself.
+         *
+         * This variant is the only one suitable for use by MLog within AsProvidedIgnoreVetoed. The rest hit loggers.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
+        {
+            try { return readForKind( Kind.AsProvidedIgnoreVetoed, defaultResources, preemptingResources, delayedLogItemsOut ).withClassLoaderSafeParseMessages(); }
+            catch (ConfigVetoedException e)
+            { throw new RuntimeException("BUG! MConfig.readForKind(...) with Kind.AsProvidedIgnoreVetoed should never throw a ConfigVetoedException.", e ); }
+        }
+
+        /**
+         * This method DOES trigger logging. If you capture {@code delayedLogItemsOut} and log the items yourself,
+         * you'll sometimes see the logged items twice (on a cache miss).
+         */
+        static MultiPropertiesConfig readCachedResourceConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
+        {
+            try
+                {
+                    // we want to collect any delayed log items emitted by ConfigUtils.condenseResources(...)
+                    List<DelayedLogItem> dlioEffective = (delayedLogItemsOut == null ? new ArrayList<DelayedLogItem>() : delayedLogItemsOut);
+                    String[] resourcePaths = ConfigUtils.condenseResources(false, defaultResources, preemptingResources, dlioEffective);
+                    return (MultiPropertiesConfig) cache.find( new PathsKey( resourcePaths, Kind.AsProvidedIgnoreVetoed, dlioEffective ) );
+                }
+            catch (CachedStoreException e)
+            { throw new RuntimeException( e ); }
+        }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readCachedResourceConfig(String[] defaultResources, String[] preemptingResources)
+        { return readCachedResourceConfig( defaultResources, preemptingResources, null ); } // cached path logs internally
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readCachedResourceConfig( String[] resourcePaths )
+        { return AsProvidedIgnoreVetoed.readCachedResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, null ); } // cached path logs internally
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources)
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return readUncachedResourceConfig( defaultResources, preemptingResources, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig( String[] resourcePaths )
+        {
+            List<DelayedLogItem> dlis = new ArrayList<>();
+            try { return AsProvidedIgnoreVetoed.readUncachedResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, dlis ); }
+            finally { dumpToLogger( dlis, logger() ); }
+        }
+
+        private AsProvidedIgnoreVetoed() {}
     }
 
     /**
@@ -659,7 +763,7 @@ public final class MConfig
             String[] resourcePath = ConfigUtils.condenseResources( true, defaultResources, preemptingResources, delayedLogItems );
             return readForKind( kind, resourcePath, delayedLogItems );
         }
-        else // AsProvided, AsProvidedVetoable
+        else // AsProvided, AsProvidedVetoable, AsProvidedIgnoreVetoed
         {
             String[] resourcePath = ConfigUtils.condenseResources( false, defaultResources, preemptingResources, delayedLogItems );
             return readForKind( kind, resourcePath, delayedLogItems );
@@ -668,7 +772,7 @@ public final class MConfig
 
     static BasicMultiPropertiesConfig readForKind(Kind kind, String[] resourcePath, List<DelayedLogItem> delayedLogItems) throws ConfigVetoedException
     {
-        if (kind == Kind.AsProvided || kind == Kind.Traditional)
+        if (kind == Kind.AsProvided || kind == Kind.Traditional || kind == Kind.AsProvidedIgnoreVetoed)
             return new BasicMultiPropertiesConfig( kind, resourcePath, delayedLogItems );
         else
             return new BasicMultiPropertiesConfig(BasicMultiPropertiesConfig.VetoThrowing.INSTANCE, resourcePath, delayedLogItems);
