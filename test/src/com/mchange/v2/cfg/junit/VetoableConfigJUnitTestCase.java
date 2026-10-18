@@ -26,6 +26,12 @@ import java.util.List;
  *    Traditional         warns and ignores the vetoing source, keeping everything else. Its paths
  *                        can come from resource-path text files the application never wrote, so a
  *                        veto there is an end-user choice and must degrade rather than abort.
+ *    AsProvidedIgnoreVetoed
+ *                        warns and reads on, for an application that supplies vetoable paths
+ *                        deliberately and would rather lose configuration than fail. It ignores
+ *                        vetoes that OCCUR, not sources that COULD veto: a file: source that
+ *                        loads cleanly is honored in full. Same paths as AsProvided, same veto
+ *                        handling as Traditional.
  *
  *  The fixture is a world-readable file asked to be user-only, which is the simplest thing that
  *  reliably vetoes. FileUrlConfigJUnitTestCase covers WHY that source vetoes; this covers what
@@ -437,5 +443,195 @@ public final class VetoableConfigJUnitTestCase extends TestCase
                     asProvided, MConfig.AsProvided.readCachedResourceConfig( paths ) );
         assertSame( "...and within the vetoable kind too",
                     vetoableRead, MConfig.AsProvidedVetoable.readCachedResourceConfig( paths ) );
+    }
+
+    // --------------------------------------------------- AsProvidedIgnoreVetoed reads
+
+    // A non-vetoABLE survivor has to be a classpath resource: every file: URL is vetoable
+    // whichever options it carries (see testVetoabilityIsAPropertyOfTheSourceNotTheIdentifier).
+    // A non-vetoING file: URL is a different thing, and `fine` is one.
+    private final static String SURVIVOR     = "/com/mchange/v2/cfg/junit/a.properties";
+    private final static String SURVIVOR_KEY = "user.home";
+    private final static String SURVIVOR_VAL = "/a/home";
+
+    /**
+     *  The point of the facade: AsProvided refuses a vetoable identifier outright, and this
+     *  one accepts it and carries on.
+     */
+    public void testIgnoreVetoedAcceptsWhatAsProvidedRefuses()
+    {
+        try
+        {
+            MConfig.AsProvided.readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            fail( "AsProvided should still refuse a vetoable identifier" );
+        }
+        catch ( IllegalArgumentException expected )
+        { /* the contrast this test exists for */ }
+
+        assertNotNull( "the IgnoreVetoed read should have produced a config",
+                       MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() ) );
+    }
+
+    /**
+     *  And it does not abort the way AsProvidedVetoable does. Same input, same actual veto,
+     *  two different answers -- which is the whole reason for a separate entry point.
+     */
+    public void testIgnoreVetoedNeverThrowsAVeto()
+    {
+        if ( !posixSupported() ) return;
+
+        try
+        {
+            MConfig.AsProvidedVetoable.readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+            fail( "AsProvidedVetoable should still throw" );
+        }
+        catch ( ConfigVetoedException expected )
+        { /* the contrast this test exists for */ }
+
+        MultiPropertiesConfig mpc = MConfig.AsProvidedIgnoreVetoed
+            .readUncachedResourceConfig( NONE, new String[] { vetoing }, new ArrayList() );
+
+        assertNotNull( mpc );
+        assertNull( "the vetoing source must contribute nothing", mpc.getProperty( "secret.key" ) );
+    }
+
+    /** It must not drop anything else. The whole point is keeping the config you can have. */
+    public void testIgnoreVetoedKeepsEverythingThatDidNotVeto()
+    {
+        if ( !posixSupported() ) return;
+
+        MultiPropertiesConfig mpc = MConfig.AsProvidedIgnoreVetoed
+            .readUncachedResourceConfig( NONE, new String[] { SURVIVOR, vetoing }, new ArrayList() );
+
+        assertEquals( "the non-vetoable source must survive", SURVIVOR_VAL, mpc.getProperty( SURVIVOR_KEY ) );
+        assertTrue( "and stay in the resolved path list: " + Arrays.asList( mpc.getPropertiesResourcePaths() ),
+                    Arrays.asList( mpc.getPropertiesResourcePaths() ).contains( SURVIVOR ) );
+    }
+
+    /**
+     *  IGNORE VETOED, NOT VETOABLE. A file: source that loads cleanly must be honored in full.
+     *  This is the distinction the facade is named for, and the thing an earlier
+     *  "IgnoreVetoable" shape got wrong by filtering on source type before reading anything.
+     */
+    public void testIgnoreVetoedHonorsAFileSourceThatDoesNotVeto()
+    {
+        MultiPropertiesConfig mpc = MConfig.AsProvidedIgnoreVetoed
+            .readUncachedResourceConfig( NONE, new String[] { fine }, new ArrayList() );
+
+        assertEquals( "a file: source that never vetoes must load normally",
+                      "from-plain", mpc.getProperty( "plain.key" ) );
+        assertTrue( "and stay in the resolved path list: " + Arrays.asList( mpc.getPropertiesResourcePaths() ),
+                    Arrays.asList( mpc.getPropertiesResourcePaths() ).contains( fine ) );
+    }
+
+    /** Silently losing configuration would be worse than failing. It must say what went. */
+    public void testIgnoreVetoedWarnsNamingWhatItDropped()
+    {
+        if ( !posixSupported() ) return;
+
+        List items = new ArrayList();
+        MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( NONE, new String[] { SURVIVOR, vetoing }, items );
+
+        assertTrue( "expected a WARNING naming the dropped identifier " + vetoing + ", got:" + describeItems( items ),
+                    hasWarningMentioning( items, vetoing ) );
+    }
+
+    /**
+     *  ...and must NOT complain when nothing vetoed. A facade that warns on every read trains
+     *  its users to ignore the one warning that matters.
+     */
+    public void testIgnoreVetoedIsSilentWhenNothingVetoes()
+    {
+        List items = new ArrayList();
+        MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( NONE, new String[] { SURVIVOR }, items );
+
+        assertFalse( "no veto occurred, so nothing should be reported as ignored, got:" + describeItems( items ),
+                     hasWarningMentioning( items, "vetoed" ) );
+        assertFalse( hasWarningMentioning( items, "ignored" ) );
+    }
+
+    /**
+     *  The message must not accuse anyone of a bug. Kind.AsProvided's veto arm does exactly
+     *  that -- deliberately, because a veto there means the up-front guard failed -- so a
+     *  facade built by dropping that guard must not reuse it. Compare
+     *  testTraditionalVetoMessageDoesNotAccuseAnyoneOfABug.
+     */
+    public void testIgnoreVetoedMessageDoesNotAccuseAnyoneOfABug()
+    {
+        if ( !posixSupported() ) return;
+
+        List items = new ArrayList();
+        MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( NONE, new String[] { vetoing }, items );
+
+        assertFalse( "a deliberate IgnoreVetoed read must not report a library bug, got:" + describeItems( items ),
+                     hasWarningMentioning( items, "bug in the com.mchange.v2.cfg library" ) );
+        assertTrue( "it should report the veto plainly instead, got:" + describeItems( items ),
+                    hasWarningMentioning( items, "has vetoed config" ) );
+    }
+
+    /**
+     *  Cached and uncached forms of one facade must resolve the same paths. They condense
+     *  their path lists in different places, so nothing but a test keeps them in step.
+     */
+    public void testIgnoreVetoedCachedAgreesWithUncached()
+    {
+        String[] paths = new String[] { SURVIVOR };
+
+        MultiPropertiesConfig uncached = MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( paths );
+        MultiPropertiesConfig cached   = MConfig.AsProvidedIgnoreVetoed.readCachedResourceConfig( paths );
+
+        assertEquals( "same resolved path list",
+                      Arrays.asList( uncached.getPropertiesResourcePaths() ),
+                      Arrays.asList( cached.getPropertiesResourcePaths() ) );
+        assertEquals( "same surviving value",
+                      uncached.getProperty( SURVIVOR_KEY ), cached.getProperty( SURVIVOR_KEY ) );
+    }
+
+    /**
+     *  As-provided means as provided: only the caller's paths. The facade sits beside
+     *  AsProvided, not Traditional, so it must not reach for resource-path text files or the
+     *  hardcoded backstop.
+     */
+    public void testIgnoreVetoedUsesOnlyTheCallersPaths()
+    {
+        String[] paths = new String[] { SURVIVOR };
+
+        assertEquals( "AsProvidedIgnoreVetoed should resolve exactly the paths AsProvided does",
+                      Arrays.asList( MConfig.AsProvided.readUncachedResourceConfig( NONE, paths, new ArrayList() ).getPropertiesResourcePaths() ),
+                      Arrays.asList( MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( NONE, paths, new ArrayList() ).getPropertiesResourcePaths() ) );
+    }
+
+    /** Null path arrays, as AsProvided already tolerates them. */
+    public void testIgnoreVetoedToleratesNullPathArrays()
+    {
+        assertNotNull( MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig( null, null, new ArrayList() ) );
+
+        assertEquals( SURVIVOR_VAL, MConfig.AsProvidedIgnoreVetoed
+                      .readUncachedResourceConfig( null, new String[] { SURVIVOR }, new ArrayList() ).getProperty( SURVIVOR_KEY ) );
+        assertEquals( SURVIVOR_VAL, MConfig.AsProvidedIgnoreVetoed
+                      .readUncachedResourceConfig( new String[] { SURVIVOR }, null, new ArrayList() ).getProperty( SURVIVOR_KEY ) );
+    }
+
+    private static boolean hasWarningMentioning( List items, String fragment )
+    {
+        for ( Object o : items )
+        {
+            DelayedLogItem item = (DelayedLogItem) o;
+            if ( DelayedLogItem.Level.WARNING.equals( item.getLevel() )
+                 && item.getText() != null && item.getText().contains( fragment ) )
+                return true;
+        }
+        return false;
+    }
+
+    private static String describeItems( List items )
+    {
+        StringBuilder sb = new StringBuilder();
+        for ( Object o : items )
+        {
+            DelayedLogItem item = (DelayedLogItem) o;
+            sb.append( "\n    [" ).append( item.getLevel() ).append( "] " ).append( item.getText() );
+        }
+        return sb.toString();
     }
 }

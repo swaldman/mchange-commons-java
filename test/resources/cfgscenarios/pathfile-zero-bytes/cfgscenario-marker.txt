@@ -1,0 +1,1 @@
+Marks the root of a cfg test scenario classpath. See CfgScenario.java.

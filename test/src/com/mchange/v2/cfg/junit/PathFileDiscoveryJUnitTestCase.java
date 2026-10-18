@@ -2,6 +2,7 @@ package com.mchange.v2.cfg.junit;
 
 import junit.framework.TestCase;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -158,5 +159,122 @@ public final class PathFileDiscoveryJUnitTestCase extends TestCase
         }
         finally
         { s.closeQuietly(); }
+    }
+
+    // ------------------------------------------------------------------------------------
+    //  traditionalPathFileSourcedPathsFound()
+    //
+    //  The predicate libraries use to decide whether the traditional path-file mechanism is
+    //  in play at all. MLog and c3p0 both branch on it: true keeps the old pathway (with a
+    //  deprecation warning), false takes a hardcoded source list.
+    //
+    //  It must agree with the mechanism it gates. The naive predicate -- "does any path file
+    //  EXIST" -- does not: a path file that is empty or wholly commented out exists but
+    //  yields no paths, so the traditional pathway falls back to its hardcoded backstop while
+    //  a caller branching on existence believes the user's file is in charge. For c3p0 that
+    //  combination reordered /mchange-commons.properties above /c3p0-default.properties,
+    //  letting an end-user file silently replace c3p0's own shipped securelyStringifiable
+    //  whitelist. Hence the predicate tests paths yielded, and hence these tests.
+    // ------------------------------------------------------------------------------------
+
+    private static boolean pathsFound( CfgScenario s )
+    { return s.traditionalPathFileSourcedPathsFound( new ArrayList<Object>() ); }
+
+    /** A path file that supplies paths: the traditional mechanism is genuinely in play. */
+    public void testPredicateTrueWhenAPathFileSuppliesPaths()
+    {
+        for ( String scenario : new String[] { "vmconfig-only", "defaultconfig-only",
+                                               "mchangeconfig-only", "all-three-pathfiles" } )
+        {
+            CfgScenario s = CfgScenario.open( scenario );
+            try
+            { assertTrue( "scenario '" + scenario + "' supplies paths, so the predicate should be true", pathsFound( s ) ); }
+            finally
+            { s.closeQuietly(); }
+        }
+    }
+
+    /** No path file anywhere: nothing to honor. */
+    public void testPredicateFalseWithNoPathFiles()
+    {
+        CfgScenario s = CfgScenario.open( "no-pathfiles" );
+        try
+        { assertFalse( pathsFound( s ) ); }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  THE CASE THE PREDICATE EXISTS FOR. The pathfile-empty scenario's path file is present
+     *  but wholly commented out, so an existence test would say true while the traditional
+     *  mechanism falls back to its backstop -- which is what
+     *  testEmptyPathFileFallsBackToHardcodedDefaults above observes from the other side.
+     *  Commenting a file out rather than deleting it is the likely way a user reaches this.
+     */
+    public void testPredicateFalseWhenAPathFileIsWhollyCommentedOut()
+    {
+        CfgScenario s = CfgScenario.open( "pathfile-empty" );
+        try
+        {
+            assertFalse( "a commented-out path file yields no paths, so the predicate must be false",
+                         pathsFound( s ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /** The same case reached by truncation rather than by commenting: a zero-byte path file. */
+    public void testPredicateFalseWhenAPathFileIsZeroBytes()
+    {
+        CfgScenario s = CfgScenario.open( "pathfile-zero-bytes" );
+        try
+        {
+            assertFalse( "a zero-byte path file yields no paths, so the predicate must be false",
+                         pathsFound( s ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /** Comments around real paths still yield those paths. The complement of the two above. */
+    public void testPredicateTrueWhenCommentsSurroundRealPaths()
+    {
+        CfgScenario s = CfgScenario.open( "pathfile-comments-blanks" );
+        try
+        { assertTrue( pathsFound( s ) ); }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  The property that actually matters: the predicate agrees with the mechanism it gates.
+     *  Wherever it reports false a traditional read must have fallen back to the hardcoded
+     *  backstop, and wherever true it must not have.
+     *
+     *  Restricted to the scenarios that ship a /mchange-commons.properties, because
+     *  backstop.source is how the backstop makes itself visible. A scenario without that file
+     *  cannot distinguish "backstop not consulted" from "backstop consulted, resource absent"
+     *  -- a resolved path list omits paths whose resources do not exist.
+     */
+    public void testPredicateAgreesWithWhetherTheBackstopWasUsed()
+    {
+        for ( String scenario : new String[] { "vmconfig-only", "defaultconfig-only", "mchangeconfig-only",
+                                               "no-pathfiles", "pathfile-empty", "pathfile-zero-bytes" } )
+        {
+            CfgScenario s = CfgScenario.open( scenario );
+            try
+            {
+                boolean predicate    = pathsFound( s );
+                Object  mpc          = s.traditionalCached();
+                boolean backstopUsed = "mchange-commons".equals( s.getProperty( mpc, "backstop.source" ) );
+
+                assertEquals( "scenario '" + scenario + "': predicate says paths found = " + predicate +
+                              ", but the backstop was " + (backstopUsed ? "" : "not ") + "used (paths: " +
+                              readPaths( s, mpc ) + ")",
+                              predicate, !backstopUsed );
+            }
+            finally
+            { s.closeQuietly(); }
+        }
     }
 }

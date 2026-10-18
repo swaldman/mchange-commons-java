@@ -272,6 +272,19 @@ public final class CfgScenario implements Closeable
     public Object traditionalUncached( String[] defaults, String[] preempts )
     { return traditionalUncached( defaults, preempts, null ); }
 
+    /**
+     *  The predicate MLogConfig and c3p0's C3P0Config consult to decide whether to use the
+     *  traditional path-file mechanism at all. It asks whether the path files YIELD PATHS,
+     *  not whether any of them exists -- the two differ for a file that is empty or wholly
+     *  commented out, and the difference is the whole point of the predicate.
+     */
+    public boolean traditionalPathFileSourcedPathsFound( List delayedLogItemsOut )
+    {
+        Object out = call( load( CN_TRADITIONAL ), "traditionalPathFileSourcedPathsFound",
+                           new Class[] { List.class }, new Object[] { delayedLogItemsOut } );
+        return ((Boolean) out).booleanValue();
+    }
+
     // --------------------------------------------------- MultiPropertiesConfig
 
     public String getProperty( Object mpc, String key )
