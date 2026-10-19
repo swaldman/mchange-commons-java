@@ -238,6 +238,103 @@ public class SealedSystemPropertiesInternalJUnitTestCase extends TestCase
         // reaching here is the assertion: AsProvided would have thrown IllegalArgumentException
     }
 
+    // ---------- the notional path inside a sequence of resource paths ----------
+
+    //  Reading the path alone proves the source works. What the capping helpers actually rely
+    //  on is that it behaves like any other element of a resource-path list: that it layers,
+    //  that its POSITION decides who wins, that it merges rather than shadows, and that the
+    //  provenance views see it. BasicMultiPropertiesConfig builds all of that from the path
+    //  sequence, so these read through a sequence rather than past it.
+    //
+    //  SEQ_RESOURCE collides with the snapshot on this fixture's own key, so staging a conflict
+    //  needs no write to a System property the fixture does not own and could not restore.
+
+    private final static String SEQ_RESOURCE = "/com/mchange/v2/cfg/sealedseq.properties";
+    private final static String ONLY_RESOURCE_KEY = PFX + ".onlyresource";
+
+    /** A resource read, with the snapshot capped above it, exactly as the helpers arrange. */
+    public void testTheNotionalPathLayersOverAnEarlierResource()
+    {
+        System.setProperty( KEY, "from-system" );
+        SealedSystemProperties.seal();
+
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
+            new String[] { SEQ_RESOURCE, SEALED } );
+
+        assertEquals( "the later path must win", "from-system", mpc.getProperty( KEY ) );
+        assertEquals( Arrays.asList( SEQ_RESOURCE, SEALED ),
+                      Arrays.asList( mpc.getPropertiesResourcePaths() ) );
+    }
+
+    /** ...and position is what decides it, not the kind of source. */
+    public void testTheNotionalPathLosesToALaterResource()
+    {
+        System.setProperty( KEY, "from-system" );
+        SealedSystemProperties.seal();
+
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
+            new String[] { SEALED, SEQ_RESOURCE } );
+
+        assertEquals( "a path after the snapshot must still override it",
+                      "from-resource", mpc.getProperty( KEY ) );
+    }
+
+    /** Merging, not shadowing: keys only the other path defines must survive alongside. */
+    public void testTheNotionalPathMergesRatherThanShadowing()
+    {
+        System.setProperty( KEY, "from-system" );
+        SealedSystemProperties.seal();
+
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
+            new String[] { SEQ_RESOURCE, SEALED } );
+
+        assertEquals( "from-system", mpc.getProperty( KEY ) );
+        assertEquals( "a key only the earlier path defines must survive",
+                      "yes", mpc.getProperty( ONLY_RESOURCE_KEY ) );
+    }
+
+    /** The provenance views must see it as read, like any other source. */
+    public void testTheNotionalPathIsReportedAsRead()
+    {
+        System.setProperty( KEY, "sealed-value" );
+        SealedSystemProperties.seal();
+
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
+            new String[] { SEQ_RESOURCE, SEALED } );
+
+        assertTrue( "wasRead must be true for the snapshot path", mpc.wasRead( SEALED ) );
+        assertTrue( "and it must appear in getAllRead: " + mpc.getAllRead(),
+                    mpc.getAllRead().contains( SEALED ) );
+        assertFalse( mpc.wasNotFound( SEALED ) );
+        assertFalse( mpc.wasVetoed( SEALED ) );
+        assertFalse( mpc.wasFault( SEALED ) );
+        assertEquals( "and its properties must be reachable by path",
+                      "sealed-value", mpc.getPropertiesByResourcePath( SEALED ).getProperty( KEY ) );
+    }
+
+    /**
+     *  The arrangement the helpers actually produce: a resource, then live System properties,
+     *  then the snapshot. All three must contribute, and the snapshot must win where it and a
+     *  live read disagree.
+     */
+    public void testAFullyCappedSequenceRanksResourceThenLiveThenSealed()
+    {
+        System.setProperty( KEY, "before" );
+        SealedSystemProperties.seal();
+        System.setProperty( KEY, "after" );
+
+        MultiPropertiesConfig mpc = MConfig.AsProvided.readUncachedResourceConfig(
+            SealedSystemProperties.capCurrentThenSealed( new String[] { SEQ_RESOURCE } ) );
+
+        assertEquals( Arrays.asList( SEQ_RESOURCE, "/", SEALED ),
+                      Arrays.asList( mpc.getPropertiesResourcePaths() ) );
+        assertEquals( "the snapshot caps the live read", "before", mpc.getProperty( KEY ) );
+        assertEquals( "the live read is still present underneath", "after",
+                      mpc.getPropertiesByResourcePath( "/" ).getProperty( KEY ) );
+        assertEquals( "and the resource underneath both still contributes",
+                      "yes", mpc.getPropertiesByResourcePath( SEQ_RESOURCE ).getProperty( ONLY_RESOURCE_KEY ) );
+    }
+
     // ---------- capCurrentThenSealed(String[]) ----------
 
     private static List<String> capped( String... paths )
