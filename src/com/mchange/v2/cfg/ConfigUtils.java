@@ -129,6 +129,8 @@ final class ConfigUtils
         }
 	else if ( "/".equals(identifier) )
 	    out = propertiesConfigSource( SystemPropertiesConfigSource.class.getName(), delayedLogItems );
+        else if ( SealedSystemProperties.NOTIONAL_RESOURCE_PATH.equals(identifier) )
+            out = propertiesConfigSource( SealedSystemPropertiesConfigSource.class.getName(), delayedLogItems );
         else if (file)
 	    out = propertiesConfigSource( FileUrlPropertiesConfigSource.class.getName(), delayedLogItems );
 	else if (identifier.startsWith("/"))

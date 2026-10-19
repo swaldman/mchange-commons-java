@@ -1,5 +1,6 @@
 package com.mchange.v2.cfg;
 
+import java.util.*;
 import com.mchange.v2.log.*;
 
 /**
@@ -70,6 +71,8 @@ import com.mchange.v2.log.*;
  */
 public final class SealedSystemProperties
 {
+    public final static String NOTIONAL_RESOURCE_PATH = "SEALED_SYSTEM_PROPERTIES";
+
     // setting up MLog / com.mchange.v2.log must never
     // touch this construct, or we'll provoke a potentially
     // dangerous cycle
@@ -81,13 +84,14 @@ public final class SealedSystemProperties
         return _logger;
     }
 
-    private static PropertiesConfig theProperties = null;
+    private static MultiPropertiesConfig theProperties = null;
 
-    public synchronized static PropertiesConfig get()
+    public synchronized static MultiPropertiesConfig get()
     {
         if (theProperties == null)
         {
-            theProperties = MConfig.AsProvided.readUncachedResourceConfig(new String[]{"/"});
+            MultiPropertiesConfig tmp = MConfig.AsProvided.readUncachedResourceConfig(new String[]{"/"});
+            theProperties = MultiPropertiesConfig.fromProperties(NOTIONAL_RESOURCE_PATH, tmp.getPropertiesByPrefix(""));
             if (logger().isLoggable( MLevel.INFO ))
                 logger().log(MLevel.INFO, "Sealed snapshot of System properties.");
             if (logger().isLoggable( MLevel.FINE ))
@@ -121,6 +125,94 @@ public final class SealedSystemProperties
 
     public synchronized static boolean isSealed()
     { return theProperties != null; }
+
+    public static String[] capCurrentThenSealed(String[] resources)
+    {
+        List<String> outList = new ArrayList<>();
+        for (String rp : resources)
+            if (!"/".equals(rp) && !SealedSystemProperties.NOTIONAL_RESOURCE_PATH.equals(rp))
+                outList.add(rp);
+        outList.add("/");
+        outList.add(SealedSystemProperties.NOTIONAL_RESOURCE_PATH);
+        return outList.toArray(new String[outList.size()]);
+    }
+
+    public static MultiPropertiesConfig capCurrentThenSealAndCombine(MultiPropertiesConfig[] overrides)
+    {
+        List<AbstractMap.SimpleEntry<String,Properties>> allProps = new ArrayList<>();
+
+        final List<DelayedLogItem> dlis = new ArrayList<>();
+        final Set<String> allRead = new HashSet<>();
+        final Set<String> allVetoed = new HashSet<>();
+        final Set<String> allNotFound = new HashSet<>();
+        final Set<String> allFaults = new HashSet<>();
+
+        for (MultiPropertiesConfig override : overrides)
+        {
+            for (String rp : override.getPropertiesResourcePaths())
+                if (!"/".equals(rp) && !SealedSystemProperties.NOTIONAL_RESOURCE_PATH.equals(rp))
+                {
+                    Properties props = override.getPropertiesByResourcePath(rp);
+                    if (props.size() > 0)
+                        allProps.add( new AbstractMap.SimpleEntry<String,Properties>(rp,props) );
+                }
+
+            dlis.addAll(override.getDelayedLogItems());
+            allRead.addAll(override.getAllRead());
+            allVetoed.addAll(override.getAllVetoed());
+            allNotFound.addAll(override.getAllNotFound());
+            allFaults.addAll(override.getAllFaults());
+        }
+        int apSize = allProps.size();
+        MultiPropertiesConfig[] all = new MultiPropertiesConfig[apSize + 2];
+        for (int i = 0; i < apSize; ++i)
+            all[i] = MultiPropertiesConfig.fromProperties(allProps.get(i).getKey(), allProps.get(i).getValue());
+
+        MultiPropertiesConfig currentSystem = MConfig.AsProvided.readUncachedResourceConfig( new String[]{"/"} );
+        dlis.addAll(currentSystem.getDelayedLogItems());
+        allRead.addAll(currentSystem.getAllRead());
+        allVetoed.addAll(currentSystem.getAllVetoed());
+        allNotFound.addAll(currentSystem.getAllNotFound());
+        allFaults.addAll(currentSystem.getAllFaults());
+        all[apSize] = currentSystem;
+
+        MultiPropertiesConfig sealed = SealedSystemProperties.get();
+        dlis.addAll(sealed.getDelayedLogItems());
+        allRead.addAll(sealed.getAllRead());
+        allVetoed.addAll(sealed.getAllVetoed());
+        allNotFound.addAll(sealed.getAllNotFound());
+        allFaults.addAll(sealed.getAllFaults());
+        all[apSize + 1] = sealed;
+
+        final MultiPropertiesConfig combined = MConfig.combine(all);
+
+        allVetoed.removeAll(allRead);
+        allNotFound.removeAll(allRead);
+        allFaults.removeAll(allRead);
+
+        allFaults.removeAll(allVetoed);
+        allNotFound.removeAll(allVetoed);
+
+        allNotFound.removeAll(allFaults);
+
+        MultiPropertiesConfig out = new MultiPropertiesConfig()
+        {
+            @Override public String[]             getPropertiesResourcePaths()             { return combined.getPropertiesResourcePaths();      }
+            @Override public Properties           getPropertiesByResourcePath(String path) { return combined.getPropertiesByResourcePath(path); }
+            @Override public Properties           getPropertiesByPrefix(String pfx)        { return combined.getPropertiesByPrefix(pfx);        }
+            @Override public String               getProperty( String key )                { return combined.getProperty(key);                  }
+            @Override public List<DelayedLogItem> getDelayedLogItems()                     { return dlis;                                       }
+            @Override public boolean              wasRead(String resourcePath)             { return allRead.contains(resourcePath);             }
+            @Override public boolean              wasVetoed(String resourcePath)           { return allVetoed.contains(resourcePath);           }
+            @Override public boolean              wasNotFound(String resourcePath)         { return allNotFound.contains(resourcePath);         }
+            @Override public boolean              wasFault(String resourcePath)            { return allFaults.contains(resourcePath);           }
+            @Override public Set<String>          getAllRead()                             { return Collections.unmodifiableSet(allRead);        }
+            @Override public Set<String>          getAllVetoed()                           { return Collections.unmodifiableSet(allVetoed);      }
+            @Override public Set<String>          getAllNotFound()                         { return Collections.unmodifiableSet(allNotFound);    }
+            @Override public Set<String>          getAllFaults()                           { return Collections.unmodifiableSet(allFaults);      }
+        };
+        return out;
+    }
 
     private SealedSystemProperties()
     {}

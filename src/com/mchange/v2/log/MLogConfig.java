@@ -3,9 +3,10 @@ package com.mchange.v2.log;
 
 import java.util.*;
 import java.lang.reflect.Method;
+import com.mchange.v2.cfg.MConfig;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.DelayedLogItem;
-import com.mchange.v2.cfg.MConfig;
+import com.mchange.v2.cfg.SealedSystemProperties;
 
 public final class MLogConfig
 {
@@ -24,13 +25,18 @@ public final class MLogConfig
     { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties"}; }
 
     public static String[] mlogC3p0Preempts()
-    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties", "/"}; }
+    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
 
     public static String[] mlogC3p0Unified()
     { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties","hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
 
     public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
     {
+        // we don't touch SealedSystemProperties in firstLoad, because it logs
+        // this class gets initialized before System properties seal, so (unsealed)
+        // firstLoad is as safe as later sealed loads
+	boolean firstLoad = (config == null);
+
 	List<DelayedLogItem> bli = new ArrayList<>();
 
         MultiPropertiesConfig tmpConfig;
@@ -43,7 +49,7 @@ public final class MLogConfig
                                        "However, mlog is transitioning from this mechanism, which is fragile and obscure. The supported way to customize configuration is " +
                                        "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
             String[] defaults = mlogC3p0Defaults();
-            String[] preempts = mlogC3p0Preempts();
+            String[] preempts = firstLoad || overrides != null? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -52,15 +58,13 @@ public final class MLogConfig
         }
         else
         {
-            String[] resources = mlogC3p0Unified();
+            String[] resources = firstLoad || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
             // or deadlocks
             tmpConfig = MConfig.AsProvided.readUncachedResourceConfig(null, resources, bli);
         }
-
-	boolean firstLoad = (config == null);
 
 	if ( overrides != null )
 	{
@@ -69,7 +73,7 @@ public final class MLogConfig
 	    combineMe[0] = tmpConfig;
 	    for ( int i = 0; i < olen; ++i )
 		combineMe[ i + 1 ] = overrides[i];
-	    config = MConfig.combine( combineMe );
+	    config = firstLoad ? MConfig.combine( combineMe ) : SealedSystemProperties.capCurrentThenSealAndCombine(combineMe);
             bli.addAll( config.getDelayedLogItems() );
 	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (firstLoad ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
 	}
@@ -82,7 +86,7 @@ public final class MLogConfig
         bli.add(new DelayedLogItem(DelayedLogItem.Level.INFO,
                                    "mlog config is now drawn from the following configuration sources: " +
                                    Arrays.toString(config.getPropertiesResourcePaths()) +
-                                   " Later paths shadow earlier paths where values conflict."));
+                                   ". Later paths shadow earlier paths where values conflict."));
 	bootstrapLogItems = bli;
     }
 

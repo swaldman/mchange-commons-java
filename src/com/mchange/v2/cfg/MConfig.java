@@ -780,7 +780,7 @@ public final class MConfig
 
     public static boolean sealSystemProperties() { return SealedSystemProperties.seal(); }
 
-    public static PropertiesConfig getSealedSystemProperties() { return SealedSystemProperties.get(); }
+    public static MultiPropertiesConfig getSealedSystemProperties() { return SealedSystemProperties.get(); }
 
     public static boolean isSealedSystemProperties() { return SealedSystemProperties.isSealed(); }
 

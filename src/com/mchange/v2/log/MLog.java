@@ -27,7 +27,7 @@ public abstract class MLog
     }
 
     public static synchronized boolean usingRedirectableLoggers() { return _redirectableLoggers; }
-    
+
     private static synchronized NameTransformer transformer() { return _transformer; }
     private static synchronized MLog            mlog()        { return _mlog; }
     private static synchronized MLogger         logger()      { return _logger; }
