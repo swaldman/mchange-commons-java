@@ -19,7 +19,8 @@ import com.mchange.v2.log.MLogger;
  *  this library is meant to share: a base key whose <code>.whitelist</code> subkeys union
  *  additively so independent layers can each contribute, an <code>.overrideWhitelist</code>
  *  that replaces that union outright, and an optional deprecated single key that keeps a
- *  pre-existing deployment working while it migrates.
+ *  pre-existing deployment working while it migrates by narrowing whatever the other keys
+ *  resolved to.
  *
  *  <p>Declared in-package because BasicMultiPropertiesConfig is not public, and the
  *  conservative intersection between System properties and supplied configuration -- the
@@ -28,8 +29,8 @@ import com.mchange.v2.log.MLogger;
  *
  *  <p>ByNameInstantiationUtilsJUnitTestCase covers the same machinery as its one current
  *  client sees it. This covers what that client cannot reach: it constructs its manager
- *  with <code>null</code> for the deprecated key, so the deprecated path and the precedence
- *  it claims are tested only here.</p>
+ *  with <code>null</code> for the deprecated key, so the deprecated path and the narrowing
+ *  it performs are tested only here.</p>
  */
 public class WhitelistManagerInternalJUnitTestCase extends TestCase
 {
@@ -188,12 +189,86 @@ public class WhitelistManagerInternalJUnitTestCase extends TestCase
 
     // ---------- the deprecated key ----------
 
+    //  The deprecated key NARROWS; it does not replace. The alternative would be for it to
+    //  win outright, on the reasoning that honoring the new keys alongside it could widen a
+    //  whitelist an existing deployment had already narrowed. Intersecting meets that
+    //  reasoning without a hazard winning outright would introduce: because selecting WHICH
+    //  key governs sits outside
+    //  the per-key intersection between System properties and supplied config, a deprecated
+    //  key injected into lower-trust config could displace an override an operator had pinned
+    //  in System properties -- and displace it with something WIDER. Intersection makes the
+    //  deprecated key incapable of widening anything, whoever wrote it and wherever from.
+
     /**
-     *  A deployment still carrying the deprecated key keeps the behavior it had. Honoring
-     *  the new keys alongside it would silently widen a whitelist that a deployment had
-     *  narrowed, so the deprecated key wins outright and the class nags about it instead.
+     *  A deployment still carrying only the deprecated key keeps exactly the behavior it had.
+     *  This is the compatibility the migration promises, and the case the reorder must not
+     *  disturb.
      */
-    public void testDeprecatedKeyTakesPrecedenceOverEverything()
+    public void testDeprecatedKeyAloneStillDecides()
+    {
+        System.setProperty( DEPRECATED, ALPHA + "," + BETA );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertEquals( WhitelistInfo.Source.DEPRECATED, info.getSource() );
+        assertEquals( setOf( ALPHA, BETA ), info.getWhitelist() );
+    }
+
+    /**
+     *  With the new keys also present, the result is the INTERSECTION rather than the
+     *  deprecated key alone. Entries only the deprecated key names are dropped, which is what
+     *  makes it unable to widen.
+     */
+    public void testDeprecatedKeyIntersectsWithTheUnionRatherThanReplacingIt()
+    {
+        System.setProperty( DEPRECATED, ALPHA + "," + BETA );
+        System.setProperty( WHITELIST + ".layerOne", BETA + "," + GAMMA );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertEquals( setOf( BETA ), info.getWhitelist() );
+    }
+
+    /** ...and with an override, likewise. */
+    public void testDeprecatedKeyIntersectsWithAnOverrideRatherThanReplacingIt()
+    {
+        System.setProperty( DEPRECATED, ALPHA + "," + BETA );
+        System.setProperty( OVERRIDE, BETA + "," + GAMMA );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertEquals( setOf( BETA ), info.getWhitelist() );
+    }
+
+    /**
+     *  The property the change exists for, stated as the attack it prevents. An operator pins
+     *  an override in System properties; the deprecated key arrives from supplied config,
+     *  naming something the override excluded. It must not get in.
+     */
+    public void testADeprecatedKeyInSuppliedConfigCannotWidenAnOverrideInSystemProperties()
+    {
+        System.setProperty( OVERRIDE, ALPHA );
+
+        WhitelistInfo info = collect( migrating(), pcfg( DEPRECATED, GAMMA ) );
+
+        assertFalse( "supplied config must not be able to add an entry the override excluded",
+                     info.getWhitelist().contains( GAMMA ) );
+        assertTrue( "and failing closed is the right direction when they are disjoint",
+                    info.getWhitelist().isEmpty() );
+    }
+
+    /** Narrowing from supplied config is still allowed -- only widening is refused. */
+    public void testADeprecatedKeyInSuppliedConfigMayNarrowAnOverrideInSystemProperties()
+    {
+        System.setProperty( OVERRIDE, ALPHA + "," + BETA );
+
+        WhitelistInfo info = collect( migrating(), pcfg( DEPRECATED, ALPHA ) );
+
+        assertEquals( setOf( ALPHA ), info.getWhitelist() );
+    }
+
+    /** Disjoint lists intersect to nothing, which is deny-all rather than either list. */
+    public void testWhollyDisjointDeprecatedAndNewKeysWhitelistNothing()
     {
         System.setProperty( DEPRECATED, ALPHA );
         System.setProperty( WHITELIST + ".layerOne", BETA );
@@ -202,14 +277,15 @@ public class WhitelistManagerInternalJUnitTestCase extends TestCase
         WhitelistInfo info = collect( migrating() );
 
         assertEquals( WhitelistInfo.Source.DEPRECATED, info.getSource() );
-        assertEquals( setOf( ALPHA ), info.getWhitelist() );
+        assertTrue( "no entry is named by both, so nothing is whitelisted", info.getWhitelist().isEmpty() );
     }
 
     /**
-     *  and an explicitly empty deprecated key wins too. Present-but-empty is a deny-all a
-     *  deployment chose; falling through to the new keys would quietly widen it.
+     *  An explicitly empty deprecated key still denies all, now by intersecting to nothing
+     *  rather than by winning outright. Present-but-empty is a deny-all a deployment chose,
+     *  and intersection preserves it for the same reason precedence used to.
      */
-    public void testEmptyDeprecatedKeyStillTakesPrecedence()
+    public void testEmptyDeprecatedKeyStillDeniesAll()
     {
         System.setProperty( DEPRECATED, "" );
         System.setProperty( WHITELIST + ".layerOne", BETA );
@@ -220,7 +296,24 @@ public class WhitelistManagerInternalJUnitTestCase extends TestCase
         assertTrue( info.getWhitelist().isEmpty() );
     }
 
-    /** Absent, it yields to the new keys rather than shadowing them. */
+    /**
+     *  Both keys are reported as having contributed, since both did. A diagnostic that named
+     *  only one would send a reader to the wrong half of their configuration.
+     */
+    public void testBothKeysAreReportedWhenBothContribute()
+    {
+        System.setProperty( DEPRECATED, ALPHA + "," + BETA );
+        System.setProperty( OVERRIDE, BETA );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertTrue( "the deprecated key should be named: " + info.getFromKeys(),
+                    info.getFromKeys().contains( DEPRECATED ) );
+        assertTrue( "and so should the override: " + info.getFromKeys(),
+                    info.getFromKeys().contains( OVERRIDE ) );
+    }
+
+    /** Absent, it yields to the new keys rather than narrowing them to nothing. */
     public void testAbsentDeprecatedKeyYieldsToTheNewKeys()
     {
         System.setProperty( WHITELIST + ".layerOne", BETA );
@@ -241,6 +334,33 @@ public class WhitelistManagerInternalJUnitTestCase extends TestCase
 
         assertEquals( WhitelistInfo.Source.MAIN_WHITELIST, info.getSource() );
         assertEquals( setOf( BETA ), info.getWhitelist() );
+    }
+
+    /**
+     *  A wildcard survives only where the deprecated key is the whole story. Intersecting
+     *  "{*, x}" with "{*, y}" yields "{*}" -- accept-any, WIDER than either side meant -- so
+     *  that case denies all instead. Subtle enough to be refactored away by accident.
+     */
+    public void testAWildcardProducedOnlyByIntersectionIsRefused()
+    {
+        System.setProperty( DEPRECATED, "*," + ALPHA );
+        System.setProperty( OVERRIDE,   "*," + BETA );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertFalse( "an accept-any whitelist must not be synthesized by intersection: " + info.getWhitelist(),
+                     info.getWhitelist().contains( "*" ) );
+        assertTrue( info.getWhitelist().isEmpty() );
+    }
+
+    /** ...while a deprecated-only wildcard is honored as it always was. */
+    public void testADeprecatedOnlyWildcardIsHonored()
+    {
+        System.setProperty( DEPRECATED, "*" );
+
+        WhitelistInfo info = collect( migrating() );
+
+        assertEquals( setOf( "*" ), info.getWhitelist() );
     }
 
     // ---------- System properties vs supplied configuration ----------

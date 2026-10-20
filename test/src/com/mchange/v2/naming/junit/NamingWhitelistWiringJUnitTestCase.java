@@ -25,12 +25,18 @@ import com.mchange.v2.naming.SecurityConfigKey;
  *  without these is the wiring: that a name written under the <i>new</i> keys reaches
  *  findMandatoryObjectFactoryWhitelist and ensureWhitelistedJavaBeanClass at all, that the
  *  additive subkeys and the override key work there, that the sentinels mean what they mean
- *  everywhere else, and -- most importantly for anyone upgrading -- that the pre-existing
- *  flat keys still decide, loudly deprecated but undiminished.</p>
+ *  everywhere else, and -- most importantly for anyone upgrading -- that a deployment still
+ *  carrying only the pre-existing flat keys resolves exactly as it always did, loudly
+ *  deprecated but undiminished.</p>
  *
  *  <p>The older ReferenceableUtils and JavaBeanReferenceable cases drive these gates through
  *  the deprecated keys, which is exactly right: they pin the compatibility this migration
  *  promised. These cover the other side of that promise.</p>
+ *
+ *  <p>Note that "undiminished" holds only while the flat key is alone. Where new keys are
+ *  configured too, the deprecated key narrows rather than decides -- see
+ *  WhitelistManagerInternalJUnitTestCase, which covers that intersection. No case here
+ *  configures both families at once.</p>
  */
 public class NamingWhitelistWiringJUnitTestCase extends TestCase
 {
