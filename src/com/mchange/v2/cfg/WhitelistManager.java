@@ -30,16 +30,45 @@ import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListT
  *        rather than adding to it, for a deployment that wants to discard what its
  *        libraries contributed.</li>
  *    <li>an optional deprecated key, named in full at construction, for a whitelist that
- *        predates this scheme. While it is present it is the whole whitelist and the two
- *        families above are ignored -- honoring them alongside it could only widen a
- *        whitelist an existing deployment had already narrowed. Its continued use is
- *        nagged about on every resolution.</li>
+ *        predates this scheme. It does not take its turn in a precedence order at all:
+ *        whatever the two families above resolved to, the deprecated key
+ *        <b>intersects</b> with it. Where it is the only thing configured, that
+ *        intersection is itself, so a deployment still carrying only this key resolves
+ *        exactly as it always did. Its continued use is nagged about on every
+ *        resolution.</li>
  *  </ul>
  *
- *  <p>Precedence is deprecated key, then override, then the union; each is consulted only
- *  if the previous is absent. Present-but-empty counts as present in all three: an
- *  operator who set a key to nothing chose deny-all, and falling through would silently
- *  widen it.</p>
+ *  <p>So precedence proper is override, then the union: the override replaces the union,
+ *  and the union is consulted only if no override is set. Present-but-empty counts as
+ *  present in both: an operator who set a key to nothing chose deny-all, and falling
+ *  through would silently widen it. An empty deprecated key reaches the same end by
+ *  intersecting everything away.</p>
+ *
+ *  <h3>Why the deprecated key narrows rather than decides</h3>
+ *
+ *  <p>The obvious alternative is for it to decide: while present, be the whole whitelist,
+ *  and have the other two families ignored. The argument for that is real -- honoring them
+ *  alongside it could widen a whitelist an existing deployment had already narrowed, and
+ *  the whole point of keeping this key is that such a deployment keeps what it had.
+ *  Intersection meets that argument, since it cannot widen anything, and avoids a hazard
+ *  deciding would introduce.</p>
+ *
+ *  <p>The hazard is that <i>which key governs</i> sits outside the per-key intersection
+ *  between the two sources described below. That intersection ensures neither source can
+ *  widen a key the other also set; it says nothing about a key appearing where no key
+ *  appeared before. So a deprecated key introduced into the supplied config could
+ *  displace an <code>overrideWhitelist</code> an operator had pinned in System
+ *  properties, and displace it with a <i>wider</i> list -- the one thing the whole scheme
+ *  exists to prevent. Narrowing closes that: the deprecated key can subtract from the
+ *  effective whitelist, never add to it, wherever it was written and whoever wrote it.</p>
+ *
+ *  <p>The cost is paid by a deployment that configures both families at once, which gets
+ *  the intersection rather than the deprecated key whole -- deny-all, if the two are
+ *  disjoint. That is a misconfiguration being resolved toward denial, consistent with how
+ *  this class resolves every other conflict, and it is warned about specifically rather
+ *  than left to surface as an unexplained empty whitelist. Note that no released version
+ *  ever resolved these keys any other way: the supported families and this key's handling
+ *  of them arrive together, so no existing configuration changes meaning.</p>
  *
  *  <h3>Two sources, and why they intersect</h3>
  *
@@ -50,6 +79,11 @@ import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListT
  *  the two sources peers rather than one overriding the other, and note also that it
  *  constrains only keys both sources set -- a key written in just one place is taken
  *  whole, so this rule narrows disagreement, it does not make either source untrusted.</p>
+ *
+ *  <p>Note that there are now two intersections, and they are not the same rule. This one
+ *  is <i>across the two sources, within one key</i>, and applies to every key. The other
+ *  is <i>across key families</i>: the deprecated key against whatever the supported keys
+ *  resolved to. A whitelist can be narrowed by both in one resolution.</p>
  *
  *  <h3>The two sentinels</h3>
  *
@@ -69,7 +103,13 @@ import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListT
  *        sources that each meant to <i>narrow</i> would otherwise combine into
  *        accept-everything. A wildcard nobody actually asked for becomes deny-all. Keys
  *        that contributed nothing are exempt from that check: a blank key is silent, not
- *        dissenting, and must not veto a wildcard another key vouched for.</p></li>
+ *        dissenting, and must not veto a wildcard another key vouched for.</p>
+ *
+ *        <p>The same protection covers the cross-family intersection. A lone
+ *        <code>*</code> surviving the deprecated key's narrowing is honored only where
+ *        the deprecated list is what the effective whitelist already was -- otherwise
+ *        <code>{A,*}</code> and <code>{B,*}</code> in the two families would again
+ *        synthesize an accept-everything neither side wrote.</p></li>
  *    <li><code>[]</code> -- deny everything. Present in <b>any</b> key of <b>any</b> of
  *        the three families above, in <b>either</b> source, it empties the whitelist,
  *        regardless of the precedence that would otherwise have ignored that key. It is
@@ -95,6 +135,10 @@ import static com.mchange.v2.cfg.PropertiesConfigUtils.commaSeparatedStringListT
  *  {@link WhitelistInfo.Source} that decided it. The source is worth attending to twice
  *  over. Diagnostics should name the key actually in force rather than the subkeys an
  *  override discarded -- {@link #makeWhitelistDescriptor} renders exactly that phrase.
+ *  Where the deprecated key narrowed a whitelist the supported keys built, both are
+ *  reported: the source is {@link WhitelistInfo.Source#DEPRECATED}, since that is the
+ *  key whose presence changed the answer, and the returned keys name every key that
+ *  actually contributed, so a reader is not sent to the wrong half of a configuration.
  *  And {@link WhitelistInfo.Source#MISSING} distinguishes <i>no whitelist is
  *  configured</i> from a configured deny-all, which is the distinction a caller needs if
  *  it means to insist that one be configured rather than silently denying everything.</p>
@@ -236,14 +280,107 @@ public class WhitelistManager
 
         boolean crossListVeto = false;
 
-        // if a deprecated whitelist exists, we use it, but with a big warning to migrate
+        Set<String> override = modifiableNarrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, overrideWhitelistKey, pcfg, DENY_ALL, logger);
+        if (override != null)
+        {
+            if (logger.isLoggable(MLevel.WARNING))
+            {
+                // staying on override whitelists is supported, we warn just once
+                if (shouldWarnSupported == null)
+                    shouldWarnSupported = Boolean.valueOf( warnSupported(cachedSyspropsConfig,pcfg) );
+                if (shouldWarnSupported.booleanValue())
+                {
+                    logger.log(MLevel.WARNING,
+                               "The whitelist that would have been built from '" + whitelistBaseKey +
+                               "' and its subkeys has been overridden by '" + overrideWhitelistKey +
+                               "'. The overridden whitelist that will be in effect is " + override + ".");
+                }
+            }
+            whitelist = override;
+            fromKeys = Collections.singleton(overrideWhitelistKey);
+            source = WhitelistInfo.Source.OVERRIDE;
+
+            if (deprecatedKey != null && checkRawKeyForToken(cachedSyspropsConfig, deprecatedKey, DENY_ALL, pcfg))
+            {
+                whitelist = new HashSet<String>();
+                crossListVeto = true;
+                warnTokenInKey(deprecatedKey, "override whitelist '" + overrideWhitelistKey + "'", logger);
+            }
+
+            Set<String> blockers = whitelistBaseKey == null ? null : findRawSubkeysWithToken(cachedSyspropsConfig, whitelistBaseKey, DENY_ALL, pcfg);
+            if (blockers != null)
+            {
+                whitelist = new HashSet<String>();
+                crossListVeto = true;
+                warnTokenInSubKeys(blockers, "override whitelist '" + overrideWhitelistKey + "'", logger);
+            }
+        }
+        else
+        {
+            Set<String> allWhitelistKeys = computeAllSubkeys( cachedSyspropsConfig, whitelistBaseKey, pcfg );
+            Set<String> noOverride = modifiableNarrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, allWhitelistKeys, pcfg, DENY_ALL, logger );
+            whitelist = noOverride;
+            fromKeys = allWhitelistKeys;
+            source = WhitelistInfo.Source.MAIN_WHITELIST;
+
+            if (deprecatedKey != null && checkRawKeyForToken(cachedSyspropsConfig, deprecatedKey, DENY_ALL, pcfg))
+            {
+                whitelist = new HashSet<String>();
+                crossListVeto = true;
+                warnTokenInKey(deprecatedKey, whitelistBaseKey + " and subkeys", logger);
+            }
+
+            if (overrideWhitelistKey != null && checkRawKeyForToken(cachedSyspropsConfig, overrideWhitelistKey, DENY_ALL, pcfg))
+            {
+                whitelist = new HashSet<String>();
+                crossListVeto = true;
+                warnTokenInKey(overrideWhitelistKey, whitelistBaseKey + " and subkeys", logger);
+            }
+        }
+
+
+        Set<String> deprecatedWhitelist = null;
+
+        // if a deprecated whitelist exists, we use it, but with a big warning to migrate, and intersecting with any otherwise specified whitelist
         if (deprecatedKey != null)
         {
-            Set<String> deprecatedWhitelist = modifiableNarrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, deprecatedKey, pcfg, DENY_ALL, logger );
+            deprecatedWhitelist = modifiableNarrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, deprecatedKey, pcfg, DENY_ALL, logger );
             if (deprecatedWhitelist != null)
             {
-                whitelist = deprecatedWhitelist;
-                fromKeys = Collections.singleton(deprecatedKey);
+                if (whitelist == null)
+                    whitelist = deprecatedWhitelist;
+                else
+                {
+                    Set<String> oldWhitelist = new HashSet<String>(whitelist);
+                    whitelist.retainAll(deprecatedWhitelist);
+
+                    if (logger.isLoggable(MLevel.WARNING))
+                    {
+                        logger.log(MLevel.WARNING,
+                                   "A whitelist is specified both with currently supported keys ('" +
+                                   whitelistBaseKey + "', its subkeys, or alternatively '" + overrideWhitelistKey +
+                                   "') and with deprecated key '" + deprecatedKey +
+                                   "'. Erring on the side of caution, when both new and deprecated config are provided, only the *intersection* of the two whitelists is retained in " +
+                                   "the effective whitelist."
+                                   );
+                        if (whitelist.isEmpty() && !oldWhitelist.isEmpty())
+                            logger.log(MLevel.WARNING,
+                                       "There was no intersection between the whitelist specified by currently supported config " + oldWhitelist +
+                                       " and the whitelist specified by deprecated config " + deprecatedWhitelist +
+                                       ", so the effective whitelist, defined by the intersection, is now empty and all checks against it will be denied!"
+                                       );
+                    }
+                }
+
+                if (fromKeys == null)
+                    fromKeys = Collections.singleton(deprecatedKey);
+                else
+                {
+                    Set<String> oldFromKeys = fromKeys;
+                    fromKeys = new HashSet<String>();
+                    fromKeys.addAll(oldFromKeys);
+                    fromKeys.add(deprecatedKey);
+                }
                 source = WhitelistInfo.Source.DEPRECATED;
 
                 if (logger.isLoggable(MLevel.WARNING))
@@ -252,7 +389,8 @@ public class WhitelistManager
                     logger.log(
                       MLevel.WARNING,
                       "Deprecated whitelist key '" + deprecatedKey + "' found. Please remove this from your configuration and migrate to '" + whitelistBaseKey + "' or any subkey for defining whitelist elements. " +
-                      "Please note that as long as this key is present in your configuration, it will remain effective, and '" + whitelistBaseKey + "', its subkeys, and '" + overrideWhitelistKey + "' will all be ignored! " +
+                      "Please note that as long as this key is present in your configuration, it will remain effective, and will narrow any whitelist that might have been specified by '" +
+                      whitelistBaseKey + "', its subkeys, or alternatively '" + overrideWhitelistKey + "'. " +
                       "Effective whitelist: " + whitelist
                     );
                 }
@@ -270,67 +408,6 @@ public class WhitelistManager
                     whitelist = new HashSet<String>();
                     crossListVeto = true;
                     warnTokenInSubKeys(blockers, "deprecated key '" + deprecatedKey + "'", logger);
-                }
-            }
-        }
-
-        if (whitelist == null)
-        {
-            Set<String> override = modifiableNarrowestStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, overrideWhitelistKey, pcfg, DENY_ALL, logger);
-            if (override != null)
-            {
-                if (logger.isLoggable(MLevel.WARNING))
-                {
-                    // staying on override whitelists is supported, we warn just once
-                    if (shouldWarnSupported == null)
-                        shouldWarnSupported = Boolean.valueOf( warnSupported(cachedSyspropsConfig,pcfg) );
-                    if (shouldWarnSupported.booleanValue())
-                    {
-                        logger.log(MLevel.WARNING,
-                                   "The whitelist that would have been built from '" + whitelistBaseKey +
-                                   "' and its subkeys has been overridden by '" + overrideWhitelistKey +
-                                   "'. The overridden whitelist that will be in effect is " + override + ".");
-                    }
-                }
-                whitelist = override;
-                fromKeys = Collections.singleton(overrideWhitelistKey);
-                source = WhitelistInfo.Source.OVERRIDE;
-
-                if (deprecatedKey != null && checkRawKeyForToken(cachedSyspropsConfig, deprecatedKey, DENY_ALL, pcfg))
-                {
-                    whitelist = new HashSet<String>();
-                    crossListVeto = true;
-                    warnTokenInKey(deprecatedKey, "override whitelist '" + overrideWhitelistKey + "'", logger);
-                }
-
-                Set<String> blockers = whitelistBaseKey == null ? null : findRawSubkeysWithToken(cachedSyspropsConfig, whitelistBaseKey, DENY_ALL, pcfg);
-                if (blockers != null)
-                {
-                    whitelist = new HashSet<String>();
-                    crossListVeto = true;
-                    warnTokenInSubKeys(blockers, "override whitelist '" + overrideWhitelistKey + "'", logger);
-                }
-            }
-            else
-            {
-                Set<String> allWhitelistKeys = computeAllSubkeys( cachedSyspropsConfig, whitelistBaseKey, pcfg );
-                Set<String> noOverride = modifiableNarrowestPerKeyUnionAcrossKeysStringSetFromStringListSyspropsPropertiesConfigWithAlwaysRetainToken( cachedSyspropsConfig, allWhitelistKeys, pcfg, DENY_ALL, logger );
-                whitelist = noOverride;
-                fromKeys = allWhitelistKeys;
-                source = WhitelistInfo.Source.MAIN_WHITELIST;
-
-                if (deprecatedKey != null && checkRawKeyForToken(cachedSyspropsConfig, deprecatedKey, DENY_ALL, pcfg))
-                {
-                    whitelist = new HashSet<String>();
-                    crossListVeto = true;
-                    warnTokenInKey(deprecatedKey, whitelistBaseKey + " and subkeys", logger);
-                }
-
-                if (overrideWhitelistKey != null && checkRawKeyForToken(cachedSyspropsConfig, overrideWhitelistKey, DENY_ALL, pcfg))
-                {
-                    whitelist = new HashSet<String>();
-                    crossListVeto = true;
-                    warnTokenInKey(overrideWhitelistKey, whitelistBaseKey + " and subkeys", logger);
                 }
             }
         }
@@ -362,7 +439,7 @@ public class WhitelistManager
             }
             else if (whitelist.contains(DENY_ALL))
             {
-                if (sz > 1 &&logger.isLoggable(MLevel.WARNING))
+                if (sz > 1 && logger.isLoggable(MLevel.WARNING))
                 {
 
                     // whitelists containing multiple values and also "[]" are misconfigurations,
@@ -408,7 +485,7 @@ public class WhitelistManager
                         whitelist = doubleCheckApparentWildcardWhitelistBaseKey( cachedSyspropsConfig, whitelistBaseKey, pcfg, whitelist, logger );
                         break;
                     case DEPRECATED:
-                        whitelist = doubleCheckApparentWildcardWhitelistSimpleKey( cachedSyspropsConfig, deprecatedKey, pcfg, whitelist, logger );
+                        whitelist = doubleCheckApparentWildcardDeprecatedKey( cachedSyspropsConfig, deprecatedKey, deprecatedWhitelist, pcfg, whitelist, logger );
                         break;
                     case OVERRIDE:
                         whitelist = doubleCheckApparentWildcardWhitelistSimpleKey( cachedSyspropsConfig, overrideWhitelistKey, pcfg, whitelist, logger );
@@ -427,6 +504,17 @@ public class WhitelistManager
             return new WhitelistInfo(new HashSet<String>(),Collections.<String>emptySet(),WhitelistInfo.Source.MISSING);
     }
 
+    private Set<String> doubleCheckApparentWildcardDeprecatedKey( PropertiesConfig cachedSyspropsConfig, String key, Set<String> deprecatedWhitelist, PropertiesConfig pcfg, Set<String> uncheckedWhitelist, MLogger logger )
+    {
+        // if the deprecated key is present, then the only scenario in which we accept a wildcard is if it's the sole entry in that key's whitelist
+        if (uncheckedWhitelist.equals(deprecatedWhitelist))
+        {
+            // now we still have to make sure the wildcard is not a result of an intersection across sources within deprecated key
+            return doubleCheckApparentWildcardWhitelistSimpleKey( cachedSyspropsConfig, key, pcfg, uncheckedWhitelist, logger );
+        }
+        else
+            return new HashSet<String>();
+    }
     private Set<String> doubleCheckApparentWildcardWhitelistSimpleKey( PropertiesConfig cachedSyspropsConfig, String key, PropertiesConfig pcfg, Set<String> uncheckedWhitelist, MLogger logger )
     {
         if (pcfg == null) // no conflict possible, only system properties
@@ -581,6 +669,8 @@ public class WhitelistManager
         switch (source) {
         case MISSING:
             return source.getIdentifier() + " (none configured; define one at '" + whitelistBaseKey + "' or a subkey)";
+        case DEPRECATED:
+            return source.getIdentifier() + " defined by the intersection of deprecated key " + effectiveKeyDescription(source) + " and currently supported config";
         default:
             return source.getIdentifier() + " defined by key " + effectiveKeyDescription(source);
         }
