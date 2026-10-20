@@ -5,6 +5,7 @@ import java.io.*;
 
 import java.nio.file.NoSuchFileException;
 
+import com.mchange.v2.util.PropertiesMasker;
 import com.mchange.v3.hocon.HoconPropertiesConfigSource;
 
 import static com.mchange.v2.cfg.DelayedLogItem.*;
@@ -533,10 +534,27 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
 //    { return (Properties) propsByKey.clone(); }
 
     //TODO: Make this much prettier
-    public String dump()
+    public String dangerousDump()
     { return String.format("[ propertiesByResourcePaths -> %s, propertiesByPrefixes -> %s ]", propsByResourcePaths, propsByPrefixes); }
+
+    //TODO: Make this much prettier
+    public String safeDump()
+    {
+        Map<String,Properties> maskedPropsByResourcePaths = new HashMap<>();
+        Map<String,Properties> maskedPropsByPrefixes      = new HashMap<>();
+
+        for (Map.Entry<String,Properties> rp2p : propsByResourcePaths.entrySet())
+            maskedPropsByResourcePaths.put( rp2p.getKey(), PropertiesMasker.DEFAULT.masked(rp2p.getValue()) );
+        for (Map.Entry<String,Properties> p2p : propsByPrefixes.entrySet())
+            maskedPropsByPrefixes.put( p2p.getKey(), PropertiesMasker.DEFAULT.masked(p2p.getValue()) );
+        return String.format("[ propertiesByResourcePaths -> %s, propertiesByPrefixes -> %s ]", maskedPropsByResourcePaths, maskedPropsByPrefixes);
+    }
+
+    //TODO: Make this much prettier
+    public String dump()
+    { return safeDump(); }
 
     @Override
     public String toString()
-    { return super.toString() + " " + this.dump(); }
+    { return super.toString() + " " + this.safeDump(); }
 }
