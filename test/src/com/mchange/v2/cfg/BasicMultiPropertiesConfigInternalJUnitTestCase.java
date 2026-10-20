@@ -118,4 +118,70 @@ public final class BasicMultiPropertiesConfigInternalJUnitTestCase extends TestC
                        ConfigUtils.propertiesConfigSourceForIdentifier( "/a.properties", items ),
                        ConfigUtils.propertiesConfigSourceForIdentifier( "file:/a", items ) );
     }
+
+    // ---------------------------------------------------------------- dumping
+
+    //  A dump of resolved configuration is the most useful diagnostic this package offers and
+    //  the most dangerous thing it prints: its source list ends with System properties, so it
+    //  holds whatever was passed as -Dsomething.password=... Masking it is the whole reason
+    //  PropertiesMasker exists, and toString() routes through the masked form because toString()
+    //  is called by debuggers, IDEs and incautious log statements without anyone deciding to.
+
+    private final static String SECRET = "s3cr3t-must-not-appear";
+
+    private static BasicMultiPropertiesConfig withASecret()
+    {
+        java.util.Properties props = new java.util.Properties();
+        props.setProperty( "some.password", SECRET );
+        props.setProperty( "some.jdbcUrl", "jdbc:postgresql://db:5432/prod?user=app&password=" + SECRET );
+        props.setProperty( "some.maxPoolSize", "30" );
+        return new BasicMultiPropertiesConfig( "/notional-test-resource", props );
+    }
+
+    public void testSafeDumpDoesNotDiscloseSecrets()
+    {
+        String dump = withASecret().safeDump();
+
+        assertFalse( "a key-named secret survived safeDump: " + dump, dump.contains( SECRET ) );
+        assertTrue( "it should still report what was configured: " + dump, dump.contains( "some.password" ) );
+        assertTrue( "and retain what is not sensitive: " + dump, dump.contains( "30" ) );
+    }
+
+    /**
+     *  toString() must be the safe one. Nothing decides to call it -- a debugger, an IDE
+     *  inspector or a log statement that interpolates a config does it unbidden -- so the unsafe
+     *  form has to be the one a caller reaches for by name.
+     */
+    public void testToStringUsesTheSafeDump()
+    {
+        assertFalse( "toString() disclosed a secret", withASecret().toString().contains( SECRET ) );
+        assertFalse( "dump() disclosed a secret",     withASecret().dump().contains( SECRET ) );
+    }
+
+    /** And dangerousDump() must still be dangerous, or the distinction is decoration. */
+    public void testDangerousDumpIsStillDangerous()
+    {
+        assertTrue( "dangerousDump() is the unmasked form and must remain so",
+                    withASecret().dangerousDump().contains( SECRET ) );
+    }
+
+    /**
+     *  THE INITIALIZATION-ORDER REGRESSION. safeDump() masks through
+     *  PropertiesMasker.DEFAULT, a static built during that class's initialization. It was once
+     *  constructed before the transformer field it reads was assigned, so DEFAULT held a set
+     *  containing null and every safeDump() -- hence every toString() -- threw
+     *  NullPointerException, while a locally constructed masker worked perfectly. Nothing caught
+     *  it, because no test called either.
+     */
+    public void testSafeDumpDoesNotThrow()
+    {
+        BasicMultiPropertiesConfig config = withASecret();
+        try
+        {
+            assertNotNull( config.safeDump() );
+            assertNotNull( config.toString() );
+        }
+        catch ( NullPointerException e )
+        { fail( "safeDump()/toString() threw, which is how the masker's statics were once ordered: " + e ); }
+    }
 }
