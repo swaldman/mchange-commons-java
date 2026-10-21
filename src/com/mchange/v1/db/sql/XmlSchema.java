@@ -8,6 +8,10 @@ import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.*;
 
+/**
+ *  @deprecated We know of no current users, so are maintaining this very lightly.
+ */
+@Deprecated
 public class XmlSchema implements Schema
 {
     private final static int CREATE = 0;

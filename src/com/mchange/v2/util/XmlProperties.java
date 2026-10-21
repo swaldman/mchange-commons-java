@@ -23,6 +23,10 @@ import org.xml.sax.*;
 //     ]]></property>
 //  </xml-properties>
 
+/**
+ * @deprecated Please use native XML functionality now built into java.util.Properties. (Yes, the format is different.)
+ */
+@Deprecated
 public class XmlProperties extends Properties
 {
     final static String DTD_SYSTEM_ID = "http://www.mchange.com/dtd/xml-properties.dtd";
@@ -43,8 +47,8 @@ public class XmlProperties extends Properties
 			{
 			    InputStream is = XmlProperties.class.getResourceAsStream(DTD_RSRC_PATH);
 			    return new InputSource(is);
-			} 
-		    else return null;
+			}
+		    else return new InputSource(new StringReader("")); // null would have meant use default resolution
 		}
 	    };
 
@@ -60,7 +64,10 @@ public class XmlProperties extends Properties
 
 		@Override
 		public void fatalError(SAXParseException e) throws SAXException
-		{ System.err.println("[Fatal Error] " + e.toString()); }
+		{
+                    System.err.println("[Fatal Error] " + e.toString());
+                    throw e;
+                }
 	    };
 
 
@@ -68,6 +75,12 @@ public class XmlProperties extends Properties
 	dbFact.setValidating( true );
 	dbFact.setCoalescing( true );
 	dbFact.setIgnoringComments( true );
+
+        dbFact.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false);
+        dbFact.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        dbFact.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        dbFact.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+
 	this.docBuilder = dbFact.newDocumentBuilder();
 	this.docBuilder.setEntityResolver( er );
 	this.docBuilder.setErrorHandler( eh );

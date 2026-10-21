@@ -19,7 +19,7 @@ import com.mchange.v1.xml.StdErrErrorHandler;
  *
  *  Thanks to chennbnbnb on github for calling attention to this issue.
  *
- *  @deprecated we know of no current users, so are maintaining this very lightly
+ *  @deprecated Please use native XML functionality now built into java.util.Properties. (Yes, the format is different.) We know of no current users, so are maintaining this very lightly.
  */
 @Deprecated
 public class DomXmlPropsParser
