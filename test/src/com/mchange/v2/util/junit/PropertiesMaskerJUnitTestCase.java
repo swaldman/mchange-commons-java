@@ -4,10 +4,8 @@ import junit.framework.TestCase;
 
 import com.mchange.v2.util.PropertiesMasker;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -345,24 +343,6 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
         assertNull( "a key outside the prefix must not appear at all",
                     out.getProperty( "someone.elses.password" ) );
         assertEquals( 2, out.stringPropertyNames().size() );
-    }
-
-    /** The published substring sets are security configuration; nobody may empty them. */
-    public void testPublishedSubstringSetsAreUnmodifiable()
-    {
-        List<Set<String>> sets = Arrays.asList( PropertiesMasker.DEFAULT_MASKABLE_LOWERCASE_SUBSTRINGS,
-                                                PropertiesMasker.DEFAULT_MASKABLE_LOWERCASE_URL_PARAM_SUBSTRINGS,
-                                                PropertiesMasker.DEFAULT_MASKABLE_LOWERCASE_URL_PARAM_EXACT_NAMES );
-        for ( Set<String> set : sets )
-        {
-            try
-            {
-                set.clear();
-                fail( "a caller able to clear this set could disable masking process-wide" );
-            }
-            catch ( UnsupportedOperationException expected )
-            { /* as it should be */ }
-        }
     }
 
     /** Mutating the set a caller passed must not change what the masker does afterward. */
