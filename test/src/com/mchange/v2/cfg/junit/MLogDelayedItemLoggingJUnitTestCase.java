@@ -277,7 +277,8 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
                     arr = Array.newInstance( mpcClass, overrides.length );
                     for ( int i = 0; i < overrides.length; ++i ) Array.set( arr, i, overrides[i] );
                 }
-                Method m = mlogConfigClass.getMethod( "refresh", Array.newInstance( mpcClass, 0 ).getClass(), String.class );
+                Method m = mlogConfigClass.getDeclaredMethod( "refresh", Array.newInstance( mpcClass, 0 ).getClass(), String.class );
+                m.setAccessible( true );   // package-private on purpose: clients go through MLog.refreshConfig(..)
                 m.invoke( null, new Object[] { arr, description } );
             }
             catch ( Exception e )
@@ -320,7 +321,8 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
 
             try
             {
-                Method m = mlogConfigClass.getMethod( "logDelayedItems", mloggerClass );
+                Method m = mlogConfigClass.getDeclaredMethod( "logDelayedItems", mloggerClass );
+                m.setAccessible( true );
                 m.invoke( null, new Object[] { logger } );
             }
             catch ( Exception e )
