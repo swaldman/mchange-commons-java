@@ -229,6 +229,56 @@ public class SealedSystemPropertiesBooleanPropertyInternalJUnitTestCase extends 
     }
 
     /**
+     *  A property may weak-default WITHOUT nagging, for the case where the weak default is the
+     *  settled answer rather than a transitional one. The nag says "THIS MAY CHANGE IN A FUTURE
+     *  RELEASE" and asks the deployment to act; where neither is true, saying it every startup
+     *  is noise that teaches a reader to ignore the ones that mean something.
+     *
+     *  <p>Note what this is NOT: an escape hatch for operators. They already have one, and it
+     *  is the one the message asks for -- setting the property either way silences it, which
+     *  testWithdrawingConfigurationReArmsTheNotice shows from the other direction. This flag is
+     *  the library deciding, at construction, that a given property never warranted the nag.</p>
+     */
+    public void testTheUnsafeDefaultNoticeCanBeSuppressedAtConstruction()
+    {
+        SealedSystemPropertiesBooleanProperty p =
+            new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false, false );
+
+        assertFalse( value( p ) );
+        assertTrue( "suppressed, so nothing should have been said: " + logger.warnings(),
+                    logger.warningsContaining( "less secure value" ).isEmpty() );
+    }
+
+    /**
+     *  THE ASSERTION WORTH HAVING. Suppressing a notice must change only what is said, never
+     *  what is decided -- the flag is threaded through configureUnconfigured(..), which also
+     *  computes the return value, so a mistake there would silently alter the value of every
+     *  weak-defaulting property rather than merely quieting it.
+     */
+    public void testSuppressingTheNoticeDoesNotChangeTheValue()
+    {
+        assertEquals( "the suppressed and unsuppressed forms must decide alike",
+                      value( new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false ) ),
+                      value( new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false, false ) ) );
+
+        // ... and they must still agree once configuration has its say, since the flag has no
+        // business reaching the configured paths at all.
+        assertEquals( value( new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false ), pcfg( ENFORCE, "true" ) ),
+                      value( new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false, false ), pcfg( ENFORCE, "true" ) ) );
+    }
+
+    /** The three-argument form must keep nagging, or every existing property goes quiet. */
+    public void testTheOlderConstructorStillNags()
+    {
+        SealedSystemPropertiesBooleanProperty p =
+            new SealedSystemPropertiesBooleanProperty( ENFORCE, true, false );
+
+        assertFalse( value( p ) );
+        assertEquals( "the default must remain to warn: " + logger.warnings(),
+                      1, logger.warningsContaining( "less secure value" ).size() );
+    }
+
+    /**
      *  Re-entering the unconfigured state re-arms the notice. An application that withdraws
      *  its configuration is running on a default again, and should be told so.
      */
