@@ -19,7 +19,7 @@ public final class Jdk14MLog extends MLog
 
     static
     {
-	String suppressVal = MLogConfig.getProperty( SUPPRESS_STACK_WALK_KEY );
+	String suppressVal = MLog.getConfigProperty( SUPPRESS_STACK_WALK_KEY );
 	if (suppressVal == null || (suppressVal = suppressVal.trim()).length() == 0)
 	    suppress_stack_walk = false;
 	else

@@ -26,7 +26,7 @@ public final class FallbackMLog extends MLog
 
         // we have to be very careful about accessing config.
         // sometimes we are using FallbackLog precisely because config is failing.
-	String dfltName = MLogConfig.getPropertyIfNoFailure( DEFAULT_CUTOFF_LEVEL_KEY );
+	String dfltName = MLog.getConfigProperty( DEFAULT_CUTOFF_LEVEL_KEY );
         if (dfltName == null)
             dfltName = System.getProperty( DEFAULT_CUTOFF_LEVEL_KEY );
 	if (dfltName != null)

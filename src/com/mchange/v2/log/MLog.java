@@ -24,7 +24,6 @@ public abstract class MLog
             System.err.println("MLog clients will fallback to standard error logging.");
             forceFallback();
             MLogConfig.markMLogReinitialized(); // not the way we would have wanted, but loggers do function
-
         }
     }
 
@@ -94,17 +93,17 @@ public abstract class MLog
 
 	RedirectableMLogger.resetAll();
 
-	String redirectableLoggersStr = MLogConfig.getProperty("com.mchange.v2.log.MLog.useRedirectableLoggers");
+	String redirectableLoggersStr = getConfigProperty("com.mchange.v2.log.MLog.useRedirectableLoggers");
 
 	if ( redirectableLoggersStr != null && redirectableLoggersStr.equalsIgnoreCase("true") )
 	    _redirectableLoggers = true;
 	else
 	    _redirectableLoggers = false;
 
-	String classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.MLog");
+	String classnamesStr = getConfigProperty("com.mchange.v2.log.MLog");
 	String[] classnames = null;
 	if (classnamesStr == null)
-	    classnamesStr = MLogConfig.getProperty("com.mchange.v2.log.mlog");
+	    classnamesStr = getConfigProperty("com.mchange.v2.log.mlog");
 	if (classnamesStr != null)
 	    classnames = StringTokenizerUtils.tokenizeToArray( classnamesStr, ", \t\r\n" );
 
@@ -124,9 +123,9 @@ public abstract class MLog
 	    info("Using " + _mlog.getClass().getName() + " -- everything goes to System.err.");
 
 	NameTransformer tmpt = null;
-	String tClassName = MLogConfig.getProperty("com.mchange.v2.log.NameTransformer");
+	String tClassName = getConfigProperty("com.mchange.v2.log.NameTransformer");
 	if (tClassName == null)
-	    tClassName = MLogConfig.getProperty("com.mchange.v2.log.nametransformer");
+	    tClassName = getConfigProperty("com.mchange.v2.log.nametransformer");
 	try
 	    {
 		if (tClassName != null)
@@ -227,6 +226,14 @@ public abstract class MLog
 	for (int i = 0, len = attempts.size(); i < len; ++i)
 	    System.err.println("\t" + attempts.get(i));
 	return null;
+    }
+
+    public static String getConfigProperty(String key)
+    {
+        // once the MLog class is initialize, so to has MLogConfig
+        // been, unless something went badly wrong, in which case
+        // an attempt to reload might not work out anyway
+        return MLogConfig.getPropertyOnlyIfAvailable( key );
     }
 
     public static MLog instance()

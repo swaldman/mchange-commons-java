@@ -50,7 +50,7 @@ public final class MLogConfig
     // if outside callers were to call MLogConfig.refresh() concurrently with MLog's class initialization,
     // or if callers simultaneously call MLogConfig.refresh(...) at the same time as they call MLog.refreshConfig(...),
     // deadlocks are possble. it seems like a pathological set of cases, letting it go for now.
-    public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
+    synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
     { refresh( overrides, overridesDescription, false ); }
 
     // we want to distinguish between several cases
@@ -173,10 +173,6 @@ public final class MLogConfig
     }
 
     // should be called only from static synchronized methods
-    private static void ensureLoad()
-    { if (config == null) refresh( null, null); }
-
-    // should be called only from static synchronized methods
     private static void ensureDelayedDumpToLogger()
     {
 	try
@@ -200,22 +196,8 @@ public final class MLogConfig
 	}
     }
 
-    public synchronized static String getProperty( String key )
+    synchronized static String getPropertyOnlyIfAvailable( String key )
     {
-	ensureLoad();
-	return config.getProperty( key ); 
-    }
-
-    public synchronized static String getPropertyOnlyIfAvailable( String key )
-    {
-	return (config != null ? config.getProperty( key ) : null);
-    }
-
-    public synchronized static String getPropertyIfNoFailure( String key )
-    {
-        try { ensureLoad(); }
-        catch (Exception e)
-        { /* ignore */ }
 	return (config != null ? config.getProperty( key ) : null);
     }
 
@@ -228,9 +210,9 @@ public final class MLogConfig
     // "duplicates" that are actually the same item, just one has its exception property
     // trimmed. so, we deduplicate on only level and text, but we prefer to log items
     // with throwables if we have one.
-    public synchronized static void logDelayedItems( MLogger logger )
+    synchronized static void logDelayedItems( MLogger logger )
     {
-        ensureLoad();
+        //ensureLoad();
         ensureDelayedDumpToLogger();
 
         if ( bootstrapLogItems != null ) // we only want to log them once, we don't want to retain their Throwables
@@ -274,8 +256,8 @@ public final class MLogConfig
         }
     }
 
-    public synchronized static String dump()
-    { return config.toString(); }
+    synchronized static String dump()
+    { return String.valueOf(config); }
 
     private MLogConfig()
     {}
