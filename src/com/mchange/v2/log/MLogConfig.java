@@ -7,13 +7,30 @@ import com.mchange.v2.cfg.MConfig;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.DelayedLogItem;
 import com.mchange.v2.cfg.SealedSystemProperties;
+import com.mchange.v2.cfg.SealedSystemPropertiesBooleanProperty;
 
 public final class MLogConfig
 {
+    public final static String FREEZE_CONFIG_KEY = "com.mchange.v2.log.freezeConfig";
+
     // MT: all now mutable references, protected by class' lock
-    private static MultiPropertiesConfig config              = null;
-    private static List<DelayedLogItem>  bootstrapLogItems   = null;
-    private static Method                delayedDumpToLogger = null;
+    private static MultiPropertiesConfig                 config               = null;
+    private static List<DelayedLogItem>                  bootstrapLogItems    = null;
+    private static Method                                delayedDumpToLogger  = null;
+    private static SealedSystemPropertiesBooleanProperty freezeConfigProperty = null; // only initialized after log package initialization completes
+    private static MLogger                               classLogger          = null; // only initialized after log package initialization completes
+    private static boolean                               refreshDebugWarned   = false;
+
+    static synchronized void markMLogReinitialized()
+    {
+        classLogger = MLog.getLogger(MLogConfig.class);
+    }
+
+    private synchronized static MLogger getClassLogger()
+    { return classLogger; }
+
+    private synchronized static boolean isMLogInitialized()
+    { return getClassLogger() != null; }
 
     // this is very inelegant. in c3p0, mlog should be entirely independent of and prior to c3p0,
     // conceptually, c3p0 is just a random user of the library.
@@ -30,14 +47,61 @@ public final class MLogConfig
     public static String[] mlogC3p0Unified()
     { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties","hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
 
+    // if outside callers were to call MLogConfig.refresh() concurrently with MLog's class initialization,
+    // or if callers simultaneously call MLogConfig.refresh(...) at the same time as they call MLog.refreshConfig(...),
+    // deadlocks are possble. it seems like a pathological set of cases, letting it go for now.
     public synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
-    {
-        // we don't touch SealedSystemProperties in firstLoad, because it logs
-        // this class gets initialized before System properties seal, so (unsealed)
-        // firstLoad is as safe as later sealed loads
-	boolean firstLoad = (config == null);
+    { refresh( overrides, overridesDescription, false ); }
 
+    // we want to distinguish between several cases
+    // - MLog is the first caller from its static initializer (the usual first call)
+    // - A client is calling AFTER MLog has initialized (supported client use)
+    // - A client is calling BEFORE MLog initialization is completed. Unexpected but harmless as long as we don't provoke logging.
+    // - MLog is a caller after some other party called this (fine, but we have to respect freeze)
+    synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
+    {
 	List<DelayedLogItem> bli = new ArrayList<>();
+
+        // we don't touch SealedSystemProperties before mlog is initialized, because it logs.
+        // mlog gets initialized before System properties seal, so (unsealed)
+        // load before mlogInitialized is as safe as later sealed loads
+	boolean mlogInitialized = isMLogInitialized();
+
+        // in this block, we CAN access logging, because we know MLog and related classes have already been initialized
+        // we make our decision under the old, potentially sunsetting config, not the proposed new one
+        if (mlogInitialized)
+        {
+            if (freezeConfigProperty == null)
+                freezeConfigProperty = new SealedSystemPropertiesBooleanProperty(FREEZE_CONFIG_KEY, true, false, false);
+
+            MLogger logger = getClassLogger(); // guaranteed not null, once mlog is initialized
+
+            if (fromMLogInit && logger.isLoggable(MLevel.SEVERE))
+                logger.log(MLevel.SEVERE,
+                           "Internal Error in logging library: It should be impossible for MLog to have already marked initialized when it's also in its class init! " +
+                           "[mlogInitialized -> " + mlogInitialized + "; fromMLogInit -> " + fromMLogInit + "]");
+
+
+            boolean configFrozen = freezeConfigProperty.getValue(config, logger);
+            if (configFrozen)
+            {
+                Throwable debugStackTrace;
+                if (refreshDebugWarned)
+                    debugStackTrace = null;
+                else
+                {
+                    debugStackTrace = new Exception("DEBUG STACK TRACE, attempted refresh of frozen log config (" + FREEZE_CONFIG_KEY + "=true)");
+                    refreshDebugWarned = true;
+                }
+                if (logger.isLoggable(MLevel.WARNING))
+                    logger.log(MLevel.WARNING,
+                               "An attempt to refresh MLog library will be ignored, because the configuration has been frozen (" + FREEZE_CONFIG_KEY + "=true)",
+                               debugStackTrace );
+
+                return;
+            }
+        }
+        // else we fall through and load config, while being careful not to touch any logging
 
         MultiPropertiesConfig tmpConfig;
 
@@ -48,8 +112,10 @@ public final class MLogConfig
                                        " has been found, so mlog will configure itself using the traditional mechanism that honored these files. " +
                                        "However, mlog is transitioning from this mechanism, which is fragile and obscure. The supported way to customize configuration is " +
                                        "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
+
+            // note that if overrides are non-null, we cap later, after the overrides, if we can cap
             String[] defaults = mlogC3p0Defaults();
-            String[] preempts = firstLoad || overrides != null? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
+            String[] preempts = !mlogInitialized || overrides != null ? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -58,7 +124,8 @@ public final class MLogConfig
         }
         else
         {
-            String[] resources = firstLoad || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
+            // note that if overrides are non-null, we cap later, after the overrides, if we can cap
+            String[] resources = !mlogInitialized || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -73,13 +140,13 @@ public final class MLogConfig
 	    combineMe[0] = tmpConfig;
 	    for ( int i = 0; i < olen; ++i )
 		combineMe[ i + 1 ] = overrides[i];
-	    config = firstLoad ? MConfig.combine( combineMe ) : SealedSystemProperties.capCurrentThenSealAndCombine(combineMe);
+	    config = !mlogInitialized ? MConfig.combine( combineMe ) : SealedSystemProperties.capCurrentThenSealAndCombine(combineMe);
             bli.addAll( config.getDelayedLogItems() );
-	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (firstLoad ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
+	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (fromMLogInit ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
 	}
 	else
 	{
-	    if ( !firstLoad )
+	    if ( !fromMLogInit )
 		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without overrides.") );
 	    config = tmpConfig;
 	}
@@ -87,7 +154,22 @@ public final class MLogConfig
                                    "mlog config is now drawn from the following configuration sources: " +
                                    Arrays.toString(config.getPropertiesResourcePaths()) +
                                    ". Later paths shadow earlier paths where values conflict."));
-	bootstrapLogItems = bli;
+
+        // we'll come back to this,
+        // but let's make one change at a time
+        bootstrapLogItems = bli;
+
+
+        /*
+        if (fromMLogInit)
+            bootstrapLogItems = bli;
+        else
+        {
+            // we know we can log, bc if we were neither
+            // initialized nor fromMLogInit, we'd have returned above
+            MConfig.dumpToLogger( bli, getClassLogger() );
+        }
+        */
     }
 
     // should be called only from static synchronized methods

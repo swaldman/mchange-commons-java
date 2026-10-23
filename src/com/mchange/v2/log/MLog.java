@@ -16,13 +16,15 @@ public abstract class MLog
 
     static
     {
-        try { refreshConfig( null, null ); }
+        try { refreshConfig( null, null, true ); }
         catch (Exception e)
         {
             System.err.println("An unexpected exception occurred while trying to read configuration for logging.");
             e.printStackTrace();
             System.err.println("MLog clients will fallback to standard error logging.");
             forceFallback();
+            MLogConfig.markMLogReinitialized(); // not the way we would have wanted, but loggers do function
+
         }
     }
 
@@ -84,8 +86,11 @@ public abstract class MLog
     }
 
     public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
+    { refreshConfig( overrides, overridesDescription, false ); }
+
+    private static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
     {
-	MLogConfig.refresh( overrides, overridesDescription );
+	MLogConfig.refresh( overrides, overridesDescription, fromMLogInit );
 
 	RedirectableMLogger.resetAll();
 
@@ -123,7 +128,7 @@ public abstract class MLog
 	if (tClassName == null)
 	    tClassName = MLogConfig.getProperty("com.mchange.v2.log.nametransformer");
 	try
-	    { 
+	    {
 		if (tClassName != null)
 		    tmpt = (NameTransformer) Class.forName( tClassName ).getDeclaredConstructor().newInstance();
 	    }
@@ -136,9 +141,13 @@ public abstract class MLog
 
 	_logger = _mlog.getLogger( MLog.class );
 
-	// at this point we are initialized; except for the initilaizer, what follows is essentially client code
+        // MLogConfig needs to know whenever we are functional
+        // with potentially new config
+        MLogConfig.markMLogReinitialized();
+
+	// at this point we are initialized; except for the initializer, what follows is essentially client code
 	// which we run in a throwaway Thread not holding the class' / classloading lock
-	
+
 	Thread bannerThread = new Thread("MLog-Init-Reporter")
 	    {
 		final MLogger logo;
@@ -154,13 +163,13 @@ public abstract class MLog
 		{
 		    if ("com.mchange.v2.log.jdk14logging.Jdk14MLog".equals( loggerDesc ))
 			loggerDesc = "java 1.4+ standard";
-			else if ("com.mchange.v2.log.log4j2.Log4j2MLog".equals( loggerDesc ))
+		    else if ("com.mchange.v2.log.log4j2.Log4j2MLog".equals( loggerDesc ))
 			loggerDesc = "log4j2";
 		    else if ("com.mchange.v2.log.log4j.Log4jMLog".equals( loggerDesc ))
 			loggerDesc = "log4j";
 		    else if ("com.mchange.v2.log.slf4j.Slf4jMLog".equals( loggerDesc ))
 			loggerDesc = "slf4j";
-	
+
 		    if (logo.isLoggable( MLevel.INFO ))
 		    {
 			String mbwith;
@@ -168,7 +177,7 @@ public abstract class MLog
 			    mbwith = " with redirectable loggers";
 			else
 			    mbwith = "";
-			    
+
 			logo.log( MLevel.INFO, "MLog clients using " + loggerDesc + " logging" + mbwith + '.');
 		    }
 
@@ -176,7 +185,7 @@ public abstract class MLog
 		    //System.err.println(mlog);
 
 		    MLogConfig.logDelayedItems( logo );
-	
+
 		    if ( logo.isLoggable( MLevel.FINEST ) )
 			logo.log( MLevel.FINEST, "Config available to MLog library: " + MLogConfig.dump() );
 		}
