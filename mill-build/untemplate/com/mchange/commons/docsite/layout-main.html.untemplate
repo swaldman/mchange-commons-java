@@ -18,6 +18,10 @@ val year = java.time.ZonedDateTime.now().getYear
       For the moment, the only documentation available is the
       <a href="apidocs/index.html">javadocs</a>.
     </p>
+    <p>
+      (However, many aspects of the logging and configuration features included in
+      this library are documented in the manual for <a href="https://www.mchange.com/projects/c3p0/">c3p0</a>.)
+    </p>
     <p class="footer">
       <a href="https://github.com/swaldman/mchange-commons-java">source on github</a>
       &nbsp;&middot;&nbsp;
