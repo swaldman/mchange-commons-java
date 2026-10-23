@@ -177,10 +177,18 @@ public final class MaskUtils
      *  there is nothing to read, which is wrong for every one of those.</p>
      *
      *  <p>Everything not itself a secret is retained: the scheme, host, port, path, every
-     *  parameter name, the fragment, and the structure throughout. A masked userinfo still
-     *  shows the username and whether a password accompanied the account (<code>mickey:******</code>) or not,
-     *  because "was a password supplied here" is usually the question
-     *  being asked of a dump.</p>
+     *  parameter name, the fragment, and the structure throughout. A masked userinfo still shows
+     *  whether a password accompanied the account, because "was a password supplied here" is
+     *  usually the question being asked of a dump -- and shows the account itself where one did:
+     *  <code>mickey:******</code> for a two-component userinfo, <code>******</code> for a
+     *  one-component one.</p>
+     *
+     *  <p>The single-component form is masked whole on purpose, although accounts are not
+     *  otherwise masked. Position is what distinguishes an account from a secret in a userinfo,
+     *  and with one component there is nothing to distinguish: a bare userinfo is sometimes a
+     *  bearer token rather than a username -- <code>https://TOKEN@github.com/org/repo.git</code>
+     *  is how a personal access token is embedded in a git remote. Masking an account costs one
+     *  diagnostic; disclosing a token cannot be undone.</p>
      *
      *  <p>This is deliberately NOT built on {@link java.net.URI}. A JDBC URL is opaque to it --
      *  the scheme is <code>jdbc</code> and the remainder is the scheme-specific part -- so
@@ -267,7 +275,7 @@ public final class MaskUtils
         String fromAtOn    = authority.substring( at );   // retains the '@' and all that follows
 
         int passwordColon = userinfo.indexOf( ':' );
-        return ( passwordColon < 0 ? userinfo : userinfo.substring(0,passwordColon) + ':' + MASK ) + fromAtOn;
+        return ( passwordColon < 0 ? MASK : userinfo.substring(0,passwordColon) + ':' + MASK ) + fromAtOn;
     }
 
     /**

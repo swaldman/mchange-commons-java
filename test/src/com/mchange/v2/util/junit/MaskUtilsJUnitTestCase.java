@@ -212,6 +212,7 @@ public final class MaskUtilsJUnitTestCase extends TestCase
     {
         List<String> mustConceal = Arrays.asList(
             "://?password=s3cret",
+            "x://s3cret@",                       // one-component userinfo: ambiguous, so masked
             "x://user:s3cret@",                  // userinfo with no host
             "x://h/?password=s3cret#frag",
             "x://user:s3cret@h:99/a;b?c=d&password=s3cret#frag"

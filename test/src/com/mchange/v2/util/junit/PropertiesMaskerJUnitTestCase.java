@@ -183,36 +183,46 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
      *  one, because "was a password supplied here" is usually what a dump is being asked.
      */
     /**
-     *  "Was a password supplied here" is usually the question being asked, and showing the
-     *  account rather than a mask makes the two cases easier to tell apart, not harder.
+     *  "Was a password supplied here" is usually the question being asked, and the two cases stay
+     *  distinguishable: one component masks to a bare mask, two components keep the account and
+     *  mask the second.
      *
-     *  <p>A single-component userinfo is retained whole, because userinfo is
-     *  <code>user[:password]</code> and with no colon there is no password to conceal. See
-     *  testASingleComponentUserInfoIsRetainedWhole for what that costs.</p>
+     *  <p>So the account is shown precisely where position proves it IS an account. See
+     *  testASingleComponentUserInfoIsMaskedWhole for why the other case does not.</p>
      */
     public void testUserInfoMaskingRetainsWhetherAPasswordWasPresent()
     {
-        assertEquals( "https://app@example.com/path",
+        assertEquals( "https://" + MASK + "@example.com/path",
                       transformed( "https://app@example.com/path" ) );
         assertEquals( "https://app:" + MASK + "@example.com/path",
                       transformed( "https://app:hunter2@example.com/path" ) );
     }
 
     /**
-     *  THE ONE PLACE THE USERNAME POLICY HAS A COST, pinned so the cost is visible rather than
-     *  discovered. In <code>user:password</code> form position tells you which component is the
-     *  secret; in bare form it does not, and a bare userinfo is sometimes not an account at all
-     *  but a bearer token -- <code>https://ghp_xxxx@github.com/org/repo.git</code> is how a
-     *  personal access token is embedded in a git remote.
+     *  THE ONE EXCEPTION TO ACCOUNTS NOT BEING MASKED, and the reasoning is worth keeping
+     *  because the exception looks inconsistent with the rest of the policy.
      *
-     *  <p>Retaining it follows from "usernames are not secrets", and masking it would contradict
-     *  the query form, where <code>?user=app</code> is now shown. The asymmetry argument points
-     *  the other way, though, which is why this is written down.</p>
+     *  <p>Elsewhere a name identifies the thing being judged: a key called <code>user</code>, a
+     *  parameter called <code>user</code>. A userinfo has no names, only positions -- it is
+     *  <code>user[:password]</code> -- so with two components position proves which is the
+     *  secret and the account is shown, while with one component nothing proves anything. And a
+     *  single-component userinfo is often not an account at all but a bearer token:
+     *  <code>https://ghp_xxxx@github.com/org/repo.git</code> is how a personal access token is
+     *  embedded in a git remote.</p>
+     *
+     *  <p>So the asymmetry decides it, the same asymmetry that licenses the loose substring
+     *  tests: masking an account costs one diagnostic value, disclosing a token cannot be
+     *  undone. Err toward overmasking exactly here, where the evidence runs out.</p>
      */
-    public void testASingleComponentUserInfoIsRetainedWhole()
+    public void testASingleComponentUserInfoIsMaskedWhole()
     {
-        assertEquals( "https://ghp_notreallyatoken@github.com/org/repo.git",
+        assertEquals( "https://" + MASK + "@github.com/org/repo.git",
                       transformed( "https://ghp_notreallyatoken@github.com/org/repo.git" ) );
+
+        // ... while two components still show the account, so this is about the ambiguity and
+        // not a retreat from the username policy.
+        assertEquals( "https://app:" + MASK + "@github.com/org/repo.git",
+                      transformed( "https://app:ghp_notreallyatoken@github.com/org/repo.git" ) );
     }
 
     /** An unescaped '@' in a password is invalid but common; taking the LAST '@' tolerates it. */
