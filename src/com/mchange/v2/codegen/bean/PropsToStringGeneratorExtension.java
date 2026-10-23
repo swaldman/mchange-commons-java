@@ -9,6 +9,18 @@ public class PropsToStringGeneratorExtension implements GeneratorExtension
 {
     private Collection<String> excludePropNames = null;
 
+    private Map<String,String> valueExpressions = null;
+
+    /**
+     *  Property name -> a Java expression rendering that property for the dump, with %s standing
+     *  for the field. Lets a generated toString mask or transform a value.
+     *
+     *  Expects zero or more '%s' substring within the expression, which will be
+     *  replaced by a reference to the property's field within the generated bean.
+     */
+    public void setValueExpressions( Map<String,String> valueExpressions )
+    { this.valueExpressions = valueExpressions; }
+
     public void setExcludePropertyNames( Collection<String> excludePropNames )
     { this.excludePropNames = excludePropNames; }
 
@@ -46,7 +58,9 @@ public class PropsToStringGeneratorExtension implements GeneratorExtension
 		if ( excludePropNames != null && excludePropNames.contains( prop.getName() ) )
 		    continue;
 
-		iw.println("sb.append( \"" + prop.getName() + " -> \"" + " + " + prop.getName() + " );");
+                String valueExpression = ( valueExpressions == null ? null : valueExpressions.get( prop.getName() ) );
+                String valueRef        = ( valueExpression  == null ? prop.getName() : valueExpression.replace( "%s", prop.getName() ) );
+		iw.println("sb.append( \"" + prop.getName() + " -> \"" + " + " + valueRef + " );");
 		if ( i != len - 1 )
 		    iw.println("sb.append( \", \");");
 	    }

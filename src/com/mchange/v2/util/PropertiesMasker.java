@@ -158,6 +158,7 @@ public class PropertiesMasker
     public PropertiesMasker()
     { this(Collections.singleton(DANGEROUS_URL_VALUE_TRANSFORMER)); }
 
+    // intended to be overridden as desired
     public boolean shouldMaskValue(String key)
     {
         for(String substring : MaskUtils.DEFAULT_MASKABLE_LOWERCASE_SUBSTRINGS)

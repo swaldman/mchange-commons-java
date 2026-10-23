@@ -45,7 +45,8 @@ import java.util.Set;
  */
 public final class MaskUtilsJUnitTestCase extends TestCase
 {
-    private final static String MASK = "****";
+    /** Refers to the constant; its spelling is pinned once, in testTheMaskIsSixAsterisks. */
+    private final static String MASK = MaskUtils.MASK;
 
     // ------------------------------------------------- the null / unchanged / masked trichotomy
 
@@ -76,20 +77,22 @@ public final class MaskUtilsJUnitTestCase extends TestCase
     }
 
     /**
-     *  Null is the answer for anything with no "://" in it, which includes values that look
-     *  URL-ish. A JDBC URL for an embedded database has a scheme and colons but no authority,
-     *  and mailto: has userinfo-looking text that is not userinfo.
+     *  URL-shaped means "begins with a scheme", NOT "has an authority". The distinction is the
+     *  whole point: an authority is where userinfo lives, but parameters need no authority, and
+     *  most embedded databases put their credentials in parameters. So null is reserved for
+     *  values carrying no scheme at all.
      */
-    public void testValuesWithoutAnAuthorityAnswerNull()
+    public void testValuesWithoutASchemeAnswerNull()
     {
         List<String> notUrlShaped = Arrays.asList(
             "",
             "30",
-            "jdbc:h2:mem:test",                         // embedded, no authority
-            "jdbc:oracle:thin:scott/tiger@//h:1521/db", // Oracle thin: credentials, but no "://"
-            "mailto:someone@example.com",
-            "C:\\Users\\steve\\app.properties",
-            "/etc/myapp/config.properties"
+            "this is prose",
+            "/etc/myapp/config.properties",   // no colon anywhere
+            "http//host/no/colon",            // the colon is what makes a scheme
+            ":leading-colon",                 // a scheme needs at least one character
+            "1abc:x",                         // ... and must not begin with a digit
+            "has space:x"                     // ... and may not contain a space
         );
         for ( String v : notUrlShaped )
             assertNull( "should not be treated as URL-shaped: '" + v + "'",
@@ -97,13 +100,67 @@ public final class MaskUtilsJUnitTestCase extends TestCase
     }
 
     /**
-     *  The Oracle thin case above is a genuine miss, not an oversight, and is recorded here so
-     *  that it is a known limit rather than a surprise. Such a value is caught only by its key
-     *  name -- which is why key-name masking is not replaceable by value inspection.
+     *  THE CASE THE SCHEME TEST EXISTS FOR. Every one of these is a real driver's real spelling,
+     *  carries a real credential, and has no authority -- so the earlier "://" test concluded
+     *  there was nothing here to read and handed back null, erasing the URL from the dump while
+     *  leaving the password in it anywhere else it appeared.
+     */
+    public void testHostlessJdbcUrlsStillGetTheirParametersMasked()
+    {
+        assertEquals( "jdbc:h2:mem:testdb;USER=sa;PASSWORD=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:h2:mem:testdb;USER=sa;PASSWORD=s3cret" ) );
+        assertEquals( "jdbc:h2:file:/data/db;USER=sa;PASSWORD=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:h2:file:/data/db;USER=sa;PASSWORD=s3cret" ) );
+        assertEquals( "jdbc:derby:memory:db;create=true;user=app;password=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:derby:memory:db;create=true;user=app;password=s3cret" ) );
+        assertEquals( "jdbc:hsqldb:file:/db/mydb;user=SA;password=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:hsqldb:file:/db/mydb;user=SA;password=s3cret" ) );
+        assertEquals( "jdbc:firebirdsql:embedded:/path/db?user=app&password=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:firebirdsql:embedded:/path/db?user=app&password=s3cret" ) );
+    }
+
+    /**
+     *  And the retention half, which matters as much: a hostless URL with nothing secret in it
+     *  comes back unchanged and EQUAL, not null. Answering null here is what put "jdbcUrl ->
+     *  null" into c3p0's pool-initialization log for every embedded database.
+     */
+    public void testHostlessJdbcUrlsWithoutCredentialsComeBackUnchanged()
+    {
+        for ( String url : new String[] { "jdbc:h2:mem:test",
+                                          "jdbc:sqlite:/var/db/app.sqlite",
+                                          "jdbc:derby:memory:db;create=true",
+                                          "mailto:someone@example.com" } )
+            assertEquals( url, MaskUtils.maskUrlCredentials( url ) );
+    }
+
+    /**
+     *  Oracle's thin driver is a known miss, and knowingly so rather than by oversight:
+     *  <code>scott/tiger@</code> sits behind no delimiter this recognizes, and reading an '@'
+     *  with no authority to anchor it would mask path segments in every URL containing one.
+     *  Such a value is caught by its key name or not at all.
+     *
+     *  <p>What changed with the scheme test is only the answer's shape -- the value comes back
+     *  unchanged now rather than null, because it does have a scheme. The credential survives
+     *  either way, which is what this pins.</p>
      */
     public void testOracleThinCredentialsAreAKnownMiss()
     {
-        assertNull( MaskUtils.maskUrlCredentials( "jdbc:oracle:thin:scott/tiger@//h:1521/db" ) );
+        String url = "jdbc:oracle:thin:scott/tiger@//h:1521/db";
+        assertEquals( "URL-shaped, so not null -- but nothing here is masked", url,
+                      MaskUtils.maskUrlCredentials( url ) );
+    }
+
+    /**
+     *  Bare <code>key</code>, behaviourally, in both parameter forms. The complement -- that a
+     *  config key named <code>whitelistBaseKey</code> is NOT masked -- is pinned next door in
+     *  testNonSensitiveKeysAreRetained, because that is a key-name question and this is not.
+     */
+    public void testBareKeyIsMaskedAsAUrlParameter()
+    {
+        assertEquals( "jdbc:h2:file:/db?cipher=sqlcipher&key=" + MASK,
+                      MaskUtils.maskUrlCredentials( "jdbc:h2:file:/db?cipher=sqlcipher&key=s3cret" ) );
+        assertEquals( "https://api.example.com/v1/items?key=" + MASK + "&pretty=true",
+                      MaskUtils.maskUrlCredentials( "https://api.example.com/v1/items?key=AIzaSyFAKE&pretty=true" ) );
     }
 
     /** Reachable only now that the method is public: a Properties cannot hold a null value. */
@@ -155,8 +212,7 @@ public final class MaskUtilsJUnitTestCase extends TestCase
     {
         List<String> mustConceal = Arrays.asList(
             "://?password=s3cret",
-            "x://s3cret@",                       // userinfo with no host
-            "x://user:s3cret@",
+            "x://user:s3cret@",                  // userinfo with no host
             "x://h/?password=s3cret#frag",
             "x://user:s3cret@h:99/a;b?c=d&password=s3cret#frag"
         );
@@ -245,42 +301,52 @@ public final class MaskUtilsJUnitTestCase extends TestCase
 
     /**
      *  The URL-parameter set is DERIVED from the key-name set, so the two cannot drift by
-     *  accident -- but they diverge at three entries on purpose, and those are what a future
-     *  tidying would quietly undo.
+     *  accident -- but they diverge on purpose, and the divergences are what a future tidying
+     *  would quietly undo.
      *
      *  <ul>
-     *    <li><code>user</code> is masked as a URL parameter, where it is the universal JDBC
-     *        account, and must NOT be a key-name substring, where it would mask
-     *        <code>user.home</code> and <code>user.dir</code>.</li>
+     *    <li><code>key</code> is masked as a URL parameter, where <code>?key=</code> is how
+     *        Google's APIs and SQLCipher pass a secret, and must NOT be a key-name substring,
+     *        where it would mask this library's own <code>whitelistBaseKey</code> and
+     *        <code>overrideWhitelistKey</code>.</li>
      *    <li><code>signature</code> likewise: in a pre-signed URL the signature IS the
      *        capability, while a signature sitting in a config value generally reveals no
      *        signing key.</li>
-     *    <li><code>c3p0.user</code> is a key-name test and means nothing as a parameter
-     *        name.</li>
      *  </ul>
+     *
+     *  <p><code>user</code> is in NEITHER, and that is the policy rather than an oversight. It
+     *  was in both before 0.15.0 -- the key-name set carried the specific <code>c3p0.user</code>
+     *  and the parameter set a bare <code>user</code>. A username identifies rather than
+     *  authorizes, so the asymmetry licensing loose masking does not reach it, and with per-user
+     *  pools it is often the question being asked. Asserted here in the negative because the
+     *  entries are gone: nothing else would notice them coming back.</p>
      */
     public void testTheTwoSetsDivergeOnlyWhereIntended()
     {
         Set<String> keys = MaskUtils.DEFAULT_MASKABLE_LOWERCASE_SUBSTRINGS;
         Set<String> url  = MaskUtils.DEFAULT_MASKABLE_LOWERCASE_URL_PARAM_SUBSTRINGS;
 
-        assertFalse( "a bare 'user' key-name substring would mask user.home and user.dir",
-                     keys.contains( "user" ) );
-        assertTrue( "'user' is the universal JDBC account parameter", url.contains( "user" ) );
+        assertFalse( "a bare 'key' key-name substring would mask whitelistBaseKey and its kind",
+                     keys.contains( "key" ) );
+        assertTrue( "'?key=' is how several services pass a secret", url.contains( "key" ) );
 
         assertFalse( "a signature in a config value is not itself a credential",
                      keys.contains( "signature" ) );
         assertTrue( "in a pre-signed URL the signature is the capability",
                     url.contains( "signature" ) );
 
-        assertTrue( keys.contains( "c3p0.user" ) );
-        assertFalse( "'c3p0.user' is meaningless as a parameter name", url.contains( "c3p0.user" ) );
+        // The username policy, in both sets and in every spelling that used to appear.
+        for ( String spelling : new String[] { "user", "c3p0.user", "username" } )
+        {
+            assertFalse( "accounts are no longer masked by key name: " + spelling,
+                         keys.contains( spelling ) );
+            assertFalse( "nor as URL parameters: " + spelling, url.contains( spelling ) );
+        }
 
         Set<String> expectedUrl = new HashSet<String>( keys );
-        expectedUrl.remove( "c3p0.user" );
-        expectedUrl.add( "user" );
+        expectedUrl.add( "key" );
         expectedUrl.add( "signature" );
-        assertEquals( "the sets must differ at exactly the three entries above",
+        assertEquals( "the sets must differ at exactly the two entries above",
                       expectedUrl, url );
     }
 
@@ -311,9 +377,21 @@ public final class MaskUtilsJUnitTestCase extends TestCase
         }
     }
 
-    /** The mask itself, because every assertion in this suite and the next spells it literally. */
-    public void testMaskIsWhatTheTestsAssume()
+    /**
+     *  THE ONLY PLACE the mask's spelling is pinned as a literal. Every other assertion in this
+     *  suite and in PropertiesMaskerJUnitTestCase refers to MaskUtils.MASK, so changing the mask
+     *  deliberately touches this one test -- while changing it by accident still fails here.
+     *
+     *  <p>An earlier version had all three test files spell the mask literally, on the reasoning
+     *  that pinning the literal catches an accidental change. It does, twenty-three times over,
+     *  which turned one deliberate edit into twenty-three failures and taught nothing the first
+     *  failure had not.</p>
+     *
+     *  <p>Six rather than four because c3p0's AuthMaskingProperties used six asterisks for
+     *  years: deployments grep their logs for <code>password=******</code>.</p>
+     */
+    public void testTheMaskIsSixAsterisks()
     {
-        assertEquals( MASK, MaskUtils.MASK );
+        assertEquals( "******", MaskUtils.MASK );
     }
 }

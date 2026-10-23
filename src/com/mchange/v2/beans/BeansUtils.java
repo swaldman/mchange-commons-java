@@ -388,7 +388,15 @@ public final class BeansUtils
         }
     }
 
+    public interface ValueTransformer
+    {
+        public Object transformValue(String key, Object value);
+    }
+
     public static void appendPropNamesAndValues(StringBuffer appendIntoMe, Object bean, Collection<String> ignoreProps) throws IntrospectionException
+    { appendPropNamesAndValues( appendIntoMe, bean, ignoreProps, null); }
+
+    public static void appendPropNamesAndValues(StringBuffer appendIntoMe, Object bean, Collection<String> ignoreProps, ValueTransformer valueTransformer) throws IntrospectionException
     {
         Map<String,Object> tmp = new TreeMap<String,Object>( String.CASE_INSENSITIVE_ORDER );
         extractAccessiblePropertiesToMap( tmp, bean, ignoreProps );
@@ -396,7 +404,13 @@ public final class BeansUtils
         for ( Iterator<String> ii = tmp.keySet().iterator(); ii.hasNext(); )
         {
             String key = (String) ii.next();
-            Object val = tmp.get( key );
+            Object val;
+
+            if (valueTransformer != null)
+                val = valueTransformer.transformValue(key, tmp.get(key));
+            else
+                val = tmp.get( key );
+
             if (first)
                 first = false;
             else

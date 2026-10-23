@@ -2,6 +2,7 @@ package com.mchange.v2.util.junit;
 
 import junit.framework.TestCase;
 
+import com.mchange.v2.util.MaskUtils;
 import com.mchange.v2.util.PropertiesMasker;
 
 import java.util.Collections;
@@ -27,7 +28,7 @@ import java.util.Set;
  *
  *  <p>Masking fails in two directions and they are not symmetric. Failing to mask leaks a
  *  credential; masking too much costs one diagnostic value. So the cases below assert the
- *  retentions as carefully as the maskings -- a masker that returned <code>****</code> for
+ *  retentions as carefully as the maskings -- a masker that masked every value for
  *  everything would pass every leak test here and be useless.</p>
  *
  *  <p>The retentions that matter most are this library's own non-secret names. Its configuration
@@ -40,7 +41,8 @@ import java.util.Set;
  */
 public final class PropertiesMaskerJUnitTestCase extends TestCase
 {
-    private final static String MASK = "****";
+    /** Spelled once, in MaskUtilsJUnitTestCase.testTheMaskIsSixAsterisks. */
+    private final static String MASK = MaskUtils.MASK;
 
     private PropertiesMasker masker;
 
@@ -113,9 +115,20 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
      *  c3p0's account name is masked while the JVM's user.* properties are not. That tension is
      *  why the key set names 'c3p0.user' specifically rather than carrying a bare 'user'.
      */
-    public void testC3p0UserIsMaskedButJvmUserPropertiesAreNot()
+    /**
+     *  No key naming an account is masked any more, c3p0's own included. A username identifies
+     *  rather than authorizes, so the asymmetry that licenses loose masking -- a leaked
+     *  credential cannot be recalled, a masked diagnostic costs one value -- does not apply to
+     *  it. And with per-user pools, "which user does this DataSource act as" is the question
+     *  being asked of the dump.
+     *
+     *  <p>Before 0.15.0 c3p0 masked <code>user</code> alongside <code>password</code>, and
+     *  <code>c3p0.user</code> was a named entry in the key-name set for exactly that reason.</p>
+     */
+    public void testNoKeyNamingAnAccountIsMasked()
     {
-        assertEquals( MASK, maskedValue( "c3p0.user", "appuser" ) );
+        assertEquals( "appuser", maskedValue( "c3p0.user", "appuser" ) );
+        assertEquals( "appuser", maskedValue( "user", "appuser" ) );
         assertEquals( "/home/someone", maskedValue( "user.home", "/home/someone" ) );
         assertEquals( "someone", maskedValue( "user.name", "someone" ) );
     }
@@ -143,7 +156,7 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
 
     public void testQueryParameterCredentialsAreMasked()
     {
-        assertEquals( "jdbc:postgresql://db:5432/prod?user=" + MASK + "&password=" + MASK + "&ssl=true",
+        assertEquals( "jdbc:postgresql://db:5432/prod?user=app&password=" + MASK + "&ssl=true",
                       transformed( "jdbc:postgresql://db:5432/prod?user=app&password=hunter2&ssl=true" ) );
     }
 
@@ -154,13 +167,14 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
      */
     public void testSemicolonSeparatedParametersAreMasked()
     {
-        assertEquals( "jdbc:sqlserver://host:1433;databaseName=prod;user=" + MASK + ";password=" + MASK + ";encrypt=true",
+        assertEquals( "jdbc:sqlserver://host:1433;databaseName=prod;user=sa;password=" + MASK + ";encrypt=true",
                       transformed( "jdbc:sqlserver://host:1433;databaseName=prod;user=sa;password=S3cr3t;encrypt=true" ) );
     }
 
+    /** The account survives, the password does not. Position says which is which. */
     public void testUserInfoCredentialsAreMasked()
     {
-        assertEquals( "postgresql://" + MASK + ":" + MASK + "@db:5432/prod",
+        assertEquals( "postgresql://app:" + MASK + "@db:5432/prod",
                       transformed( "postgresql://app:hunter2@db:5432/prod" ) );
     }
 
@@ -168,19 +182,44 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
      *  A masked userinfo still distinguishes an account with a password from an account without
      *  one, because "was a password supplied here" is usually what a dump is being asked.
      */
+    /**
+     *  "Was a password supplied here" is usually the question being asked, and showing the
+     *  account rather than a mask makes the two cases easier to tell apart, not harder.
+     *
+     *  <p>A single-component userinfo is retained whole, because userinfo is
+     *  <code>user[:password]</code> and with no colon there is no password to conceal. See
+     *  testASingleComponentUserInfoIsRetainedWhole for what that costs.</p>
+     */
     public void testUserInfoMaskingRetainsWhetherAPasswordWasPresent()
     {
-        assertEquals( "https://" + MASK + "@example.com/path",
+        assertEquals( "https://app@example.com/path",
                       transformed( "https://app@example.com/path" ) );
-        assertEquals( "https://" + MASK + ":" + MASK + "@example.com/path",
+        assertEquals( "https://app:" + MASK + "@example.com/path",
                       transformed( "https://app:hunter2@example.com/path" ) );
+    }
+
+    /**
+     *  THE ONE PLACE THE USERNAME POLICY HAS A COST, pinned so the cost is visible rather than
+     *  discovered. In <code>user:password</code> form position tells you which component is the
+     *  secret; in bare form it does not, and a bare userinfo is sometimes not an account at all
+     *  but a bearer token -- <code>https://ghp_xxxx@github.com/org/repo.git</code> is how a
+     *  personal access token is embedded in a git remote.
+     *
+     *  <p>Retaining it follows from "usernames are not secrets", and masking it would contradict
+     *  the query form, where <code>?user=app</code> is now shown. The asymmetry argument points
+     *  the other way, though, which is why this is written down.</p>
+     */
+    public void testASingleComponentUserInfoIsRetainedWhole()
+    {
+        assertEquals( "https://ghp_notreallyatoken@github.com/org/repo.git",
+                      transformed( "https://ghp_notreallyatoken@github.com/org/repo.git" ) );
     }
 
     /** An unescaped '@' in a password is invalid but common; taking the LAST '@' tolerates it. */
     public void testUnescapedAtSignInPasswordIsStillMasked()
     {
         String out = transformed( "postgresql://app:p@sswor@d@db:5432/prod" );
-        assertEquals( "postgresql://" + MASK + ":" + MASK + "@db:5432/prod", out );
+        assertEquals( "postgresql://app:" + MASK + "@db:5432/prod", out );
         assertFalse( out.contains( "sswor" ) );
     }
 
@@ -300,7 +339,7 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
     /** ...while an insensitive key leaves it free to do its finer-grained work. */
     public void testAnInsensitiveKeyLetsTheTransformerAct()
     {
-        assertEquals( "jdbc:postgresql://h/db?user=" + MASK + "&password=" + MASK,
+        assertEquals( "jdbc:postgresql://h/db?user=u&password=" + MASK,
                       maskedValue( "c3p0.jdbcUrl", "jdbc:postgresql://h/db?user=u&password=p" ) );
     }
 
@@ -387,7 +426,7 @@ public final class PropertiesMaskerJUnitTestCase extends TestCase
      */
     public void testDefaultInstanceHasAWorkingUrlTransformer()
     {
-        assertEquals( "jdbc:postgresql://db:5432/prod?user=" + MASK + "&password=" + MASK,
+        assertEquals( "jdbc:postgresql://db:5432/prod?user=app&password=" + MASK,
                       PropertiesMasker.DEFAULT
                           .masked( propsOf( "c3p0.jdbcUrl", "jdbc:postgresql://db:5432/prod?user=app&password=p" ) )
                           .getProperty( "c3p0.jdbcUrl" ) );

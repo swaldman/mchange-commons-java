@@ -26,17 +26,18 @@ import java.util.Set;
  *  rather than a defect.</p>
  *
  *  <p>Loose, but not unbounded, because the opposite failure is real too: a masker that returned
- *  <code>****</code> for everything would disclose nothing and be worthless. The retentions are
+ *  <code>******</code> for everything would disclose nothing and be worthless. The retentions are
  *  as much a part of the contract as the maskings. Two are worth naming, because the obvious
- *  substrings would have destroyed them. A bare <code>key</code> would mask this library's own
- *  configuration -- <code>whitelistBaseKey</code>, <code>overrideWhitelistKey</code> and their
- *  kind are not secrets -- and a bare <code>user</code> would mask <code>user.home</code> and
+ *  substrings would have destroyed them. <code>key</code> and <code>user</code> are substrings
+ *  of a wide variety of useful-to-debug configuration. <code>user</code> would mask <code>user.home</code> and
  *  <code>user.dir</code>, which are exactly what someone debugging a <code>file:</code> config
  *  source or a HOCON <code>${user.home}</code> substitution needs to see. Hence the narrow
- *  compounds (<code>apikey</code>, <code>accesskey</code>) and the specific
- *  <code>c3p0.user</code>.</p>
+ *  compounds (<code>apikey</code>, <code>accesskey</code>). We don't consider <code>user</code>
+ *  sensitive, and don't mask it here (although users are welcome to override
+ *  <code>public boolean shouldMaskValue(String key)</code> in our sibling <code>PropertiesMasker</code>
+ *  to mask anything they wish).
  *
- *  <h3>What it does not do</h3>
+ *  <h3>What we do not do</h3>
  *
  *  <ul>
  *    <li><b>A secret in a URL path is out of reach.</b> A Slack webhook is
@@ -86,16 +87,20 @@ public final class MaskUtils
         tmp.add("accesskey");
         tmp.add("accountkey");
         tmp.add("webhook");
-        tmp.add("c3p0.user"); // we know that this one will hit pretty specifically
         DEFAULT_MASKABLE_LOWERCASE_SUBSTRINGS = Collections.unmodifiableSet(tmp);
 
-        // The same notions of sensitivity, but tested against URL parameter NAMES rather than
-        // config keys, so the two differ at exactly two entries. "c3p0.user" is a key-name test
-        // and means nothing as a parameter name; plain "user" is the universal JDBC parameter
-        // for the account, and is not caught by any substring above.
+        // the same notions of sensitivity, tested against URL parameter names rather than config keys,
+        // diverging only where noted below.
         Set<String> tmpUrl = new HashSet<>( tmp );
-        tmpUrl.remove("c3p0.user");
-        tmpUrl.add("user");
+
+        // Bare "key" is excluded from the key-name set because it would mask this library's own
+        // configuration -- whitelistBaseKey, overrideWhitelistKey and their kind. That argument
+        // is about CONFIG KEYS and does not carry over to parameter names, where "?key=" is how
+        // Google's APIs and SQLCipher pass a secret. It subsumes the apikey/accesskey/accountkey
+        // compounds inherited above, harmlessly, and it will also claim keystore, sslkey and
+        // keywords -- a path or a word list masked is the cheap error, by the asymmetry this
+        // class is built on.
+        tmpUrl.add("key");
 
         // In a PRE-SIGNED url the signature is not a byproduct, it is the capability: possession
         // of the url grants the access it describes until it expires. So the signature parameter
@@ -120,7 +125,7 @@ public final class MaskUtils
         DEFAULT_MASKABLE_LOWERCASE_URL_PARAM_EXACT_NAMES = Collections.unmodifiableSet( tmpUrlExact );
     }
 
-    public final static String MASK = "****";
+    public final static String MASK = "******"; // consistent with how c3p0's AuthMaskingProperties used to mask
 
     private final static String SCHEME_SEP = "://";
 
@@ -163,10 +168,18 @@ public final class MaskUtils
      *        parameters directly after the authority with no <code>?</code> at all.</li>
      *  </ul>
      *
+     *  <p>A value is URL-shaped if it begins with a scheme, and an authority is not required.
+     *  Parameters do not need one, and most embedded databases put their credentials exactly
+     *  there -- <code>jdbc:h2:mem:db;USER=sa;PASSWORD=x</code>,
+     *  <code>jdbc:derby:memory:db;user=app;password=x</code>,
+     *  <code>jdbc:hsqldb:file:/db;user=SA;password=x</code>. Testing for
+     *  <code>&#47;&#47;</code> asks after the authority and concludes from its absence that
+     *  there is nothing to read, which is wrong for every one of those.</p>
+     *
      *  <p>Everything not itself a secret is retained: the scheme, host, port, path, every
      *  parameter name, the fragment, and the structure throughout. A masked userinfo still
-     *  shows whether a password accompanied the account (<code>****:****</code>) or not
-     *  (<code>****</code>), because "was a password supplied here" is usually the question
+     *  shows the username and whether a password accompanied the account (<code>mickey:******</code>) or not,
+     *  because "was a password supplied here" is usually the question
      *  being asked of a dump.</p>
      *
      *  <p>This is deliberately NOT built on {@link java.net.URI}. A JDBC URL is opaque to it --
@@ -174,15 +187,17 @@ public final class MaskUtils
      *  getUserInfo(), getHost() and getQuery() all return null for precisely the values that
      *  most need masking.</p>
      *
-     *  @return the value with any embedded credentials masked, or null if the value is not
-     *          URL-shaped at all. Never throws: a malformed URL is treated as prose.
+     *  @return the value with any embedded credentials masked, or null if the value carries no
+     *          scheme and so is not URL-shaped at all. A URL with nothing to mask comes back
+     *          unchanged and equal to the input, which is how a caller tells "declined" from
+     *          "nothing needed". Never throws: a malformed URL is treated as prose.
      */
     public static String maskUrlCredentials( String value )
     {
         if (value != null)
         {
             int schemeSep = value.indexOf( SCHEME_SEP );
-            if ( schemeSep < 0 ) return null;
+            if ( schemeSep < 0 ) return maskSchemeOnlyUrlCredentials( value );
 
             int authorityStart = schemeSep + SCHEME_SEP.length();
 
@@ -202,6 +217,43 @@ public final class MaskUtils
             return null;
     }
 
+    /**
+     *  A value with a scheme but no authority. There is no userinfo to mask -- userinfo lives in
+     *  an authority -- but the parameters do not need one, so everything after the scheme goes
+     *  through the ordinary parameter scan.
+     *
+     *  <p>Oracle's thin driver stays a miss, and knowingly:
+     *  <code>jdbc:oracle:thin:scott/tiger@//host:1521/db</code> writes the account and password
+     *  as <code>user/password@</code>, behind no delimiter this recognizes. Reading an
+     *  <code>@</code> without an authority to anchor it would mask path segments in every URL
+     *  containing one, and that retention is worth more than this one driver's unusual
+     *  spelling. Such a value is caught by its key name or not at all.</p>
+     */
+    private static String maskSchemeOnlyUrlCredentials( String value )
+    {
+        int schemeEnd = schemeEnd( value );
+        if ( schemeEnd < 0 ) return null;
+
+        return value.substring( 0, schemeEnd ) + maskParameters( value.substring( schemeEnd ) );
+    }
+
+    /**
+     *  @return the index just past the ':' terminating an RFC 3986 scheme, or -1 if the value
+     *          does not begin with one. This is what "URL-shaped" means where there is no
+     *          authority to go by, and every JDBC URL has a scheme whatever follows it.
+     */
+    private static int schemeEnd( String value )
+    {
+        int colon = value.indexOf( ':' );
+        if ( colon < 1 || !Character.isLetter( value.charAt( 0 ) ) ) return -1;
+        for ( int i = 1; i < colon; ++i )
+        {
+            char c = value.charAt( i );
+            if ( !Character.isLetterOrDigit( c ) && c != '+' && c != '-' && c != '.' ) return -1;
+        }
+        return colon + 1;
+    }
+
     /** Masks the userinfo of an authority, retaining whether a password accompanied the account. */
     private static String maskUserInfo( String authority )
     {
@@ -214,7 +266,8 @@ public final class MaskUtils
         String userinfo    = authority.substring( 0, at );
         String fromAtOn    = authority.substring( at );   // retains the '@' and all that follows
 
-        return ( userinfo.indexOf( ':' ) < 0 ? MASK : MASK + ':' + MASK ) + fromAtOn;
+        int passwordColon = userinfo.indexOf( ':' );
+        return ( passwordColon < 0 ? userinfo : userinfo.substring(0,passwordColon) + ':' + MASK ) + fromAtOn;
     }
 
     /**
