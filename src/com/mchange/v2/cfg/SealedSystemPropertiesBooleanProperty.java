@@ -8,8 +8,11 @@ public class SealedSystemPropertiesBooleanProperty extends AbstractBooleanProper
     boolean uninitialized = true;
     Boolean sealedSys;
 
+    public SealedSystemPropertiesBooleanProperty(String property, boolean strongest, boolean defaultValue, boolean warnUnconfiguredWeakDefault)
+    { super(property, strongest, defaultValue, warnUnconfiguredWeakDefault); }
+
     public SealedSystemPropertiesBooleanProperty(String property, boolean strongest, boolean defaultValue)
-    { super(property, strongest, defaultValue); }
+    { this(property, strongest, defaultValue, true); }
 
     public SealedSystemPropertiesBooleanProperty(String property, boolean strongest)
     { this(property, strongest, strongest); }

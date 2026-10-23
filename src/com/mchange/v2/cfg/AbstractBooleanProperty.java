@@ -13,18 +13,23 @@ abstract class AbstractBooleanProperty
     final boolean strongest;
     final Boolean strongestBoolean;
     final boolean defaultValue;
+    final boolean warnUnconfiguredWeakDefault;
 
     // MT: protected by this' lock
     HashSet<String> warned = new HashSet<String>();
     boolean warnedUnconfiguredWeakDefault = false;
 
-    public AbstractBooleanProperty(String property, boolean strongest, boolean defaultValue)
+    public AbstractBooleanProperty(String property, boolean strongest, boolean defaultValue, boolean warnUnconfiguredWeakDefault)
     {
         this.property = property;
         this.strongest = strongest;
         this.strongestBoolean = Boolean.valueOf(strongest);
         this.defaultValue = defaultValue;
+        this.warnUnconfiguredWeakDefault = warnUnconfiguredWeakDefault;
     }
+
+    public AbstractBooleanProperty(String property, boolean strongest, boolean defaultValue)
+    { this( property, strongest, defaultValue, true ); }
 
     public static class Details
     {
@@ -129,7 +134,7 @@ abstract class AbstractBooleanProperty
 
     boolean configureUnconfigured(MLogger logger)
     {
-        if (!warnedUnconfiguredWeakDefault && defaultValue != strongest && logger.isLoggable(MLevel.WARNING))
+        if (warnUnconfiguredWeakDefault && !warnedUnconfiguredWeakDefault && defaultValue != strongest && logger.isLoggable(MLevel.WARNING))
         {
             logger.log(MLevel.WARNING,
                        "Security-sensitive property '" + property +
