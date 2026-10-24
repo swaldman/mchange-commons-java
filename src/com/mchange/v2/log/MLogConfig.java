@@ -50,6 +50,10 @@ public final class MLogConfig
     // if outside callers were to call MLogConfig.refresh() concurrently with MLog's class initialization,
     // or if callers simultaneously call MLogConfig.refresh(...) at the same time as they call MLog.refreshConfig(...),
     // deadlocks are possble. it seems like a pathological set of cases, letting it go for now.
+    //
+    // In any case, it is now impossible, absent reflective workarounds or some such. All of
+    // MLogConfig's synchronized methods are now accessed via MLog, so callers get MLog's lock
+    // first, MLogConfig second.
     synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
     { refresh( overrides, overridesDescription, false ); }
 
@@ -58,6 +62,9 @@ public final class MLogConfig
     // - A client is calling AFTER MLog has initialized (supported client use)
     // - A client is calling BEFORE MLog initialization is completed. Unexpected but harmless as long as we don't provoke logging.
     // - MLog is a caller after some other party called this (fine, but we have to respect freeze)
+    //
+    // After our reorg, mlog is the only caller. MLog can still be initialized or not,
+    // and can still be calling from the initializer or not.
     synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
     {
 	List<DelayedLogItem> bli = new ArrayList<>();
@@ -155,21 +162,10 @@ public final class MLogConfig
                                    Arrays.toString(config.getPropertiesResourcePaths()) +
                                    ". Later paths shadow earlier paths where values conflict."));
 
-        // we'll come back to this,
-        // but let's make one change at a time
-        bootstrapLogItems = bli;
-
-
-        /*
-        if (fromMLogInit)
+        if (bootstrapLogItems == null)
             bootstrapLogItems = bli;
         else
-        {
-            // we know we can log, bc if we were neither
-            // initialized nor fromMLogInit, we'd have returned above
-            MConfig.dumpToLogger( bli, getClassLogger() );
-        }
-        */
+            bootstrapLogItems.addAll(bli);
     }
 
     // should be called only from static synchronized methods

@@ -7,11 +7,26 @@ public final class LogUtils
 {
     public static String createParamsList(Object[] params)
     {
-	StringBuffer sb = new StringBuffer(511);
+	StringBuilder sb = new StringBuilder(511);
 	LogUtils.appendParamsList( sb, params );
 	return sb.toString();
     }
 
+    public static void appendParamsList(StringBuilder sb, Object[] params)
+    {
+	sb.append("[params: ");
+	if ( params != null )
+	{
+	    for (int i = 0, len = params.length; i < len; ++i)
+	    {
+		if (i != 0) sb.append(", ");
+		sb.append( params[i] );
+	    }
+	}
+	sb.append(']');
+    }
+
+    @Deprecated
     public static void appendParamsList(StringBuffer sb, Object[] params)
     {
 	sb.append("[params: ");
@@ -28,7 +43,7 @@ public final class LogUtils
 
     public static String createMessage(String srcClass, String srcMeth, String msg)
     {
-	StringBuffer sb = new StringBuffer(511);
+	StringBuilder sb = new StringBuilder(511);
 	sb.append("[class: ");
 	sb.append( srcClass );
 	sb.append("; method: ");
@@ -42,7 +57,7 @@ public final class LogUtils
 
     public static String createMessage(String srcMeth, String msg)
     {
-	StringBuffer sb = new StringBuffer(511);
+	StringBuilder sb = new StringBuilder(511);
 	sb.append("[method: ");
 	sb.append( srcMeth );
 	if (! srcMeth.endsWith(")"))

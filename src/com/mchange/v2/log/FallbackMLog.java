@@ -161,7 +161,7 @@ public final class FallbackMLog extends MLog
 	{
 	    boolean add_parens = (srcMeth != null && ! srcMeth.endsWith(")"));
 		
-	    StringBuffer sb = new StringBuffer(256);
+	    StringBuilder sb = new StringBuilder(256);
 	    sb.append(l.getLineHeader());
 	    sb.append(' ');
 	    if ( name != null )
@@ -361,7 +361,7 @@ public final class FallbackMLog extends MLog
 			entering( srcClass, srcMeth );
 		    else
 			{
-			    StringBuffer sb = new StringBuffer(128);
+			    StringBuilder sb = new StringBuilder(128);
 			    sb.append("( ");
 			    for (int i = 0, len = params.length; i < len; ++i)
 				{

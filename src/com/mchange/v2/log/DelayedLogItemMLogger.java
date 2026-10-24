@@ -67,6 +67,12 @@ class DelayedLogItemMLogger implements MLogger
         boolean add_parens = (srcMeth != null && ! srcMeth.endsWith(")"));
 
         StringBuilder sb = new StringBuilder(256);
+        if (this.name != null)
+            {
+                sb.append("[");
+                sb.append(name);
+                sb.append("]");
+            }
         if (srcClass != null && srcMeth != null)
             {
                 sb.append('[');
@@ -147,7 +153,7 @@ class DelayedLogItemMLogger implements MLogger
             entering( srcClass, srcMeth );
         else
         {
-            StringBuffer sb = new StringBuffer(128);
+            StringBuilder sb = new StringBuilder(128);
             sb.append("( ");
             for (int i = 0, len = params.length; i < len; ++i)
                 {
