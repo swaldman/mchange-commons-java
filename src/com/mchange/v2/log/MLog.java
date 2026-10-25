@@ -16,7 +16,7 @@ public abstract class MLog
 
     static
     {
-        try { refreshConfig( null, null, true ); }
+        try { refreshConfigWithBackstopsAndOverrides( null, null, null, null, true ); }
         catch (Exception e)
         {
             System.err.println("An unexpected exception occurred while trying to read configuration for logging.");
@@ -33,13 +33,12 @@ public abstract class MLog
     private static synchronized MLog            mlog()        { return _mlog; }
     private static synchronized MLogger         logger()      { return _logger; }
 
-    public static void refreshConfig() { refreshConfig( null, null ); } // no sync' 'cuz the internal method does it
-
+    public static void refreshConfig() { refreshConfigWithBackstopsAndOverrides( null, null, null, null ); } // no sync' 'cuz the delegated method does it
 
     /**
      *  Returns the MLog instance that was replaced by this operation
      */
-    public static MLog forceFallback() { return forceFallback( null ); } // no sync' 'cuz the internal method does it
+    public static MLog forceFallback() { return forceFallback( null ); } // no sync' 'cuz the delegated method does it
 
     /**
      *  Returns the MLog instance that was replaced by this operation
@@ -84,12 +83,26 @@ public abstract class MLog
 	return replaced;
     }
 
-    public static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription )
-    { refreshConfig( overrides, overridesDescription, false ); }
+    /**
+     * @deprecated please use refreshConfigWithOverrides( MultiPropertiesConfig[] overrides, String overridesDescription ),
+     *             it's a much clearer name for this method.
+     */
+    @Deprecated
+    public static void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription ) // no sync' 'cuz the delegated method does it
+    { refreshConfigWithOverrides( overrides, overridesDescription ); }
 
-    private static synchronized void refreshConfig( MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
+    public static void refreshConfigWithOverrides( MultiPropertiesConfig[] overrides, String overridesDescription ) // no sync' 'cuz the delegated method does it
+    { refreshConfigWithBackstopsAndOverrides( null, null, overrides, overridesDescription ); }
+    
+    public static void refreshConfigWithBackstops( MultiPropertiesConfig[] backstops, String backstopsDescription ) // no sync' 'cuz the delegated method does it
+    { refreshConfigWithBackstopsAndOverrides( backstops, backstopsDescription, null, null ); }
+    
+    public static void refreshConfigWithBackstopsAndOverrides( MultiPropertiesConfig[] backstops, String backstopsDescription, MultiPropertiesConfig[] overrides, String overridesDescription) // no sync' 'cuz the delegated method does it
+    { refreshConfigWithBackstopsAndOverrides( backstops, backstopsDescription, overrides, overridesDescription, false); }
+        
+    private static synchronized void refreshConfigWithBackstopsAndOverrides( MultiPropertiesConfig[] backstops, String backstopsDescription, MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
     {
-	MLogConfig.refresh( overrides, overridesDescription, fromMLogInit );
+	MLogConfig.refresh( backstops, backstopsDescription, overrides, overridesDescription, fromMLogInit );
 
 	RedirectableMLogger.resetAll();
 

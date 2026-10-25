@@ -13,6 +13,8 @@ public final class MLogConfig
 {
     public final static String FREEZE_CONFIG_KEY = "com.mchange.v2.log.freezeConfig";
 
+    private final static MultiPropertiesConfig[] EMPTY_MPC_ARRAY = new MultiPropertiesConfig[0];
+
     // MT: all now mutable references, protected by class' lock
     private static MultiPropertiesConfig                 config               = null;
     private static List<DelayedLogItem>                  bootstrapLogItems    = null;
@@ -47,16 +49,6 @@ public final class MLogConfig
     public static String[] mlogC3p0Unified()
     { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties","hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
 
-    // if outside callers were to call MLogConfig.refresh() concurrently with MLog's class initialization,
-    // or if callers simultaneously call MLogConfig.refresh(...) at the same time as they call MLog.refreshConfig(...),
-    // deadlocks are possble. it seems like a pathological set of cases, letting it go for now.
-    //
-    // In any case, it is now impossible, absent reflective workarounds or some such. All of
-    // MLogConfig's synchronized methods are now accessed via MLog, so callers get MLog's lock
-    // first, MLogConfig second.
-    synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription )
-    { refresh( overrides, overridesDescription, false ); }
-
     // we want to distinguish between several cases
     // - MLog is the first caller from its static initializer (the usual first call)
     // - A client is calling AFTER MLog has initialized (supported client use)
@@ -65,7 +57,10 @@ public final class MLogConfig
     //
     // After our reorg, mlog is the only caller. MLog can still be initialized or not,
     // and can still be calling from the initializer or not.
-    synchronized static void refresh( MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
+    //
+    // In any case, it is now impossible, absent reflective workarounds or some such.
+    // All of MLogConfig's synchronized methods are now accessed via MLog, so callers get MLog's lock first, MLogConfig second.
+    synchronized static void refresh( MultiPropertiesConfig[] backstops, String backstopsDescription, MultiPropertiesConfig[] overrides, String overridesDescription, boolean fromMLogInit )
     {
 	List<DelayedLogItem> bli = new ArrayList<>();
 
@@ -120,9 +115,9 @@ public final class MLogConfig
                                        "However, mlog is transitioning from this mechanism, which is fragile and obscure. The supported way to customize configuration is " +
                                        "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
 
-            // note that if overrides are non-null, we cap later, after the overrides, if we can cap
+            // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
             String[] defaults = mlogC3p0Defaults();
-            String[] preempts = !mlogInitialized || overrides != null ? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
+            String[] preempts = !mlogInitialized || backstops != null || overrides != null ? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -131,8 +126,8 @@ public final class MLogConfig
         }
         else
         {
-            // note that if overrides are non-null, we cap later, after the overrides, if we can cap
-            String[] resources = !mlogInitialized || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
+            // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
+            String[] resources = !mlogInitialized || backstops != null || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -140,21 +135,40 @@ public final class MLogConfig
             tmpConfig = MConfig.AsProvided.readUncachedResourceConfig(null, resources, bli);
         }
 
-	if ( overrides != null )
+	if ( backstops != null || overrides != null )
 	{
-	    int olen = overrides.length;
-	    MultiPropertiesConfig[] combineMe = new MultiPropertiesConfig[ olen + 1 ];
-	    combineMe[0] = tmpConfig;
-	    for ( int i = 0; i < olen; ++i )
-		combineMe[ i + 1 ] = overrides[i];
+            MultiPropertiesConfig[] nullsafeBackstops = backstops == null ? EMPTY_MPC_ARRAY : backstops;
+            MultiPropertiesConfig[] nullsafeOverrides = overrides == null ? EMPTY_MPC_ARRAY : overrides;
+            int blen = nullsafeBackstops.length;
+	    int olen = nullsafeOverrides.length;
+	    MultiPropertiesConfig[] combineMe = new MultiPropertiesConfig[ blen + 1 + olen];
+            System.arraycopy(nullsafeBackstops,0,combineMe,0,blen);
+	    combineMe[blen] = tmpConfig;
+            System.arraycopy(nullsafeOverrides,0,combineMe,blen+1,olen);
 	    config = !mlogInitialized ? MConfig.combine( combineMe ) : SealedSystemProperties.capCurrentThenSealAndCombine(combineMe);
             bli.addAll( config.getDelayedLogItems() );
-	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, (fromMLogInit ? "Loaded" : "Refreshed") + " MLog library log configuration, with overrides" + (overridesDescription == null ? "." : ": " + overridesDescription) ) );
+            StringBuilder sb = new StringBuilder();
+            sb.append(fromMLogInit ? "Loaded " : "Refreshed ");
+            sb.append("MLog library log configuration");
+            if (blen > 0)
+            {
+                sb.append(", with backstops specified");
+                if (backstopsDescription != null)
+                    sb.append(" -- " + backstopsDescription);
+            }
+            if (olen > 0)
+            {
+                sb.append(", with overrides specified");
+                if (overridesDescription != null)
+                    sb.append(" -- " + overridesDescription);
+            }
+            sb.append(".");
+	    bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, sb.toString() ) );
 	}
 	else
 	{
 	    if ( !fromMLogInit )
-		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without overrides.") );
+		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without backstops or overrides.") );
 	    config = tmpConfig;
 	}
         bli.add(new DelayedLogItem(DelayedLogItem.Level.INFO,
