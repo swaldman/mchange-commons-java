@@ -277,9 +277,11 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
                     arr = Array.newInstance( mpcClass, overrides.length );
                     for ( int i = 0; i < overrides.length; ++i ) Array.set( arr, i, overrides[i] );
                 }
-                Method m = mlogConfigClass.getDeclaredMethod( "refresh", Array.newInstance( mpcClass, 0 ).getClass(), String.class );
+                Class<?> arrayClass = Array.newInstance( mpcClass, 0 ).getClass();
+                Method m = mlogConfigClass.getDeclaredMethod( "refresh", arrayClass, String.class, arrayClass, String.class, boolean.class );
                 m.setAccessible( true );   // package-private on purpose: clients go through MLog.refreshConfig(..)
-                m.invoke( null, new Object[] { arr, description } );
+                // backstops null, overrides as given, fromMLogInit false -- a client call's shape
+                m.invoke( null, new Object[] { null, null, arr, description, Boolean.FALSE } );
             }
             catch ( Exception e )
             { throw new RuntimeException( "MLogConfig.refresh(..) failed in the scenario", e ); }

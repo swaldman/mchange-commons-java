@@ -78,21 +78,46 @@ final class MLogConfigDriver
         { throw new RuntimeException( "Could not build an override config", e ); }
     }
 
+    /** Refresh with overrides only, which is what most of these tests want. */
     void refresh( Object[] overrides, String description )
+    { refresh( null, null, overrides, description ); }
+
+    /** Refresh with backstops only. */
+    void refreshWithBackstops( Object[] backstops, String description )
+    { refresh( backstops, description, null, null ); }
+
+    /**
+     *  Both halves of MLog's refresh, in precedence order: backstops sit below the resource
+     *  configuration, overrides above it.
+     *
+     *  <p>The <code>fromMLogInit</code> flag is deliberately not exposed. Only MLog's own class
+     *  initializer may pass true, and a test that passed it would be claiming to be an
+     *  initialization that is not happening -- which is the mistake that cost a day: the
+     *  predicate these paths turn on is "is MLog up", and faking it provokes the silent fallback
+     *  to System.err. Reaching the four-argument method leaves that flag false, as a client
+     *  call does.</p>
+     */
+    void refresh( Object[] backstops, String backstopsDescription, Object[] overrides, String overridesDescription )
     {
         try
         {
-            Object arr = null;
-            if ( overrides != null )
-            {
-                arr = Array.newInstance( mpcClass, overrides.length );
-                for ( int i = 0; i < overrides.length; ++i ) Array.set( arr, i, overrides[i] );
-            }
-            reach( "refresh", Array.newInstance( mpcClass, 0 ).getClass(), String.class )
-                .invoke( null, new Object[] { arr, description } );
+            Class<?> arrayClass = Array.newInstance( mpcClass, 0 ).getClass();
+            reach( "refresh", arrayClass, String.class, arrayClass, String.class, boolean.class )
+                .invoke( null, new Object[] { asArray( backstops ), backstopsDescription,
+                                              asArray( overrides ), overridesDescription,
+                                              Boolean.FALSE } );
         }
         catch ( Exception e )
         { throw new RuntimeException( "MLogConfig.refresh(..) failed in the scenario", e ); }
+    }
+
+    /** null stays null -- MLogConfig distinguishes "no layer supplied" from "an empty one". */
+    private Object asArray( Object[] configs )
+    {
+        if ( configs == null ) return null;
+        Object arr = Array.newInstance( mpcClass, configs.length );
+        for ( int i = 0; i < configs.length; ++i ) Array.set( arr, i, configs[i] );
+        return arr;
     }
 
     /**
@@ -176,6 +201,33 @@ final class MLogConfigDriver
         { throw new RuntimeException( "Could not install a stub classLogger in the scenario", e ); }
 
         return recorded;
+    }
+
+    /**
+     *  Drains the delayed log items into whatever classLogger is installed.
+     *
+     *  <p>These tests call MLogConfig.refresh(..) directly, so no MLog-Init-Reporter is spawned
+     *  to drain them -- which is the point of routing clients through MLog.refreshConfig(..).
+     *  A test that wants to read the notice a refresh produced has to drain it itself.</p>
+     */
+    void logDelayedItems()
+    {
+        try
+        { reach( "logDelayedItems", mloggerClass ).invoke( null, classLogger() ); }
+        catch ( Exception e )
+        { throw new RuntimeException( "MLogConfig.logDelayedItems(..) failed in the scenario", e ); }
+    }
+
+    private Object classLogger()
+    {
+        try
+        {
+            Field f = mlogConfigClass.getDeclaredField( "classLogger" );
+            f.setAccessible( true );
+            return f.get( null );
+        }
+        catch ( Exception e )
+        { throw new RuntimeException( "Could not read the scenario's classLogger", e ); }
     }
 
     /** Records at WARNING or above whose text contains the fragment. */
