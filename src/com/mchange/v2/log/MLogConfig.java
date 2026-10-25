@@ -102,7 +102,7 @@ public final class MLogConfig
                 }
                 if (logger.isLoggable(MLevel.WARNING))
                     logger.log(MLevel.WARNING,
-                               "An attempt to refresh MLog library will be ignored, because the configuration has been frozen (" + FREEZE_CONFIG_KEY + "=true)",
+                               "An attempt to refresh MLog library config will be ignored, because the configuration has been frozen (" + FREEZE_CONFIG_KEY + "=true)",
                                debugStackTrace );
 
                 return;
