@@ -95,8 +95,9 @@ final class ConfigUtils
     {
         if (identifier == null) return null;
 
-	boolean hocon = isHoconPath( identifier );
-        boolean file  = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
+	boolean hocon   = isHoconPath( identifier );
+        boolean file    = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
+        boolean c3p0Xml = C3P0XmlPropertiesConfigSource.isC3P0XmlIdentifier( identifier );
 
         PropertiesConfigSource out;
 
@@ -133,10 +134,14 @@ final class ConfigUtils
             out = propertiesConfigSource( SealedSystemPropertiesConfigSource.class.getName(), delayedLogItems );
         else if (file)
 	    out = propertiesConfigSource( FileUrlPropertiesConfigSource.class.getName(), delayedLogItems );
+        else if (c3p0Xml)
+            // no Class.forName guard, unlike HOCON: XML parsing is in the JDK, so unlike the
+            // HOCON bridge this source has no optional dependency that might be absent
+            out = propertiesConfigSource( C3P0XmlPropertiesConfigSource.class.getName(), delayedLogItems );
 	else if (identifier.startsWith("/"))
 	    out = propertiesConfigSource( BasicPropertiesConfigSource.class.getName(), delayedLogItems );
         else
-            throw new IllegalArgumentException(String.format("Resource identifier '%s' is neither an absolute resource path nor a file URL nor a HOCON path. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:')", identifier));
+            throw new IllegalArgumentException(String.format("Resource identifier '%s' is not an absolute resource path, a file URL, a HOCON path, or a c3p0 XML config source. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:' or 'c3p0-xml:')", identifier));
 
         return out;
     }

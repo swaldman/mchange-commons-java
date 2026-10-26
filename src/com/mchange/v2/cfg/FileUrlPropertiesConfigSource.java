@@ -53,15 +53,76 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     @Override
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
     {
-	if ( isFileUrlIdentifier( identifier ) )
+	if (! isFileUrlIdentifier( identifier ) )
+            throw new IllegalArgumentException("FileUrlPropertiesConfigSource accepts only identifiers beginning with 'file:', found " + identifier);
+
+        // we cannot log directly from here. this source is consulted while MLog is still
+        // initializing its own configuration, so touching a logger would find MLog half-built.
+        // DelayedLogItems exist for exactly this: they are replayed once logging is up.
+        List<DelayedLogItem> delayedLogItems = new ArrayList<DelayedLogItem>();
+
+        Resolved resolved = resolve( this, identifier, delayedLogItems );
+
+        try
         {
+            Properties props = new Properties();
+
+            try (InputStream is = new BufferedInputStream(new FileInputStream(resolved.readPath.toFile())))
+            { props.load(is); }
+
+            // the file itself is sound. it can still be deleted by whoever can write a
+            // directory above it, which no check on the file can prevent -- so advise.
+            if (resolved.enforceUserOnlyPermissions)
+                warnIfRemovableByOthers( identifier, resolved.readPath, resolved.requiredConfig, delayedLogItems );
+
+            return new PropertiesConfigSource.Parse(props, delayedLogItems);
+        }
+        // no OwnLogCarryingMissingFileException catch here: that arises from the permissions
+        // check, which resolve(..) now performs and routes itself. What is left to fail at this
+        // point is the open, between the check and the read.
+        catch (FileNotFoundException e)
+        { throw handleExceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
+        catch (NoSuchFileException e)
+        { throw handleExceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
+    }
+
+    /**
+     *  Everything a {@code file:} identifier means, except how to parse the bytes it names.
+     *
+     *  <p>Shared so that a source reading some other format from a {@code file:} URL gets the
+     *  same security semantics rather than a second implementation of them: the query-string
+     *  grammar, {@code ${}} property references, the absolute-path rule, the
+     *  {@code permissions=useronly} ownership-and-mode chain, and how absence is reported under
+     *  {@code required=}.</p>
+     */
+    static final class Resolved
+    {
+        /** The file to open: what the permissions check resolved to, when one ran. */
+        final Path    readPath;
+        final boolean requiredConfig;
+        final boolean enforceUserOnlyPermissions;
+
+        private Resolved( Path readPath, boolean requiredConfig, boolean enforceUserOnlyPermissions )
+        {
+            this.readPath                   = readPath;
+            this.requiredConfig             = requiredConfig;
+            this.enforceUserOnlyPermissions = enforceUserOnlyPermissions;
+        }
+    }
+
+    /**
+     *  Interprets a {@code file:} identifier, up to but not including reading it.
+     *
+     *  @param source the source on whose behalf we are resolving. Vetoes name it, so a refusal
+     *                is attributed to the source a caller actually asked for rather than to
+     *                whichever class happens to hold this code. Typed VetoableConfig rather than
+     *                PropertiesConfigSource because {@code permissions=useronly} can refuse: a
+     *                source that cannot veto has no business asking for a check that might.
+     */
+    static Resolved resolve( VetoableConfig source, String identifier, List<DelayedLogItem> delayedLogItems ) throws Exception
+    {
             String                   fileUrl;
             Map<String,List<String>> parsedQueryString;
-
-            // we cannot log directly from here. this source is consulted while MLog is still
-            // initializing its own configuration, so touching a logger would find MLog half-built.
-            // DelayedLogItems exist for exactly this: they are replayed once logging is up.
-            List<DelayedLogItem> delayedLogItems = new ArrayList<DelayedLogItem>();
 
             int qm_index = identifier.indexOf('?');
             if (qm_index >= 0)
@@ -79,7 +140,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             for (String s : parsedQueryString.keySet())
             {
                 if (!QUERY_KEYS.contains(s))
-                    throw new InsecureConfigurationException(this, identifier, "identifier query string contains an unsupported key '" + s + "'. Note that keys are case-sensitive.", null, delayedLogItems);
+                    throw new InsecureConfigurationException(source, identifier, "identifier query string contains an unsupported key '" + s + "'. Note that keys are case-sensitive.", null, delayedLogItems);
             }
             boolean enforceUserOnlyPermissions = false;
             boolean requiredConfig = false;
@@ -90,12 +151,12 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             if (permissionsValues != null)
             {
                 if (permissionsValues.size() == 0)
-                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + PERMISSIONS_KEY + "' key but no value. Please supply a value, or remove the key.", null, delayedLogItems);
+                    throw new InsecureConfigurationException(source, identifier, "'" + identifier + "' specifies a '" + PERMISSIONS_KEY + "' key but no value. Please supply a value, or remove the key.", null, delayedLogItems);
 
                 for (String s : permissionsValues)
                 {
                     if (!PERMISSIONS_VALUES.contains(s.toLowerCase()))
-                        throw new InsecureConfigurationException(this, identifier, "identifier query string contains an unsupported value '" + s + "' for key '" + PERMISSIONS_KEY + "'.", null, delayedLogItems);
+                        throw new InsecureConfigurationException(source, identifier, "identifier query string contains an unsupported value '" + s + "' for key '" + PERMISSIONS_KEY + "'.", null, delayedLogItems);
                     if (PERMISSIONS_USER_ONLY_LC.equalsIgnoreCase(s))
                         enforceUserOnlyPermissions = true;
                 }
@@ -106,9 +167,9 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             {
                 int sz = requiredValues.size();
                 if (sz == 0)
-                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but no value. Please supply a value, or remove the key.", null, delayedLogItems);
+                    throw new InsecureConfigurationException(source, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but no value. Please supply a value, or remove the key.", null, delayedLogItems);
                 else if (sz > 1)
-                    throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but too many values (" + sz + "). Please supply a unique value, or remove the key.", null, delayedLogItems);
+                    throw new InsecureConfigurationException(source, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key but too many values (" + sz + "). Please supply a unique value, or remove the key.", null, delayedLogItems);
                 else
                 {
                     String requiredStr = requiredValues.get(0).toLowerCase();
@@ -118,13 +179,13 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                         requiredConfig = false;
                         explicitlyNotRequired = true;
                     }
-                    else throw new InsecureConfigurationException(this, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key, which must take a value 'true' or 'false', but instead takes a value of '" + requiredStr + "'.", null, delayedLogItems);
+                    else throw new InsecureConfigurationException(source, identifier, "'" + identifier + "' specifies a '" + REQUIRED_KEY + "' key, which must take a value 'true' or 'false', but instead takes a value of '" + requiredStr + "'.", null, delayedLogItems);
                 }
             }
 
 
             Path propsPath = containsPropertyReference( fileUrl )
-                               ? resolveReferencedPath( identifier, fileUrl, requiredConfig, delayedLogItems )
+                               ? resolveReferencedPath( source, identifier, fileUrl, requiredConfig, delayedLogItems )
                                : Paths.get(new URI(fileUrl));
 
             // this if clause should never be satisfied, because the URI parse should have failed on a relative file path
@@ -136,44 +197,31 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                 throw new ConfigParseException(msg, null, delayedLogItems);
             }
 
-            String propsPathStr = propsPath.toString();
-
             try
             {
                 // when useronly is enforced we open the path the check resolved to, so that the file
                 // examined and the file read are the same file. otherwise we open what we were given.
                 Path readPath = enforceUserOnlyPermissions
-                                  ? checkUserOnlyAndResolve( identifier, requiredConfig, explicitlyNotRequired, propsPath, delayedLogItems )
+                                  ? checkUserOnlyAndResolve( source, identifier, requiredConfig, explicitlyNotRequired, propsPath, delayedLogItems )
                                   : propsPath;
-
-                Properties props = new Properties();
-
-                try (InputStream is = new BufferedInputStream(new FileInputStream(readPath.toFile())))
-                { props.load(is); }
-
-                // the file itself is sound. it can still be deleted by whoever can write a
-                // directory above it, which no check on the file can prevent -- so advise.
-                if (enforceUserOnlyPermissions)
-                    warnIfRemovableByOthers( identifier, readPath, requiredConfig, delayedLogItems );
-
-                return new PropertiesConfigSource.Parse(props, delayedLogItems);
+                return new Resolved( readPath, requiredConfig, enforceUserOnlyPermissions );
             }
+            // routing here is idempotent: OwnLogCarryingMissingFileException extends
+            // ConfigParseException, which the handler returns unchanged, so a not-found already
+            // dressed by resolveReferencedPath(..) is not dressed twice.
             catch (OwnLogCarryingMissingFileException e)
-            { throw handleExceptionIndicatingFileNotFound( identifier, requiredConfig, e, delayedLogItems ); }
-            catch (FileNotFoundException e)
-            { throw handleExceptionIndicatingFileNotFound( identifier, requiredConfig, e, delayedLogItems  ); }
+            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
             catch (NoSuchFileException e)
-            { throw handleExceptionIndicatingFileNotFound( identifier, requiredConfig, e, delayedLogItems  ); }
-        }
-        else
-            throw new IllegalArgumentException("FileUrlPropertiesConfigSource accepts only identifiers beginning with 'file:', found " + identifier);
+            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
+            catch (FileNotFoundException e)
+            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
     }
 
     /**
      *  Whether an identifier's path names a System property, as {@code file:${some.property}} or
      *  {@code file:${some.dir}/fixed-name.properties}.
      *
-     *  <p>Tested against the portion BEFORE the query string, deliberately: a {@code ${} in a
+     *  <p>Tested against the portion BEFORE the query string, deliberately: a <code>${</code> in a
      *  query value must not turn the path into a substituted one.</p>
      */
     static boolean containsPropertyReference( String fileUrlNoQuery )
@@ -194,8 +242,8 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  load. Note too that this is the only place the snapshot is touched, so an ordinary
      *  {@code file:} identifier still causes no seal.</p>
      */
-    private Path resolveReferencedPath( String identifier, String fileUrl, boolean requiredConfig,
-                                        List<DelayedLogItem> delayedLogItems ) throws Exception
+    private static Path resolveReferencedPath( VetoableConfig source, String identifier, String fileUrl, boolean requiredConfig,
+                                               List<DelayedLogItem> delayedLogItems ) throws Exception
     {
         MultiPropertiesConfig sealed = SealedSystemProperties.initGet( delayedLogItems );
 
@@ -211,7 +259,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                 "Config resource identifier '" + identifier + "' names System property '" + unresolved[0] +
                 "' as its path, or part of it, but that property is not set in the sealed snapshot of System " +
                 "properties. The configuration it names is treated as absent.";
-            throw handleExceptionIndicatingFileNotFound( identifier, requiredConfig, new FileNotFoundException( msg ), delayedLogItems );
+            throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, new FileNotFoundException( msg ), delayedLogItems );
         }
 
         // A substituted identifier denotes a filesystem path, NOT a URL, and is not
@@ -243,7 +291,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
 
     /**
      *  One pass, left to right. A value is appended verbatim and scanning resumes AFTER its
-     *  closing brace, so a value that itself contains {@code ${} is not re-expanded: there is no
+     *  closing brace, so a value that itself contains <code>${</code> is not re-expanded: there is no
      *  expansion loop to construct, and no way to name a property indirectly through a value.
      *
      *  @return the substituted String, or null when some name did not resolve -- in which case
@@ -322,7 +370,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  A missing file, or a dangling link, raises NoSuchFileException from readAttributes, which
      *  the caller routes to its ordinary not-found handling. Absence is not insecurity.
      */
-    private Path checkUserOnlyAndResolve( String identifier, boolean requiredConfig, boolean explicitlyNotRequired, Path start, List<DelayedLogItem> delayedLogItems ) throws Exception
+    private static Path checkUserOnlyAndResolve( VetoableConfig source, String identifier, boolean requiredConfig, boolean explicitlyNotRequired, Path start, List<DelayedLogItem> delayedLogItems ) throws Exception
     {
         Path        p    = start;
         Set<Path>   seen = new HashSet<>();
@@ -366,7 +414,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             catch (Exception e)
             {
                 throw new InsecureConfigurationException(
-                   this,
+                   source,
                    identifier,
                    "This configuration was specified as requiring specific file permissions, but the current environment does not support reading file permissions, or the read failed. " +
                    "Either eliminate the permissions requirement from config source identifier '" + identifier + "' or else run in an environment that supports POSIX file permissions.",
@@ -379,7 +427,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
 
             if (! acceptableOwner( attrs.owner(), delayedLogItems ) )
                 throw new InsecureConfigurationException(
-                    this, identifier,
+                    source, identifier,
                     "For '" + identifier + "', useronly permissions are set, but " +
                     (attrs.isSymbolicLink() ? "symbolic link" : "file") + " '" + p + "' is owned by '" +
                     attrs.owner().getName() + "', neither the current user ('" + currentUserName() + "') nor root." +
@@ -393,7 +441,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                 permissions.remove(PosixFilePermission.OWNER_EXECUTE);
                 if (permissions.size() != 0)
                     throw new InsecureConfigurationException(
-                        this, identifier,
+                        source, identifier,
                         "For '" + identifier + "', useronly permissions are set, but file '" + p +
                         "' has other permissions set: " + permissions + viaSuffix( hops ), null, delayedLogItems );
                 return p;
@@ -401,7 +449,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
 
             if (! seen.add( p ) )
                 throw new InsecureConfigurationException(
-                    this, identifier,
+                    source, identifier,
                     "For '" + identifier + "', useronly permissions are set, but the path is a cycle of " +
                     "symbolic links that never reaches a file." + viaSuffix( hops ), null, delayedLogItems );
 
@@ -453,8 +501,8 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  warning that fires when it should not teaches people to ignore the warning, which costs
      *  more than the cases we miss.
      */
-    private void warnIfRemovableByOthers( String identifier, Path readPath, boolean requiredConfig,
-                                          List<DelayedLogItem> delayedLogItems )
+    private static void warnIfRemovableByOthers( String identifier, Path readPath, boolean requiredConfig,
+                                                 List<DelayedLogItem> delayedLogItems )
     {
         // a vanished required file already throws. there is no silent failure to warn about.
         if ( requiredConfig ) return;
@@ -635,10 +683,10 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
         { return null; }
     }
 
-    private Exception handleExceptionIndicatingFileNotFound(String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
+    static Exception handleExceptionIndicatingFileNotFound(VetoableConfig source, String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
     {
         if (requiredConfig)
-            return new InsecureConfigurationException(this, identifier, "Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.", e, delayedLogItems);
+            return new InsecureConfigurationException(source, identifier, "Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.", e, delayedLogItems);
         else if (e instanceof ConfigParseException)
             return e;
         else

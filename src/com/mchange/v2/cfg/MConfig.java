@@ -158,7 +158,7 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    names.</p>
  *
  *    <p>Substitution is a <b>single pass, left to right</b>. A value is inserted verbatim and
- *    scanning continues after its closing brace, so a value that itself contains {@code ${} is a
+ *    scanning continues after its closing brace, so a value that itself contains <code>${</code> is a
  *    path and not another reference. There is therefore no expansion loop to construct, and no way
  *    to name a property indirectly through the contents of another.</p>
  *
@@ -166,7 +166,7 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    configuration it names <b>absent</b> &mdash; the same as a file that is not there, reported
  *    the same way and skipped. This is why no new option was needed: {@code required=true} already
  *    says what to do about absence, and over a referenced path it now means <i>the property must
- *    be set <b>and</b> the file must exist</i>. A <b>malformed</b> reference &mdash; a {@code ${}
+ *    be set <b>and</b> the file must exist</i>. A <b>malformed</b> reference &mdash; a <code>${</code>
  *    never closed, or an empty {@code ${}} naming nothing &mdash; is a different matter: that
  *    source contributes nothing and a <b>warning</b> says why. It is a failure to parse, not a
  *    refusal on security grounds, so it is reported rather than vetoing the load.</p>
@@ -214,6 +214,46 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    {@code config.url} &mdash; checked in
  *    that order, the first one set winning &mdash; may be loaded instead of
  *    {@code application.properties} / {@code application.json} / {@code application.conf}.</p></li>
+ *
+ *    <li><p>Paths beginning {@code c3p0-xml:} are read as <a href="https://www.mchange.com/projects/c3p0/">c3p0</a>
+ *    XML configuration and translated into properties. What follows the prefix is either a
+ *    classloader resource path beginning {@code /} &mdash; where <b>every</b> resource at that
+ *    path is read and merged, earlier classpath entries winning, just as for properties resources
+ *    &mdash; or a {@code file:} URL, which gets the full treatment described above, including
+ *    {@code ${system.property}} references, {@code ?required=} and {@code ?permissions=useronly}.
+ *    {@code c3p0-xml:/} alone names nothing and is refused, as is a query string on the
+ *    classloader form, which would otherwise be read as part of the resource path and silently
+ *    find nothing.</p>
+ *
+ *    <p>Because the {@code file:} form can refuse on permission grounds, this source is vetoable,
+ *    with everything that implies below: plain {@link MConfig.AsProvided} will not read it.</p>
+ *
+ *    <p>Property names are mapped by shape, since this library has no list of c3p0's configurable
+ *    properties to validate against. Within {@code <default-config>}, a bare name takes a
+ *    {@code c3p0.} prefix and a compound name is kept as written &mdash; so
+ *    {@code maxPoolSize} becomes {@code c3p0.maxPoolSize}, while
+ *    {@code com.mchange.v2.log.freezeConfig} means itself. Within
+ *    {@code <named-config name="X">}, names are prefixed {@code c3p0.named-configs.X.} and a
+ *    leading {@code c3p0.} is dropped first, so both spellings of a pool property arrive at one
+ *    key; a fully-qualified name is <b>refused with a warning</b> there, because a named config is
+ *    a per-DataSource scope while such settings are read globally, with no DataSource in hand.
+ *    {@code <user-overrides user="..."/>} maps the same way beneath
+ *    {@code c3p0.user-overrides.<user>.} or
+ *    {@code c3p0.named-configs.X.user-overrides.<user>.} &mdash; a {@code name} attribute is
+ *    accepted in place of {@code user}, with a warning, because a since-corrected error in c3p0's
+ *    documentation showed it. {@code <extensions>} names are never processed, being names a
+ *    deployment invented for its own use, and are not read beneath a user override at all, since
+ *    extensions are per-config rather than per-user.</p>
+ *
+ *    <p>Parsing is <b>hardened</b> &mdash; doctypes, external entities, external DTDs and schemas,
+ *    XInclude and entity expansion all disabled; see CVE-2018-20433. The single escape is the
+ *    System property {@code com.mchange.v2.c3p0.cfg.xml.usePermissiveParser}, which defaults to
+ *    false and is read <b>only</b> from the sealed snapshot of System properties, never from
+ *    configuration: a flag that relaxes XML parsing must not be settable by the documents whose
+ *    parsing it relaxes. In practice it means a {@code -D}. c3p0's own deprecated
+ *    {@code com.mchange.v2.c3p0.cfg.xml.expandEntityReferences} is <i>not</i> honored here; if it
+ *    is set, a warning points at {@code usePermissiveParser} instead, so a deployment migrating
+ *    from c3p0's own config finder is told why its entity references stopped resolving.</p></li>
  *  </ul>
  *
  *  <h3>The hardcoded backstop</h3>
