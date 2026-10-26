@@ -71,10 +71,20 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
     // ------------------------------------------------------- the first load
 
     /**
-     *  THE REASON FOR THE EXCEPTION. A first load must not reach the snapshot, because
-     *  reaching it logs and the first load is MLog coming up.
+     *  EVERY load seals, the first one included. There used to be an exception: reaching the
+     *  snapshot logged, and the first load is MLog coming up, so a bootstrap load deliberately
+     *  skipped the cap and read the live "/" instead.
+     *
+     *  <p>That exception is gone, because its cause is gone. Everything on the load path now
+     *  reports through delayed log items -- SealedSystemProperties' init* methods accumulate
+     *  rather than log, and SealedSystemPropertiesConfigSource reports through its Parse -- so
+     *  nothing on the path calls a logger, and the cap can apply uniformly.</p>
+     *
+     *  <p>Sealing earlier is also the better behaviour on its own terms: the snapshot is the
+     *  operator's word, and the less application code runs before it is taken, the more nearly
+     *  that is true.</p>
      */
-    public void testAFirstLoadDoesNotSeal()
+    public void testEvenTheFirstLoadSeals()
     {
         CfgScenario s = CfgScenario.open( SCENARIO, false );
         try
@@ -84,15 +94,17 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
 
             d.refresh( null, null );
 
-            assertFalse( "MLog's own bootstrap must not seal System properties", d.isSealed() );
+            assertTrue( "the bootstrap load caps, and so seals", d.isSealed() );
         }
         finally
         { s.closeQuietly(); }
     }
 
     /**
-     *  And it does not need to: the live "/" is already the last element of MLogConfig's source
-     *  list, so System properties win on the first load without being capped.
+     *  System properties are top of the ladder on the first load, as on every other. This held
+     *  before the cap became unconditional too, by a different route -- the live "/" was already
+     *  the last element of the source list -- so the assertion is unchanged while the reason for
+     *  it is not.
      */
     public void testAFirstLoadStillGivesSystemPropertiesTopPrecedence()
     {
@@ -105,48 +117,57 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
             d.refresh( null, null );
 
             assertEquals( "from-system", d.getProperty( KEY ) );
-            assertFalse( "and it still must not have sealed", d.isSealed() );
         }
         finally
         { s.closeQuietly(); }
     }
 
-    // ------------------------------------------------------- later refreshes
+    // ------------------------------------------------------- what the cap is for
 
-    /** Once MLog is up, capping is safe, and a later refresh takes it. */
     /**
-     *  Once MLog is up, capping is safe, and a refresh takes it.
+     *  Sealing does not wait for MLog, and does not need to be asked twice. This is the case that
+     *  used to turn on the "is MLog initialized" predicate; with nothing on the load path logging,
+     *  that predicate no longer has anything to protect and MLogConfig no longer consults it.
      *
-     *  <p>The precondition is stated rather than assumed. The guard is "is MLog initialized",
-     *  not "is this a later load" -- those coincide in the ordinary path, because MLog's own
-     *  initializer performs the first load, and they come apart here, where MLogConfig is driven
-     *  directly and MLog never comes up at all. Earlier this test passed on the coincidence; it
-     *  now installs the logger whose presence IS the predicate.</p>
+     *  <p>Driven with MLog never coming up at all, which is the configuration that used to be
+     *  required to stay unsealed and is now the sharpest demonstration that the seal is
+     *  unconditional.</p>
      */
-    public void testARefreshSealsOnceMLogIsUp()
+    public void testSealingDoesNotWaitForMLog()
     {
         CfgScenario s = CfgScenario.open( SCENARIO, false );
         try
         {
             MLogConfigDriver d = new MLogConfigDriver( s );
-            d.refresh( null, null );
-            assertFalse( "a load before MLog is up must not reach the snapshot", d.isSealed() );
 
             d.refresh( null, null );
-            assertFalse( "nor must a second one, while MLog is still down", d.isSealed() );
+            assertTrue( "the first load seals, with MLog still down", d.isSealed() );
 
-            d.initializeMLog();
+            // THE INVARIANT THE init* FAMILY EXISTS TO PRESERVE, asserted directly. Capping now
+            // reads SEALED_SYSTEM_PROPERTIES on the bootstrap load, and if anything on that path
+            // logs -- a convenience wrapper that evaluates logger(), say -- MLog comes up in the
+            // middle of a config load, re-enters refresh(..), and its init reporter drains the
+            // delayed items out from under the caller. That is exactly what happened when this
+            // simplification was first attempted, and it surfaced only as a puzzling failure in
+            // MLogDelayedItemLoggingJUnitTestCase. Here it is a direct assertion.
+            assertFalse( "nothing on the load path may initialize MLog", d.isMLogInitialized() );
+
             d.refresh( null, null );
-
-            assertTrue( "a refresh once MLog is up caps, and so seals", d.isSealed() );
+            assertTrue( "and a second load leaves it sealed", d.isSealed() );
+            assertFalse( "still not, on a second load", d.isMLogInitialized() );
         }
         finally
         { s.closeQuietly(); }
     }
 
     /**
-     *  And the cap means what it means: the snapshot sits above a live read, so a write after
-     *  sealing cannot change what logging is configured with.
+     *  WHAT THE CAP IS FOR, and the whole point of sealing: the snapshot sits above a live read,
+     *  so a write to System properties after the seal cannot change what logging is configured
+     *  with. An application that reconfigures logging by setting a System property at runtime is
+     *  doing the thing the snapshot exists to refuse.
+     *
+     *  <p>Now that the first load seals, this needs no preparation: one load takes the snapshot,
+     *  and every later read is capped by it.</p>
      */
     public void testARefreshCapsWithTheSnapshotRatherThanTheLiveValue()
     {
@@ -156,9 +177,8 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
         try
         {
             MLogConfigDriver d = new MLogConfigDriver( s );
-            d.refresh( null, null );                  // before MLog is up: no seal
-            d.initializeMLog();                       // now in the post-initialization regime
-            d.refresh( null, null );                  // caps, and seals with KEY=before
+            d.refresh( null, null );                  // seals, with KEY=before
+            assertEquals( "precondition: the first load saw it", "before", d.getProperty( KEY ) );
 
             System.setProperty( KEY, "after" );
             d.refresh( null, null );
@@ -212,20 +232,12 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
         { s.closeQuietly(); }
     }
     /**
-     *  The other source-list branch. refresh(..) chooses between a traditional-path-file branch
-     *  and a hardcoded-list branch, and each guards SealedSystemProperties separately, so a
-     *  guard keyed wrongly in one is invisible to a suite that only exercises the other.
-     *
-     *  <p>No overrides, and no MLog, both deliberately. The guard reads
-     *  "!mlogInitialized || overrides != null", so passing overrides short-circuits it and
-     *  proves nothing -- which is how the first version of this test passed while the mutation
-     *  went uncaught. The two candidate predicates diverge on exactly one case: a refresh
-     *  before MLog is up, carrying no overrides, where !mlogInitialized is true and fromMLogInit
-     *  is false. Keyed on fromMLogInit, that case would cap -- reaching SealedSystemProperties,
-     *  which logs, with no logging to do it -- so asserting that nothing sealed is asserting
-     *  that nothing tried.</p>
+     *  The other dispatch branch caps on the first load too. The two branches read different
+     *  source lists -- the path-file mechanism's, and the hardcoded one -- and each appends the
+     *  current-then-sealed System properties itself, so each had to be checked separately when
+     *  the cap was conditional, and still has to be now that it is not.
      */
-    public void testThePathFileBranchDoesNotSealBeforeMLogIsUp()
+    public void testThePathFileBranchSealsToo()
     {
         CfgScenario s = CfgScenario.open( "all-three-pathfiles", false );
         try
@@ -233,14 +245,7 @@ public final class MLogConfigCappingJUnitTestCase extends TestCase
             MLogConfigDriver d = new MLogConfigDriver( s );
 
             d.refresh( null, null );
-            assertFalse( "a load before MLog is up must not reach the snapshot", d.isSealed() );
-
-            d.refresh( null, null );
-            assertFalse( "nor must a second one, while MLog is still down", d.isSealed() );
-
-            d.initializeMLog();
-            d.refresh( null, null );
-            assertTrue( "but once MLog is up, the path-file branch caps too", d.isSealed() );
+            assertTrue( "the path-file branch caps on its first load as well", d.isSealed() );
         }
         finally
         { s.closeQuietly(); }

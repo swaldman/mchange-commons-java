@@ -217,49 +217,24 @@ public final class MLogConfigFreezeJUnitTestCase extends TestCase
         { s.closeQuietly(); }
     }
 
-    /**
-     *  THE GUARANTEE THAT MAKES freezeConfig A SECURITY CONTROL RATHER THAN A PREFERENCE. Where
-     *  the sealed snapshot and the configuration in force disagree, the SAFE answer wins -- so an
-     *  operator who freezes cannot be overruled by the configuration of the application whose
-     *  logging is being pinned.
+    /*
+     *  testWhereTheSnapshotAndConfigDisagreeTheFreezeWins used to live here. It pinned the
+     *  arbitration SealedSystemPropertiesBooleanProperty's `strongest` argument selects: where
+     *  the sealed snapshot and the configuration in force disagree, the safe value wins, so an
+     *  operator who freezes cannot be overruled by the application whose logging is being pinned.
      *
-     *  <p>That is what the "strongest" argument to SealedSystemPropertiesBooleanProperty decides.
-     *  Found by mutation: flipping it broke nothing, because a disagreement is harder to arrange
-     *  than it looks. The decision reads the config IN FORCE, and that config already carries
-     *  whatever the live System property said when it was loaded -- so simply setting the
-     *  property and passing a contrary override has both sources agreeing, and arbitration never
-     *  happens.</p>
+     *  It is gone because its setup is no longer constructible. It needed the snapshot to be
+     *  taken LATER than a config load, so that a System.setProperty in between left the two
+     *  sources saying different things. MLogConfig now caps -- and therefore seals -- on the
+     *  first load, so that window is closed by design and the two cannot start out disagreeing.
      *
-     *  <p>Hence the sequence below: load config while the property says false, so the config in
-     *  force carries false; only then set it true, so the snapshot -- taken at this first
-     *  evaluation -- carries true. Now they conflict, and frozen must win.</p>
+     *  The mechanism is not left untested. It is covered directly, and better, where it belongs:
+     *  SealedSystemPropertiesBooleanPropertyInternalJUnitTestCase's
+     *  testASealedSafeSyspropCannotBeLoosenedByConfig and testConfigMayTightenASealedPermissiveSysprop
+     *  build the disagreement by hand -- seal one way, pass a PropertiesConfig saying the other --
+     *  which needs no load-order window at all, since getValue(..) takes the config as an argument.
      */
-    public void testWhereTheSnapshotAndConfigDisagreeTheFreezeWins()
-    {
-        System.setProperty( FREEZE_KEY, "false" );
 
-        CfgScenario s = CfgScenario.open( SCENARIO, false );
-        try
-        {
-            MLogConfigDriver d = new MLogConfigDriver( s );
-            d.initializeMLog();                        // config in force now carries false
-            assertFalse( "precondition: nothing sealed yet", d.isSealed() );
-            assertEquals( "precondition: config in force says false", "false", d.getProperty( FREEZE_KEY ) );
-
-            System.setProperty( FREEZE_KEY, "true" );  // the snapshot will capture true
-            List<String[]> logged = d.installRecordingClassLogger();
-
-            d.refresh( new Object[] { d.override( KEY, "from-override" ) }, "config says unfrozen" );
-
-            assertNull( "the sealed freeze must beat the unfrozen config in force: "
-                            + MLogConfigDriver.describe( logged ),
-                        d.getProperty( KEY ) );
-            assertEquals( "and the refusal must be reported: " + MLogConfigDriver.describe( logged ),
-                          1, MLogConfigDriver.warningsContaining( logged, REFUSAL ).size() );
-        }
-        finally
-        { s.closeQuietly(); }
-    }
 
     // ------------------------------------------------------------- and quietly
 

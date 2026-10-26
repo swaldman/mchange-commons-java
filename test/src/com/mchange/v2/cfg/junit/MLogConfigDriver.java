@@ -134,6 +134,18 @@ final class MLogConfigDriver
     }
 
     /**
+     *  Whether this scenario's MLog has come up. Reads MLogConfig's own predicate rather than
+     *  guessing, because that is what the library's own decisions used to turn on.
+     */
+    boolean isMLogInitialized()
+    {
+        try
+        { return ((Boolean) reach( "isMLogInitialized" ).invoke( null )).booleanValue(); }
+        catch ( Exception e )
+        { throw new RuntimeException( "MLogConfig.isMLogInitialized() failed in the scenario", e ); }
+    }
+
+    /**
      *  Initializes this scenario's MLog, for real, which performs MLogConfig's first load as a
      *  side effect and marks the scenario initialized the way production does.
      *
