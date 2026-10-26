@@ -129,7 +129,72 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    and a platform that cannot report POSIX permissions when {@code permissions} was requested.
  *    What is <i>not</i> a veto: a missing file, absent {@code required=true} &mdash; and that
  *    includes a dangling symbolic link, which is simply absence wearing a link. Absence is not
- *    insecurity.</p></li>
+ *    insecurity.</p>
+ *
+ *    <p><b>System property references.</b> A file-url path may name a System property rather than
+ *    carry a path directly, by writing {@code ${the.property.name}}. All of these are accepted:</p>
+ *
+ *    <pre>
+ *    file:${my.config.path}
+ *    file://${my.config.path}
+ *    file:${my.config.dir}/application.properties
+ *    file://${user.home}/etc/${app.name}.properties
+ *    file:${my.config.path}?permissions=useronly&amp;required=true
+ *    </pre>
+ *
+ *    <p>This exists so that a <i>hardcoded</i> list of configuration sources can still name a file
+ *    whose location only a deployment knows. Without it, a library must read such a property
+ *    itself, before it loads any configuration &mdash; which only a library that interprets its
+ *    own sources can do.</p>
+ *
+ *    <p>A reference resolves against the <b>sealed snapshot</b> of System properties, never the
+ *    live ones. In practice that means a reference resolves to what a {@code -D} on the command
+ *    line said: a property set by application code after startup will <i>not</i> redirect a
+ *    configuration read. That is deliberate twice over. It is the same rule that already governs
+ *    the properties naming configuration files &mdash; an operator's word, captured before
+ *    application code runs, is not revisable by the application. And it is what keeps the cached
+ *    read honest: the cached methods key their cache on the identifier string, so an identifier
+ *    free to change meaning would let the cache return the contents of a file it no longer
+ *    names.</p>
+ *
+ *    <p>Substitution is a <b>single pass, left to right</b>. A value is inserted verbatim and
+ *    scanning continues after its closing brace, so a value that itself contains {@code ${} is a
+ *    path and not another reference. There is therefore no expansion loop to construct, and no way
+ *    to name a property indirectly through the contents of another.</p>
+ *
+ *    <p>A named property that is <b>unset</b>, or set to nothing but whitespace, makes the
+ *    configuration it names <b>absent</b> &mdash; the same as a file that is not there, reported
+ *    the same way and skipped. This is why no new option was needed: {@code required=true} already
+ *    says what to do about absence, and over a referenced path it now means <i>the property must
+ *    be set <b>and</b> the file must exist</i>. A <b>malformed</b> reference &mdash; a {@code ${}
+ *    never closed, or an empty {@code ${}} naming nothing &mdash; is a different matter: that
+ *    source contributes nothing and a <b>warning</b> says why. It is a failure to parse, not a
+ *    refusal on security grounds, so it is reported rather than vetoing the load.</p>
+ *
+ *    <p>Two consequences of a referenced path being a <i>filesystem path</i> rather than a URL are
+ *    worth knowing, because they are the places where it and a literal {@code file:} identifier
+ *    part company:</p>
+ *
+ *    <ul>
+ *      <li><p>It is <b>not percent-decoded</b>. A System property holding a path carries no
+ *      percent escapes, and a path containing a space could not survive URI parsing at all. So
+ *      {@code file:/my%20file.properties} reads a file named {@code my file.properties}, while
+ *      {@code file:${dir}/my%20file.properties} reads one named literally
+ *      {@code my%20file.properties}. The same spelling means two things, according to whether a
+ *      reference appears.</p></li>
+ *
+ *      <li><p>A {@code ?} <b>inside a property value</b> is part of the path, not the start of a
+ *      query string. The query string is separated off before any substitution happens, so the
+ *      restriction noted above &mdash; that a literal file-url path cannot contain a {@code ?}
+ *      &mdash; does not extend to one arriving through a property.</p></li>
+ *    </ul>
+ *
+ *    <p>Finally, what gets <b>reported</b> is the identifier <i>as written</i>. Source lists,
+ *    configuration dumps, and the key by which a caller looks a source up all show
+ *    {@code file:${my.config.path}}, not the path it resolved to: stable across machines, matching
+ *    the cache key, and keeping filesystem layout out of diagnostics. The resolution is logged at
+ *    {@code FINE}, for whoever is working out why a path is wrong.</p>
+ *    </li>
  *
  *    <li><p>Paths beginning {@code hocon:} are interpreted according to
  *    <a href="https://github.com/lightbend/config/blob/main/HOCON.md">HOCON</a> conventions when

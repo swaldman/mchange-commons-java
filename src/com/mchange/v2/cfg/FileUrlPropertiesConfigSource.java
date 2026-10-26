@@ -13,6 +13,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.InvalidPathException;
 
 import com.mchange.v2.net.QueryStringParser;
 
@@ -27,6 +28,10 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     private final static String PERMISSIONS_USER_ONLY_LC = "useronly";
 
     private final static String REQUIRED_KEY = "required";
+
+    private final static String FILE_SCHEME        = "file:";
+    private final static String PROPERTY_REF_OPEN  = "${";
+    private final static char   PROPERTY_REF_CLOSE = '}';
 
     static
     {
@@ -43,7 +48,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     }
 
     public static boolean isFileUrlIdentifier( String identifier )
-    { return identifier.toLowerCase().startsWith("file:"); }
+    { return identifier.toLowerCase().startsWith(FILE_SCHEME); }
 
     @Override
     public Parse propertiesFromSource( String identifier ) throws FileNotFoundException, Exception
@@ -118,7 +123,9 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             }
 
 
-            Path propsPath = Paths.get(new URI(fileUrl));
+            Path propsPath = containsPropertyReference( fileUrl )
+                               ? resolveReferencedPath( identifier, fileUrl, requiredConfig, delayedLogItems )
+                               : Paths.get(new URI(fileUrl));
 
             // this if clause should never be satisfied, because the URI parse should have failed on a relative file path
             // nevertheless, the code that enforces that behavior is invisible to me and I'd rather backstop it.
@@ -160,6 +167,140 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
         }
         else
             throw new IllegalArgumentException("FileUrlPropertiesConfigSource accepts only identifiers beginning with 'file:', found " + identifier);
+    }
+
+    /**
+     *  Whether an identifier's path names a System property, as {@code file:${some.property}} or
+     *  {@code file:${some.dir}/fixed-name.properties}.
+     *
+     *  <p>Tested against the portion BEFORE the query string, deliberately: a {@code ${} in a
+     *  query value must not turn the path into a substituted one.</p>
+     */
+    static boolean containsPropertyReference( String fileUrlNoQuery )
+    { return fileUrlNoQuery.indexOf( PROPERTY_REF_OPEN ) >= 0; }
+
+    /**
+     *  Substitutes {@code ${name}} references from the SEALED snapshot of System properties, and
+     *  returns the filesystem path they denote.
+     *
+     *  <p>Sealed, not live, for two reasons. It matches how the properties that name config files
+     *  have always been read -- a sealed value wins -- and MConfig's cache is keyed on the
+     *  identifier string, so an identifier whose meaning could drift would make the cache hand
+     *  back content from a file it no longer points at.</p>
+     *
+     *  <p>The snapshot is reached through {@code initGet(..)}, never {@code get()}. This source is
+     *  consulted on config-load paths, MLog's own bootstrap included, and {@code get()} evaluates
+     *  {@code logger()} in order to dump its items -- which initializes MLog in the middle of a
+     *  load. Note too that this is the only place the snapshot is touched, so an ordinary
+     *  {@code file:} identifier still causes no seal.</p>
+     */
+    private Path resolveReferencedPath( String identifier, String fileUrl, boolean requiredConfig,
+                                        List<DelayedLogItem> delayedLogItems ) throws Exception
+    {
+        MultiPropertiesConfig sealed = SealedSystemProperties.initGet( delayedLogItems );
+
+        String[] unresolved = new String[1];
+        String substituted = substitutePropertyReferences( identifier, fileUrl, sealed, unresolved, delayedLogItems );
+
+        if ( substituted == null )
+        {
+            // An unset property is an absent file, which is why no new query key is needed: the
+            // existing required= already says what to do about absence, and required=true now
+            // means "the property must be set AND the file must exist".
+            String msg =
+                "Config resource identifier '" + identifier + "' names System property '" + unresolved[0] +
+                "' as its path, or part of it, but that property is not set in the sealed snapshot of System " +
+                "properties. The configuration it names is treated as absent.";
+            throw handleExceptionIndicatingFileNotFound( identifier, requiredConfig, new FileNotFoundException( msg ), delayedLogItems );
+        }
+
+        // A substituted identifier denotes a filesystem path, NOT a URL, and is not
+        // percent-decoded. A System property holding a path does not carry percent escapes, and a
+        // path containing a space could not survive new URI(..) at all. The consequence to know:
+        // 'file:/my%20file.props' reads 'my file.props', while 'file:${d}/my%20file.props' reads a
+        // file literally named 'my%20file.props'.
+        String pathStr = stripFileScheme( substituted );
+
+        Path out;
+        try
+        { out = Paths.get( pathStr ); }
+        catch ( InvalidPathException e )
+        {
+            String msg = "Config resource identifier '" + identifier + "' resolved to '" + pathStr +
+                         "', which is not a usable filesystem path.";
+            delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, e ) );
+            throw new ConfigParseException( msg, e, delayedLogItems );
+        }
+
+        // FINE, and only here: the resolution is what a reader needs when a path is wrong, but the
+        // identifier stays unsubstituted everywhere it is REPORTED, so config dumps and source
+        // lists do not carry filesystem layout.
+        delayedLogItems.add( new DelayedLogItem( Level.FINE,
+            "Config resource identifier '" + identifier + "' resolved to path '" + out + "'." ) );
+
+        return out;
+    }
+
+    /**
+     *  One pass, left to right. A value is appended verbatim and scanning resumes AFTER its
+     *  closing brace, so a value that itself contains {@code ${} is not re-expanded: there is no
+     *  expansion loop to construct, and no way to name a property indirectly through a value.
+     *
+     *  @return the substituted String, or null when some name did not resolve -- in which case
+     *          unresolvedOut[0] holds the first such name.
+     */
+    private static String substitutePropertyReferences( String identifier, String s, MultiPropertiesConfig sealed,
+                                                        String[] unresolvedOut, List<DelayedLogItem> delayedLogItems )
+        throws ConfigParseException
+    {
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        for (;;)
+        {
+            int open = s.indexOf( PROPERTY_REF_OPEN, i );
+            if ( open < 0 )
+            {
+                sb.append( s, i, s.length() );
+                return sb.toString();
+            }
+
+            int close = s.indexOf( PROPERTY_REF_CLOSE, open + PROPERTY_REF_OPEN.length() );
+            if ( close < 0 )
+                throw malformedReference( identifier, "a '" + PROPERTY_REF_OPEN + "' is never closed by a '" +
+                                          PROPERTY_REF_CLOSE + "'", delayedLogItems );
+
+            String name = s.substring( open + PROPERTY_REF_OPEN.length(), close ).trim();
+            if ( name.length() == 0 )
+                throw malformedReference( identifier, "'" + PROPERTY_REF_OPEN + PROPERTY_REF_CLOSE +
+                                          "' names no System property", delayedLogItems );
+
+            String value = sealed.getProperty( name );
+            if ( value == null || value.trim().length() == 0 )
+            {
+                unresolvedOut[0] = name;
+                return null;
+            }
+
+            sb.append( s, i, open ).append( value );
+            i = close + 1;
+        }
+    }
+
+    private static ConfigParseException malformedReference( String identifier, String complaint,
+                                                            List<DelayedLogItem> delayedLogItems )
+    {
+        String msg = "Malformed System property reference in config resource identifier '" + identifier +
+                     "': " + complaint + ".";
+        delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, null ) );
+        return new ConfigParseException( msg, null, delayedLogItems );
+    }
+
+    /** Removes a leading "file:" (any case), then an optional "//" left by the empty authority form. */
+    private static String stripFileScheme( String fileUrl )
+    {
+        String out = fileUrl.substring( FILE_SCHEME.length() );
+        if ( out.startsWith( "//" ) ) out = out.substring( 2 );
+        return out;
     }
 
     /**
