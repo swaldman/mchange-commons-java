@@ -3,6 +3,8 @@ package com.mchange.v2.cfg;
 import java.util.*;
 import com.mchange.v2.log.*;
 
+import com.mchange.v2.cfg.DelayedLogItem.Level;
+
 /**
  *  A snapshot of this JVM's System properties, taken once and never retaken, for
  *  configuration whose meaning must not change after an application has started.
@@ -86,58 +88,8 @@ public final class SealedSystemProperties
 
     private static MultiPropertiesConfig theProperties = null;
 
-    public synchronized static MultiPropertiesConfig get()
-    {
-        if (theProperties == null)
-        {
-            MultiPropertiesConfig tmp = MConfig.AsProvided.readUncachedResourceConfig(new String[]{"/"});
-            theProperties = MultiPropertiesConfig.fromProperties(NOTIONAL_RESOURCE_PATH, tmp.getPropertiesByPrefix(""));
-            if (logger().isLoggable( MLevel.INFO ))
-                logger().log(MLevel.INFO, "Sealed snapshot of System properties.");
-            if (logger().isLoggable( MLevel.FINE ))
-                logger().log(MLevel.FINE, "Logging stack trace of the call that sealed snapshot of System properties.", new Exception("Logging stack trace of the call that sealed snapshot of System properties."));
-        }
-        return theProperties;
-    }
-
-    public synchronized static boolean seal()
-    {
-        boolean unset = (theProperties == null);
-        if (unset)
-        {
-            get();
-            assert theProperties != null : "get() should have set theProperties, should not be null here!";
-            return true;
-        }
-        else
-        {
-            if (logger().isLoggable( MLevel.WARNING ))
-                logger().log(MLevel.WARNING, "An attempt to seal a snapshot of System properties did nothing, a prior snapshot has already been sealed.");
-            if (logger().isLoggable( MLevel.FINE ))
-                logger().log(
-                  MLevel.FINE,
-                  "Logging stack trace of the attempt to seal a snapshot of System properties when a snapshot had already been sealed.",
-                  new Exception("Logging stack trace that attempt to seal a snapshot of System properties when a snapshot had already been sealed.")
-                );
-            return false;
-        }
-    }
-
-    public synchronized static boolean isSealed()
-    { return theProperties != null; }
-
-    public static String[] capCurrentThenSealed(String[] resources)
-    {
-        List<String> outList = new ArrayList<>();
-        for (String rp : resources)
-            if (!"/".equals(rp) && !SealedSystemProperties.NOTIONAL_RESOURCE_PATH.equals(rp))
-                outList.add(rp);
-        outList.add("/");
-        outList.add(SealedSystemProperties.NOTIONAL_RESOURCE_PATH);
-        return outList.toArray(new String[outList.size()]);
-    }
-
-    public static MultiPropertiesConfig capCurrentThenSealAndCombine(MultiPropertiesConfig[] overrides)
+    /** safe for use on/before mlog initialization pathway */
+    public static MultiPropertiesConfig initCapCurrentThenSealAndCombine(MultiPropertiesConfig[] overrides, List<DelayedLogItem> delayedLogItems)
     {
         List<AbstractMap.SimpleEntry<String,Properties>> allProps = new ArrayList<>();
 
@@ -168,7 +120,7 @@ public final class SealedSystemProperties
         for (int i = 0; i < apSize; ++i)
             all[i] = MultiPropertiesConfig.fromProperties(allProps.get(i).getKey(), allProps.get(i).getValue());
 
-        MultiPropertiesConfig currentSystem = MConfig.AsProvided.readUncachedResourceConfig( new String[]{"/"} );
+        MultiPropertiesConfig currentSystem = MConfig.AsProvided.readUncachedResourceConfig( null, new String[]{"/"}, delayedLogItems );
         dlis.addAll(currentSystem.getDelayedLogItems());
         allRead.addAll(currentSystem.getAllRead());
         allVetoed.addAll(currentSystem.getAllVetoed());
@@ -176,7 +128,7 @@ public final class SealedSystemProperties
         allFaults.addAll(currentSystem.getAllFaults());
         all[apSize] = currentSystem;
 
-        MultiPropertiesConfig sealed = SealedSystemProperties.get();
+        MultiPropertiesConfig sealed = SealedSystemProperties.initGet(delayedLogItems);
         dlis.addAll(sealed.getDelayedLogItems());
         allRead.addAll(sealed.getAllRead());
         allVetoed.addAll(sealed.getAllVetoed());
@@ -211,6 +163,84 @@ public final class SealedSystemProperties
             @Override public Set<String>          getAllNotFound()                         { return Collections.unmodifiableSet(allNotFound);    }
             @Override public Set<String>          getAllFaults()                           { return Collections.unmodifiableSet(allFaults);      }
         };
+        return out;
+    }
+
+    /** safe for use on/before mlog initialization pathway */
+    public synchronized static MultiPropertiesConfig initGet(List<DelayedLogItem> delayedLogItems)
+    {
+        if (theProperties == null)
+        {
+            MultiPropertiesConfig tmp = MConfig.AsProvided.readUncachedResourceConfig(null, new String[]{"/"}, delayedLogItems);
+            theProperties = MultiPropertiesConfig.fromProperties(NOTIONAL_RESOURCE_PATH, tmp.getPropertiesByPrefix(""));
+            delayedLogItems.add( new DelayedLogItem(Level.INFO, "Sealed snapshot of System properties.") );
+            delayedLogItems.add( new DelayedLogItem(Level.FINE, "Logging stack trace of the call that sealed snapshot of System properties.", new Exception("Logging stack trace of the call that sealed snapshot of System properties.") ) );
+        }
+        return theProperties;
+    }
+
+    /** safe for use on/before mlog initialization pathway */
+    public synchronized static boolean initSeal(List<DelayedLogItem> delayedLogItems)
+    {
+        boolean unset = (theProperties == null);
+        if (unset)
+        {
+            initGet(delayedLogItems);
+            assert theProperties != null : "get() should have set theProperties, should not be null here!";
+            return true;
+        }
+        else
+        {
+            delayedLogItems.add( new DelayedLogItem(Level.WARNING, "An attempt to seal a snapshot of System properties did nothing, a prior snapshot has already been sealed.") );
+            delayedLogItems.add(
+                new DelayedLogItem(Level.FINE,
+                                   "Logging stack trace of the attempt to seal a snapshot of System properties when a snapshot had already been sealed.",
+                                   new Exception("Logging stack trace that attempt to seal a snapshot of System properties when a snapshot had already been sealed.") )
+            );
+            return false;
+        }
+    }
+
+    /** safe for use on/before mlog initialization pathway */
+    public synchronized static boolean isSealed()
+    { return theProperties != null; }
+
+    /** safe for use on/before mlog initialization pathway */
+    public static String[] capCurrentThenSealed(String[] resources)
+    {
+        List<String> outList = new ArrayList<>();
+        for (String rp : resources)
+            if (!"/".equals(rp) && !SealedSystemProperties.NOTIONAL_RESOURCE_PATH.equals(rp))
+                outList.add(rp);
+        outList.add("/");
+        outList.add(SealedSystemProperties.NOTIONAL_RESOURCE_PATH);
+        return outList.toArray(new String[outList.size()]);
+    }
+
+    /** NOT safe for use on/before mlog initialization pathway */
+    public static MultiPropertiesConfig capCurrentThenSealAndCombine(MultiPropertiesConfig[] overrides)
+    {
+        List<DelayedLogItem> delayedLogItems = new ArrayList<>();
+        MultiPropertiesConfig out = initCapCurrentThenSealAndCombine(overrides,delayedLogItems);
+        MConfig.dumpToLogger(delayedLogItems,logger());
+        return out;
+    }
+
+    /** NOT safe for use on/before mlog initialization pathway */
+    public static MultiPropertiesConfig get()
+    {
+        List<DelayedLogItem> delayedLogItems = new ArrayList<>();
+        MultiPropertiesConfig out = initGet(delayedLogItems);
+        MConfig.dumpToLogger(delayedLogItems,logger());
+        return out;
+    }
+
+    /** NOT safe for use on/before mlog initialization pathway */
+    public static boolean seal()
+    {
+        List<DelayedLogItem> delayedLogItems = new ArrayList<>();
+        boolean out = initSeal(delayedLogItems);
+        MConfig.dumpToLogger(delayedLogItems,logger());
         return out;
     }
 

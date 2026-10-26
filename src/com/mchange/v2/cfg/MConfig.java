@@ -669,7 +669,11 @@ public final class MConfig
     { for( DelayedLogItem item : items ) dumpToLogger( item, logger ); }
 
     public static void dumpToLogger( DelayedLogItem item, MLogger logger )
-    { logger.log( levelMap.get( item.getLevel() ), item.getText(), item.getException() ); }
+    {
+        MLevel mlevel = levelMap.get( item.getLevel() );
+        if (logger.isLoggable(mlevel))
+            logger.log(mlevel, item.getText(), item.getException() );
+    }
 
     private final static class PathsKey
     {

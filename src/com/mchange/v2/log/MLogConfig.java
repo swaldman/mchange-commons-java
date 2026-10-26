@@ -117,7 +117,7 @@ public final class MLogConfig
 
             // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
             String[] defaults = mlogC3p0Defaults();
-            String[] preempts = !mlogInitialized || backstops != null || overrides != null ? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts());
+            String[] preempts = backstops != null || overrides != null ? mlogC3p0Preempts() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Preempts()); // doesn't log
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -127,7 +127,7 @@ public final class MLogConfig
         else
         {
             // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
-            String[] resources = !mlogInitialized || backstops != null || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified());
+            String[] resources = backstops != null || overrides != null ? mlogC3p0Unified() : SealedSystemProperties.capCurrentThenSealed(mlogC3p0Unified()); // doesn't log
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -145,7 +145,7 @@ public final class MLogConfig
             System.arraycopy(nullsafeBackstops,0,combineMe,0,blen);
 	    combineMe[blen] = tmpConfig;
             System.arraycopy(nullsafeOverrides,0,combineMe,blen+1,olen);
-	    config = !mlogInitialized ? MConfig.combine( combineMe ) : SealedSystemProperties.capCurrentThenSealAndCombine(combineMe);
+	    config = SealedSystemProperties.initCapCurrentThenSealAndCombine(combineMe,bli);
             bli.addAll( config.getDelayedLogItems() );
             StringBuilder sb = new StringBuilder();
             sb.append(fromMLogInit ? "Loaded " : "Refreshed ");
