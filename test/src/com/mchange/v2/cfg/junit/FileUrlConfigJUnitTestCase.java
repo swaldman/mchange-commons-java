@@ -911,4 +911,29 @@ public final class FileUrlConfigJUnitTestCase extends TestCase
         assertEquals( "the present source still loads", "from-useronly", mpc.getProperty( "secret.key" ) );
         assertEquals( 1, pathsOf( mpc ).size() );
     }
+
+    // =================================================== percent-decoding, as a URL
+
+    /**
+     *  A plain file: identifier IS a URL, and its path IS percent-decoded. Untested until now,
+     *  because every other fixture here has a filename needing no escapes.
+     *
+     *  <p>It matters as the other half of a deliberate divergence: an identifier carrying a
+     *  ${...} System property reference is treated as a filesystem path and is NOT decoded. That
+     *  half is pinned in FileUrlPropertyReferenceInternalJUnitTestCase, which needs the sealed
+     *  snapshot under its control and so lives in com.mchange.v2.cfg. This half belongs here,
+     *  with the rest of the URL behaviour, and exists so the divergence cannot drift from either
+     *  side.</p>
+     */
+    public void testAPlainFileUrlIsPercentDecoded() throws Exception
+    {
+        Path spaced = write( "has space.properties", "secret.key=from-spaced\n", "rw-------" );
+
+        // toUri() encodes the space as %20; the URI route must decode it back to find the file
+        String identifier = url( spaced );
+        assertTrue( "precondition: the identifier really is escaped: " + identifier,
+                    identifier.contains( "%20" ) );
+
+        assertEquals( "from-spaced", read( identifier ).getProperty( "secret.key" ) );
+    }
 }
