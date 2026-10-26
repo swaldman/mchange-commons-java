@@ -12,7 +12,7 @@ public class PropsToStringGeneratorExtension implements GeneratorExtension
     private Map<String,String> valueExpressions = null;
 
     /**
-     *  Property name -> a Java expression rendering that property for the dump, with %s standing
+     *  Property name &rarr; a Java expression rendering that property for the dump, with %s standing
      *  for the field. Lets a generated toString mask or transform a value.
      *
      *  Expects zero or more '%s' substring within the expression, which will be

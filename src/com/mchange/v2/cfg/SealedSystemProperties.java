@@ -55,7 +55,7 @@ import com.mchange.v2.cfg.DelayedLogItem.Level;
  *
  *  <p>Nor does this class decide policy. It holds the properties; what to do when current
  *  configuration disagrees with them belongs to the consumer.
- *  {@link PropertiesConfigUtils.EarliestOrNarrowestWhitelistManager} is the one in this library
+ *  <code>EarliestOrNarrowestWhitelistManager</code> is the one in this library
  *  today: it honors later changes that <i>narrow</i> a whitelist and ignores those that would
  *  widen it.</p>
  *

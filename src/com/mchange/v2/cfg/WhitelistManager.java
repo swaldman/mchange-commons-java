@@ -266,7 +266,7 @@ public class WhitelistManager
     }
 
     /**
-     * @param syspropsConfig null means use the cuurrent system properties
+     * @param cachedSyspropsConfig null means use the current system properties
      */
     protected WhitelistInfo collectWhitelistInfoSyspropsPropertiesConfig(PropertiesConfig cachedSyspropsConfig, PropertiesConfig pcfg, MLogger logger)
     {
