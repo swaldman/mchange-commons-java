@@ -413,4 +413,42 @@ public final class FileUrlPropertyReferenceInternalJUnitTestCase extends TestCas
         assertTrue( "a %-escape in a referenced path is a literal, not a space",
                     hasFineSkip( read( refUrl( "escaped" ) ) ) );
     }
+
+    // =================================================== and through a c3p0-xml: identifier
+
+    /**
+     *  THE REASON THE REFERENCE SYNTAX WAS BUILT. c3p0 names its XML config file with the System
+     *  property com.mchange.v2.c3p0.cfg.xml, and a normalized C3P0Config will have nowhere to
+     *  read that property for itself -- the source list is built before any configuration is
+     *  loaded. Written into the identifier, it works, and the file: semantics come along with it.
+     */
+    public void testAC3P0XmlIdentifierMayNameItsFileByReference() throws Exception
+    {
+        Path xml = write( "c3p0-config.xml",
+            "<c3p0-config><default-config><property name=\"maxPoolSize\">42</property></default-config></c3p0-config>",
+            "rw-------" );
+
+        setRef( "xmlPath", xml.toString() );
+
+        MultiPropertiesConfig mpc = read( "c3p0-xml:file:" + ref( "xmlPath" ) );
+
+        assertEquals( "42", mpc.getProperty( "c3p0.maxPoolSize" ) );
+        assertEquals( "and the identifier is reported as written, not resolved",
+                      Arrays.asList( "c3p0-xml:file:" + ref( "xmlPath" ) ), pathsOf( mpc ) );
+    }
+
+    /** With the directives too, since they are the same implementation. */
+    public void testAC3P0XmlReferenceStillHonorsPermissionsDirectives() throws Exception
+    {
+        if ( !posixSupported() ) return;
+
+        Path xml = write( "exposed-config.xml",
+            "<c3p0-config><default-config><property name=\"maxPoolSize\">42</property></default-config></c3p0-config>",
+            "rw-r--r--" );
+
+        setRef( "exposedXml", xml.toString() );
+
+        String msg = assertVetoed( "c3p0-xml:file:" + ref( "exposedXml" ) + "?permissions=useronly" );
+        assertTrue( "the veto should be about permissions: " + msg, msg.contains( "permissions" ) );
+    }
 }
