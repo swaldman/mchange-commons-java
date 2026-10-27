@@ -238,13 +238,24 @@ public final class C3P0XmlConfigJUnitTestCase extends TestCase
         assertTrue( warns( mpc, "com.mchange.v2.log.freezeConfig", "named config 'X'" ) );
     }
 
-    /** And a c3p0-prefixed name of more than two parts is equally unusable there. */
+    /**
+     *  And a c3p0-prefixed name of more than two parts is equally unusable there.
+     *
+     *  <p>What survives is the scope's declaration marker and nothing else, which is a stronger
+     *  statement than "contributed nothing": the scope WAS declared, and the one property in it
+     *  was refused. This case used to assert the properties were empty outright, from before a
+     *  declared scope left a trace of its own.</p>
+     */
     public void testANamedScopeRefusesALongerC3p0PrefixedName() throws Exception
     {
         MultiPropertiesConfig mpc = read( xml(
             "  <named-config name=\"X\"><property name=\"c3p0.a.b\">v</property></named-config>" ) );
 
-        assertTrue( propsOf( mpc ).isEmpty() );
+        Properties p = propsOf( mpc );
+        assertEquals( "only the declaration marker should survive, got " + p, 1, p.size() );
+        assertEquals( "", p.getProperty( "c3p0.named-configs.X" ) );
+        assertNull( "the refused name must not arrive under the scope", p.getProperty( "c3p0.named-configs.X.c3p0.a.b" ) );
+        assertNull( "nor promoted to a global",                        p.getProperty( "c3p0.a.b" ) );
         assertTrue( warns( mpc, "c3p0.a.b", "named config 'X'" ) );
     }
 
@@ -492,5 +503,167 @@ public final class C3P0XmlConfigJUnitTestCase extends TestCase
         String id = xml( "  <default-config><property name=\"maxPoolSize\">30</property></default-config>",
                          "Permissions=useronly" );
         assertVetoed( id );
+    }
+
+    // ========================================= a declared named scope leaves a mark
+
+    private final static String X = "c3p0.named-configs.X";
+
+    /**
+     *  A named config declared with nothing in it still says it exists.
+     *
+     *  <p>c3p0 behaves differently for a scope declared empty than for one never declared — the
+     *  first falls through to lower-precedence config, the second reverts to the default scope —
+     *  and a scope with no properties contributes no keys, so without a mark the two would be
+     *  indistinguishable. The bare scope key carries it, because a prefix can never collide with
+     *  a property.</p>
+     */
+    public void testAnEmptyNamedScopeIsStillDeclared() throws Exception
+    {
+        Properties p = propsOf( read( xml( "  <named-config name=\"X\"/>" ) ) );
+
+        assertEquals( "the declaration should be the one and only key, got " + p, 1, p.size() );
+        assertEquals( "and its value the empty string", "", p.getProperty( X ) );
+    }
+
+    /** The mark is unconditional, so a populated scope carries it too. */
+    public void testAPopulatedNamedScopeIsMarkedAsWell() throws Exception
+    {
+        Properties p = propsOf( read( xml(
+            "  <named-config name=\"X\"><property name=\"maxPoolSize\">30</property></named-config>" ) ) );
+
+        assertEquals( "", p.getProperty( X ) );
+        assertEquals( "30", p.getProperty( X + ".maxPoolSize" ) );
+        assertEquals( 2, p.size() );
+    }
+
+    /** Including when all it holds is a user override, which lives a level deeper. */
+    public void testANamedScopeHoldingOnlyAUserOverrideIsMarked() throws Exception
+    {
+        Properties p = propsOf( read( xml(
+            "  <named-config name=\"X\">\n" +
+            "    <user-overrides user=\"steve\"><property name=\"maxPoolSize\">5</property></user-overrides>\n" +
+            "  </named-config>" ) ) );
+
+        assertEquals( "", p.getProperty( X ) );
+        assertEquals( "5", p.getProperty( X + ".user-overrides.steve.maxPoolSize" ) );
+    }
+
+    /**
+     *  The four states a caller has to tell apart, read through the by-prefix lookup that c3p0
+     *  will use, with the XML layered under properties-style config so the awkward state is
+     *  present too.
+     *
+     *  <p>Z is the state that forbids the obvious shorthand. A scope declared only in
+     *  properties-style configuration carries no mark, because nothing writes one there, yet it is
+     *  plainly declared. So "declared" has to remain {@code size() > 0}; {@code containsKey(pfx)}
+     *  answers the narrower question of whether the scope was declared <i>empty</i>.</p>
+     */
+    public void testTheFourStatesOfANamedScope() throws Exception
+    {
+        Properties fromProps = new Properties();
+        fromProps.setProperty( "c3p0.named-configs.Z.maxPoolSize", "9" );
+
+        MultiPropertiesConfig mpc = MConfig.combine( new MultiPropertiesConfig[] {
+            read( xml( "  <named-config name=\"X\"/>\n" +
+                       "  <named-config name=\"Y\"><property name=\"maxPoolSize\">7</property></named-config>" ) ),
+            MultiPropertiesConfig.fromProperties( "/from.properties", fromProps )
+        } );
+
+        assertScope( mpc, "X", 1, true,  false );   // declared empty, by XML
+        assertScope( mpc, "Y", 2, true,  true  );   // declared with properties, by XML
+        assertScope( mpc, "Z", 1, false, true  );   // declared by properties alone: no mark
+        assertScope( mpc, "W", 0, false, false );   // never declared
+    }
+
+    /**
+     *  @param marked   containsKey(pfx) — was the scope declared empty somewhere that marks?
+     *  @param subkeys  does it carry properties?
+     */
+    private static void assertScope( MultiPropertiesConfig mpc, String name,
+                                     int size, boolean marked, boolean subkeys )
+    {
+        String     pfx   = "c3p0.named-configs." + name;
+        Properties under = mpc.getPropertiesByPrefix( pfx );
+
+        assertEquals( name + ": " + under, size, under.size() );
+        assertEquals( name + ": marked? " + under, marked, under.containsKey( pfx ) );
+        assertEquals( name + ": subkeys? " + under,
+                      subkeys, under.size() > ( under.containsKey( pfx ) ? 1 : 0 ) );
+        assertEquals( name + ": declared? " + under, marked || subkeys, under.size() > 0 );
+    }
+
+    /** The mark passes through combine() unaltered, which is where every read of it happens. */
+    public void testTheMarkSurvivesCombine() throws Exception
+    {
+        MultiPropertiesConfig combined = MConfig.combine( new MultiPropertiesConfig[] {
+            read( xml( "  <named-config name=\"X\"/>" ) ) } );
+
+        assertEquals( "", combined.getProperty( X ) );
+        assertTrue( combined.getPropertiesByPrefix( X ).containsKey( X ) );
+    }
+
+    /**
+     *  A scope name containing '.' is refused, because the flat namespace cannot hold it
+     *  unambiguously: scope "a.b" declared empty and scope "a" with an empty-valued property "b"
+     *  are the same key with the same value.
+     */
+    public void testADottedScopeNameIsRefused() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( xml(
+            "  <named-config name=\"a.b\"><property name=\"maxPoolSize\">5</property></named-config>" ) );
+
+        assertTrue( "the scope contributes nothing at all, got " + propsOf( mpc ), propsOf( mpc ).isEmpty() );
+        assertTrue( warns( mpc, "named-config", "'a.b'", "may not contain" ) );
+    }
+
+    /**
+     *  And the collision it was refused for cannot arise: scope "a" keeps its property "b", and
+     *  nothing has quietly claimed that key as a declaration of a scope called "a.b".
+     *
+     *  <p>Note what this case cannot do: it is NOT the guard on the refusal. Were the dotted
+     *  scope merely warned about and then read, it would write that same key with that same empty
+     *  value, and every assertion here would still pass — which is the collision, demonstrated.
+     *  testADottedScopeNameIsRefused is what holds the refusal in place.</p>
+     */
+    public void testADottedScopeNameCannotShadowASiblingScopesProperty() throws Exception
+    {
+        MultiPropertiesConfig mpc = read( xml(
+            "  <named-config name=\"a\"><property name=\"b\"></property></named-config>\n" +
+            "  <named-config name=\"a.b\"/>" ) );
+
+        Properties p = propsOf( mpc );
+        assertEquals( "scope 'a' is declared", "", p.getProperty( "c3p0.named-configs.a" ) );
+        assertEquals( "and its empty-valued property survives", "", p.getProperty( "c3p0.named-configs.a.b" ) );
+        assertEquals( "those two keys and nothing else, got " + p, 2, p.size() );
+        assertTrue( warns( mpc, "'a.b'", "may not contain" ) );
+    }
+
+    /**
+     *  No mark for user overrides or extensions, deliberately. Declared-and-empty is
+     *  behaviorally the same as undeclared for both — c3p0 needs only to see that there are no
+     *  overrides, or no extensions — and every mark is a key that every future reader of the
+     *  properties view has to know to skip.
+     */
+    public void testUserOverridesAndExtensionsAreNotMarked() throws Exception
+    {
+        Properties p = propsOf( read( xml(
+            "  <default-config>\n" +
+            "    <user-overrides user=\"steve\"/>\n" +
+            "    <extensions/>\n" +
+            "  </default-config>\n" +
+            "  <named-config name=\"X\">\n" +
+            "    <user-overrides user=\"steve\"/>\n" +
+            "    <extensions/>\n" +
+            "  </named-config>" ) ) );
+
+        assertNull( p.getProperty( "c3p0.user-overrides.steve" ) );
+        assertNull( p.getProperty( "c3p0.extensions" ) );
+        assertNull( p.getProperty( X + ".user-overrides.steve" ) );
+        assertNull( p.getProperty( X + ".extensions" ) );
+
+        assertEquals( "only the named config's own declaration should be present, got " + p,
+                      1, p.size() );
+        assertEquals( "", p.getProperty( X ) );
     }
 }
