@@ -114,8 +114,10 @@ public class HoconMultiPropertiesConfig extends MultiPropertiesConfig
 		String dottedPfx = pfx + '.';
 		for ( Map.Entry<Object,Object> entry : props.entrySet() )
 		{
+                    // note MultiPropertiesConfig semantics places the prefix as key itself,
+                    // as well as subkeys, in the prefix map
 		    String key = (String) entry.getKey();
-		    if ( key.startsWith( dottedPfx ) )
+		    if ( key.equals( pfx ) || key.startsWith( dottedPfx ) ) 
 			outish.put( key, entry.getValue() );
 		}
 	    }

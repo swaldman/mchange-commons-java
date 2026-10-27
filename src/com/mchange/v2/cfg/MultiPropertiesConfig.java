@@ -83,7 +83,37 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
     public abstract Properties getPropertiesByResourcePath(String path);
 
     /**
-     *  The special prefix "" returns all the Properties
+     *  The Properties beneath a prefix, <b>keyed by full key</b> rather than by the remainder
+     *  after the prefix. {@code getPropertiesByPrefix("a.b")} over a config holding
+     *  {@code a.b.c=1} returns {@code {a.b.c=1}}, not {@code {c=1}}.
+     *
+     *  <p>A prefix matches by <b>dot-separated token</b>, never by character. So {@code "a.b"}
+     *  reaches {@code a.b.c} and {@code a.b.c.d}, but not {@code a.bx} or {@code a.b-x}, which
+     *  merely begin with the same letters. This is what the {@link PropertiesConfig} declaration
+     *  means by asking that a prefix be a complete token.</p>
+     *
+     *  <p>The prefix <b>includes the exact key</b>. A config holding only {@code a.b=v} answers
+     *  {@code getPropertiesByPrefix("a.b")} with {@code {a.b=v}}, not with an empty Properties:
+     *  every key is a prefix of itself. The consequence worth knowing is that a non-empty result
+     *  does not by itself mean the prefix names a populated scope &mdash; it may be one bare key
+     *  wearing the scope's name. Where the distinction matters, ask for it:</p>
+     *
+     *  <pre>
+     *    Properties under  = cfg.getPropertiesByPrefix( pfx );
+     *    boolean bareKeySet = under.containsKey( pfx );          // or getProperty(pfx) != null
+     *    boolean hasSubkeys = under.size() &gt; (bareKeySet ? 1 : 0);
+     *  </pre>
+     *
+     *  <p>The special prefix {@code ""} returns all the Properties. A key with no dot in it is
+     *  reachable only under {@code ""} and under itself.</p>
+     *
+     *  <p>Implementors: the exact key belongs in the result. The in-library consumer that walks
+     *  a prefix's keys is {@code WhitelistManager}, whose fallback path over live System
+     *  properties spells the same rule out as
+     *  {@code k.equals(baseKey) || k.startsWith(baseKey + ".")}. An implementation that filters
+     *  on {@code pfx + "."} alone will disagree with {@link BasicMultiPropertiesConfig}, and so
+     *  with the result of {@link MConfig#combine}, which flattens everything it is given into
+     *  one of those.</p>
      *
      *  @return an empty Properties, even if prefix is unknown, just to avoid downstream NullPointerExceptions
      */
