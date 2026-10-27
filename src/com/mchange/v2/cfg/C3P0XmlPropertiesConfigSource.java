@@ -80,6 +80,9 @@ import static com.mchange.v2.cfg.DelayedLogItem.Level;
  *    c3p0.a.b                        -&gt; WARN and ignore
  *  </pre>
  *
+ *  <p>A {@code <named-config>} with no {@code name} is ignored with a warning, as is one whose
+ *  name contains a {@code '.'} &mdash; see below for why.</p>
+ *
  *  <p>The asymmetry is deliberate. The default scope shares a namespace with properties-style
  *  configuration, so a fully-qualified key written there means exactly itself. A named config is
  *  a per-DataSource scope, and every reader of a {@code com.mchange.*} setting reads it
@@ -91,6 +94,51 @@ import static com.mchange.v2.cfg.DelayedLogItem.Level;
  *  {@code c3p0.named-configs.<X>.user-overrides.<user>.}. {@code <extensions>} names are
  *  <b>never</b> processed: they are names a deployment invented for its own
  *  {@code getExtensions(..)} lookup, so there is no vocabulary against which to correct them.</p>
+ *
+ *  <h3>A declared named config leaves a mark, even when it is empty</h3>
+ *
+ *  <p>{@code <named-config name="X"/>} with nothing in it is <b>not</b> the same as no
+ *  {@code <named-config name="X">} at all, and c3p0 behaves differently in the two cases. But a
+ *  scope with no properties contributes no keys, so read naively the two would be
+ *  indistinguishable. This source therefore writes the bare scope key for every named config it
+ *  reads:</p>
+ *
+ *  <pre>
+ *    &lt;named-config name="X"/&gt;                                 -&gt; c3p0.named-configs.X=
+ *    &lt;named-config name="X"&gt;maxPoolSize=30&lt;/named-config&gt;      -&gt; c3p0.named-configs.X=
+ *                                                                c3p0.named-configs.X.maxPoolSize=30
+ *  </pre>
+ *
+ *  <p>The bare scope key is the natural carrier: it is a prefix rather than a property, so it can
+ *  never collide with one, and no pseudo-property name has to be invented for the purpose. Its
+ *  value is the empty string, which is both what the declaration means and what an author would
+ *  write by hand in a properties file &mdash; so the convention is expressible in either format,
+ *  not only in XML. Since a key is a prefix of itself (see
+ *  {@link MultiPropertiesConfig#getPropertiesByPrefix}), the mark is visible as
+ *  {@code getPropertiesByPrefix("c3p0.named-configs.X").containsKey("c3p0.named-configs.X")}.</p>
+ *
+ *  <p>Note what the mark does <b>not</b> mean. A scope declared only in properties-style
+ *  configuration carries no mark, because nothing writes one there, yet it is plainly declared.
+ *  So <i>declared</i> remains "the prefix has any keys at all", and the mark is what additionally
+ *  makes <i>declared but empty</i> expressible:</p>
+ *
+ *  <pre>
+ *    declared         -&gt; getPropertiesByPrefix(pfx).size() &gt; 0
+ *    declared, empty  -&gt; size() == 1 &amp;&amp; containsKey(pfx)
+ *  </pre>
+ *
+ *  <p>This is also why a named config's name may <b>not contain a '.'</b>, and such a scope is
+ *  refused with a warning. In the flat namespace these keys live in, scope {@code a.b} declared
+ *  empty and scope {@code a} carrying a pool property {@code b} both arrive as
+ *  {@code c3p0.named-configs.a.b} &mdash; and where that property's own value is empty, the two
+ *  are not merely ambiguous but identical. Refusing the name is cheaper than resolving the
+ *  collision, and a dotted scope name was never usable in the properties-style namespace
+ *  anyway.</p>
+ *
+ *  <p>{@code <user-overrides>} and {@code <extensions>} get no such mark, deliberately. Declared
+ *  and empty is behaviorally the same as undeclared for both &mdash; c3p0 needs only to see that
+ *  there are no overrides, or no extensions &mdash; and every mark is a key that every future
+ *  reader of the properties view would have to know to skip.</p>
  *
  *  <h3>Parsing is hardened, and stays hardened</h3>
  *
@@ -285,6 +333,20 @@ public final class C3P0XmlPropertiesConfigSource implements PropertiesConfigSour
                     "A named config without a name cannot be referred to, so it is ignored." ) );
                 continue;
             }
+            if ( name.indexOf( '.' ) >= 0 )
+            {
+                // a dotted scope name is ambiguous in the flat properties namespace this source
+                // writes into: scope 'a.b' declared empty and scope 'a' carrying a pool property
+                // 'b' both arrive as the key c3p0.named-configs.a.b, and where that property's
+                // value is itself empty the two are indistinguishable. Rather than let the
+                // ambiguity decide at read time, refuse the name.
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING,
+                    "In '" + origin + "', a '" + NAMED_CONFIG_TAG + "' element is named '" + name +
+                    "'. A named config's name may not contain '.', because the key this scope " +
+                    "would occupy could equally belong to another scope's property, and the two " +
+                    "could not be told apart. The scope is ignored. Rename it without a '.'." ) );
+                continue;
+            }
             if (! seenNames.add( name ) )
                 delayedLogItems.add( new DelayedLogItem( Level.WARNING,
                     "In '" + origin + "', '" + NAMED_CONFIG_TAG + "' name '" + name + "' appears more than once. " +
@@ -300,7 +362,20 @@ public final class C3P0XmlPropertiesConfigSource implements PropertiesConfigSour
     private void readScope( Element scopeElem, String scopeName, Properties out, String identifier, String origin,
                             List<DelayedLogItem> delayedLogItems )
     {
-        String scopePfx = scopeName == null ? C3P0_PFX : C3P0_PFX + "named-configs." + scopeName + ".";
+        String scopePfx;
+        if (scopeName == null)
+            scopePfx = C3P0_PFX;
+        else
+        {
+            String bareScopeKey = C3P0_PFX + "named-configs." + scopeName;
+
+            // we add the following bare key for the named scope, which will sit in the properties
+            // prefix set but which cannot be interpreted as a sub-keyed property itself, in order
+            // to mark mere definition of a potentially empty named scope
+            out.setProperty(bareScopeKey, "");
+
+            scopePfx = bareScopeKey + ".";
+        }
 
         // ---- the scope's own properties
         NodeList props = DomParseUtils.immediateChildElementsByTagName( scopeElem, PROPERTY_TAG );

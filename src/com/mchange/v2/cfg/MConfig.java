@@ -245,6 +245,18 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    deployment invented for its own use, and are not read beneath a user override at all, since
  *    extensions are per-config rather than per-user.</p>
  *
+ *    <p>Every named config additionally contributes the <b>bare scope key</b> with an empty
+ *    value, so {@code <named-config name="X"/>} yields {@code c3p0.named-configs.X=} even with
+ *    nothing in it. c3p0 distinguishes a scope declared empty from one never declared, and a
+ *    scope with no properties would otherwise leave no trace. Since a key is a prefix of itself,
+ *    the mark reads as {@code containsKey(pfx)} on the by-prefix lookup; <i>declared</i> stays
+ *    {@code size() > 0}, because a scope declared in properties-style configuration carries no
+ *    such mark and is declared nonetheless. A name containing a {@code '.'} is refused with a
+ *    warning: in this flat namespace, scope {@code a.b} declared empty and scope {@code a} with
+ *    an empty-valued property {@code b} are the same key with the same value. The mark is for
+ *    named configs alone &mdash; for {@code <user-overrides>} and {@code <extensions>},
+ *    declared-and-empty and undeclared mean the same thing to c3p0.</p>
+ *
  *    <p>Parsing is <b>hardened</b> &mdash; doctypes, external entities, external DTDs and schemas,
  *    XInclude and entity expansion all disabled; see CVE-2018-20433. The single escape is the
  *    System property {@code com.mchange.v2.c3p0.cfg.xml.usePermissiveParser}, which defaults to
