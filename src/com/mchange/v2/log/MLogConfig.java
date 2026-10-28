@@ -44,10 +44,22 @@ public final class MLogConfig
     { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties"}; }
 
     public static String[] mlogC3p0Preempts()
-    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
+    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties","c3p0-xml:/c3p0-config.xml","c3p0-xml:file:${com.mchange.v2.c3p0.cfg.xml}","/"}; }
 
     public static String[] mlogC3p0Unified()
-    { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties","hocon:/reference,/application,/c3p0,/","/c3p0.properties","/"}; }
+    {
+        return new String[] {
+            "/com/mchange/v2/log/default-mchange-log.properties",
+            "/mchange-commons.properties",
+            "/mchange-log.properties",
+            "/c3p0-default.properties",
+            "hocon:/reference,/application,/c3p0,/",
+            "/c3p0.properties",
+            "c3p0-xml:/c3p0-config.xml",
+            "c3p0-xml:file:${com.mchange.v2.c3p0.cfg.xml}",
+            "/"
+        };
+    }
 
     // we want to distinguish between several cases
     // - MLog is the first caller from its static initializer (the usual first call)
@@ -132,7 +144,7 @@ public final class MLogConfig
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
             // or deadlocks
-            tmpConfig = MConfig.AsProvided.readUncachedResourceConfig(null, resources, bli);
+            tmpConfig = MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig(null, resources, bli);
         }
 
 	if ( backstops != null || overrides != null )

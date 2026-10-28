@@ -89,7 +89,9 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     BasicMultiPropertiesConfig(String[] rps, Map<String,Properties> propsByResourcePaths, List<DelayedLogItem> parseMessages, Set<String> historyVetoed, Set<String> historyNotFound, Set<String> historyOtherFailures)
     {
 	this.rps                  = (String[]) rps.clone();
-	this.propsByResourcePaths = new HashMap<String,Properties>(propsByResourcePaths);
+	this.propsByResourcePaths = new HashMap<String,Properties>();
+        for (String rp : propsByResourcePaths.keySet())
+            this.propsByResourcePaths.put(rp, (Properties) propsByResourcePaths.get(rp).clone());
 
 	List<DelayedLogItem> dlis = new ArrayList<DelayedLogItem>();
 	dlis.addAll( parseMessages );
@@ -109,7 +111,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     {
         this(
              (notionalResourcePath == null ? badNotionalResourcePath() : new String[] { notionalResourcePath }),
-             resourcePathToPropertiesMap( notionalResourcePath, props ),
+             resourcePathToPropertiesMap( notionalResourcePath, (Properties) props.clone() ),
              Collections.<DelayedLogItem>emptyList()
         );
     }
@@ -516,14 +518,14 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
     public Properties getPropertiesByResourcePath(String path)
     { 
 	Properties out = ((Properties) propsByResourcePaths.get( path )); 
-	return (out == null ? new Properties() : out);
+	return (out == null ? new Properties() : (Properties) out.clone());
     }
 
     @Override
     public Properties getPropertiesByPrefix(String pfx)
     {
 	Properties out = ((Properties) propsByPrefixes.get( pfx ));
-	return (out == null ? new Properties() : out);
+	return (out == null ? new Properties() : (Properties) out.clone());
     }
 
     @Override

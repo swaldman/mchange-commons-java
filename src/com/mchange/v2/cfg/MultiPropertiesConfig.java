@@ -111,7 +111,7 @@ public abstract class MultiPropertiesConfig implements PropertiesConfig
      *  a prefix's keys is {@code WhitelistManager}, whose fallback path over live System
      *  properties spells the same rule out as
      *  {@code k.equals(baseKey) || k.startsWith(baseKey + ".")}. An implementation that filters
-     *  on {@code pfx + "."} alone will disagree with {@link BasicMultiPropertiesConfig}, and so
+     *  on {@code pfx + "."} alone will disagree with {@code BasicMultiPropertiesConfig}, and so
      *  with the result of {@link MConfig#combine}, which flattens everything it is given into
      *  one of those.</p>
      *
