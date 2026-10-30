@@ -11,9 +11,13 @@ import static com.mchange.v2.cfg.DelayedLogItem.*;
 // external clients should go through the MConfig facade.
 final class ConfigUtils
 {
-    // we retain "/com/mchange/v2/cfg/vmConfigResourcePaths.txt" for backwards compatibility,
+    // We retain "/com/mchange/v2/cfg/vmConfigResourcePaths.txt" for backwards compatibility,
     // but we are trying to get rid of the ill-defined concept of "vmConfig"
-    private final static String[] DFLT_RSRC_PATHFILES = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/com/mchange/v2/cfg/defaultConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"};
+    //
+    // In general these are legacy resource-path lists for the WithTraditionalDefaultSources
+    // API. Prefer leaving configuration of paths to client applications and use of 
+    // AsProvided* APIs
+    private final static String[] DFLT_RSRC_PATHFILES = new String[] {"/com/mchange/v2/cfg/vmConfigResourcePaths.txt", "/mchange-config-resource-paths.txt"}; 
 
     private final static Set<String> DFLT_RSRC_PATHFILES_SET;
     static

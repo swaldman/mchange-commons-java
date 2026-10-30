@@ -33,7 +33,6 @@ import com.mchange.v2.uid.UidUtils;
  *
  * <ul>
  *   <li>{@code /com/mchange/v2/cfg/vmConfigResourcePaths.txt}</li>
- *   <li>{@code /com/mchange/v2/cfg/defaultConfigResourcePaths.txt}</li>
  *   <li>{@code /mchange-config-resource-paths.txt}</li>
  * </ul>
  *

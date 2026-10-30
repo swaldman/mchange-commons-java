@@ -22,7 +22,6 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *
  *  <ul>
  *    <li>{@code /com/mchange/v2/cfg/vmConfigResourcePaths.txt}</li>
- *    <li>{@code /com/mchange/v2/cfg/defaultConfigResourcePaths.txt}</li>
  *    <li>{@code /mchange-config-resource-paths.txt}</li>
  *  </ul>
  *
@@ -286,12 +285,10 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *
  *  <ul>
  *    <li>{@code /com/mchange/v2/cfg/vmConfigResourcePaths.txt}</li>
- *    <li>{@code /com/mchange/v2/cfg/defaultConfigResourcePaths.txt}</li>
  *    <li>{@code /mchange-config-resource-paths.txt}</li>
  *  </ul>
  *
- *  <p>supplied resource paths. (And {@code /com/mchange/v2/cfg/defaultConfigResourcePaths.txt}
- *  is in fact a recent addition to the list.)</p>
+ *  <p>supplied resource paths.</p>
  *
  *  <h3>The as-provided API</h3>
  *
