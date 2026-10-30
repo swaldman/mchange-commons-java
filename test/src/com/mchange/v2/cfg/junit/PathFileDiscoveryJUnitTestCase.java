@@ -11,10 +11,11 @@ import java.util.List;
  *  config may live, per the MConfig class documentation:
  *
  *    /com/mchange/v2/cfg/vmConfigResourcePaths.txt
- *    /com/mchange/v2/cfg/defaultConfigResourcePaths.txt
  *    /mchange-config-resource-paths.txt
  *
- *  read in that order, with all non-blank, non-'#' lines treated as resource paths.
+ *  read in that order, with all non-blank, non-'#' lines treated as resource paths. These are
+ *  exactly the two locations mchange-commons-java 0.6.1 honored, which is the point: see
+ *  testDefaultConfigPathFileIsNotRead.
  */
 public final class PathFileDiscoveryJUnitTestCase extends TestCase
 {
@@ -34,14 +35,36 @@ public final class PathFileDiscoveryJUnitTestCase extends TestCase
         { s.closeQuietly(); }
     }
 
-    /** defaultConfigResourcePaths.txt is the recent addition to the list, and is read. */
-    public void testDefaultConfigPathFileIsRead()
+    /**
+     *  /com/mchange/v2/cfg/defaultConfigResourcePaths.txt is NOT read, deliberately.
+     *
+     *  <p>It was added during 0.7.0's development as a more generically named alternative to the
+     *  vmConfig path file, to discourage the ill-defined "vmConfig" idea. It never shipped: 0.6.1
+     *  honored only the two locations above, so withdrawing it before release breaks no released
+     *  version's behavior. The reason to withdraw it is that the whole
+     *  WithTraditionalDefaultSources mechanism is now what we discourage -- so a new, better-named
+     *  entrance to it is an attractive nuisance rather than an improvement.</p>
+     *
+     *  <p>This case is the inversion of the one it replaces, which asserted the path WAS read.
+     *  Asserted rather than merely deleted, because the next person to want a generic alternative
+     *  to vmConfig should find out that it was considered and declined, not re-derive it.</p>
+     */
+    public void testDefaultConfigPathFileIsNotRead()
     {
         CfgScenario s = CfgScenario.open( "defaultconfig-only" );
         try
         {
             Object mpc = s.traditionalCached();
-            assertEquals( "defaultconfig", s.getProperty( mpc, "which.pathfile" ) );
+
+            assertNull( "a path file at the defaultConfig location must contribute nothing",
+                        s.getProperty( mpc, "which.pathfile" ) );
+            assertFalse( "nor may its paths appear in the resolved list: " + readPaths( s, mpc ),
+                         readPaths( s, mpc ).contains( "/from-defaultconfig.properties" ) );
+
+            // and so the scenario behaves exactly as one with no path file at all
+            assertEquals( "the hardcoded backstop should be in force instead",
+                          "mchange-commons", s.getProperty( mpc, "backstop.source" ) );
+            assertFalse( "and the traditional-mechanism predicate must say so", pathsFound( s ) );
         }
         finally
         { s.closeQuietly(); }
@@ -61,28 +84,35 @@ public final class PathFileDiscoveryJUnitTestCase extends TestCase
     }
 
     /**
-     *  All three path files are read and CONCATENATED in declaration order. This is
-     *  what makes the MConfig javadoc's early.properties/late.properties example hold:
-     *  paths contributed by a later file end up later in the list, so they win.
+     *  The honored path files are read and CONCATENATED in declaration order. This is what makes
+     *  the MConfig javadoc's early.properties/late.properties example hold: paths contributed by
+     *  a later file end up later in the list, so they win.
+     *
+     *  <p>The scenario also ships a defaultConfigResourcePaths.txt naming /middle.properties, so
+     *  this doubles as the ordering-context half of testDefaultConfigPathFileIsNotRead: an
+     *  unhonored path file contributes nothing even sitting between two that are honored, and in
+     *  particular does not land in the middle of the order its name would suggest.</p>
      */
-    public void testAllThreePathFilesConcatenateInOrder()
+    public void testOnlyTheHonoredPathFilesConcatenateInOrder()
     {
         CfgScenario s = CfgScenario.open( "all-three-pathfiles" );
         try
         {
             Object mpc = s.traditionalCached();
 
-            assertEquals( "paths should be ordered vmConfig, defaultConfig, mchange-config",
-                          Arrays.asList( "/early.properties", "/middle.properties", "/late.properties" ),
+            assertEquals( "paths should be ordered vmConfig, mchange-config, with the unhonored " +
+                          "defaultConfig file's /middle.properties absent",
+                          Arrays.asList( "/early.properties", "/late.properties" ),
                           readPaths( s, mpc ) );
 
             assertEquals( "the last path file's contribution should win",
                           "late", s.getProperty( mpc, "ordered.key" ) );
 
-            // every file still contributes its non-conflicting keys
+            // each honored file still contributes its non-conflicting keys
             assertEquals( "yes", s.getProperty( mpc, "only.early" ) );
-            assertEquals( "yes", s.getProperty( mpc, "only.middle" ) );
             assertEquals( "yes", s.getProperty( mpc, "only.late" ) );
+            assertNull( "but the unhonored file contributes none of its own",
+                        s.getProperty( mpc, "only.middle" ) );
         }
         finally
         { s.closeQuietly(); }
@@ -183,8 +213,8 @@ public final class PathFileDiscoveryJUnitTestCase extends TestCase
     /** A path file that supplies paths: the traditional mechanism is genuinely in play. */
     public void testPredicateTrueWhenAPathFileSuppliesPaths()
     {
-        for ( String scenario : new String[] { "vmconfig-only", "defaultconfig-only",
-                                               "mchangeconfig-only", "all-three-pathfiles" } )
+        for ( String scenario : new String[] { "vmconfig-only", "mchangeconfig-only",
+                                               "all-three-pathfiles" } )
         {
             CfgScenario s = CfgScenario.open( scenario );
             try
