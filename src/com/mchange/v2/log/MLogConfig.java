@@ -1,32 +1,109 @@
 package com.mchange.v2.log;
 
-
+import java.io.*;
 import java.util.*;
+
 import java.lang.reflect.Method;
+import java.net.URL;
 import com.mchange.v2.cfg.MConfig;
 import com.mchange.v2.cfg.MultiPropertiesConfig;
 import com.mchange.v2.cfg.DelayedLogItem;
 import com.mchange.v2.cfg.SealedSystemProperties;
 import com.mchange.v2.cfg.SealedSystemPropertiesBooleanProperty;
 
+import static com.mchange.v2.cfg.DelayedLogItem.Level;
+
 public final class MLogConfig
 {
     public final static String FREEZE_CONFIG_KEY = "com.mchange.v2.log.freezeConfig";
 
+    // If this resource is present, it's expected to be a list of
+    // notional resource paths of the sort decodable by com.mchange.v2.cfg APIs.
+    // values found in later resources will shadow values found in earlier resources.
+    //
+    // If the resource is multiply present on the CLASSPATH, resources found EARLIER in the CLASSPATH
+    // will, according the JVM-usual conventions, take precedence over resources found LATER in the CLASSPATH.
+    //
+    // A bit confusingly, what this adds up to is
+    //
+    //   (1) The final resource path list preserves the in-file order of resource paths for
+    //       each `mlog-config-resource-paths.txt` found
+    //
+    //   (2) Lists are combined in reverse order: The list found first in the CLASSPATH
+    //       represents the TAIL of the ultimate resource path list constructed
+    public final static String MLOG_CONFIG_RESOURCE_PATHS_RESOURCE = "mlog-config-resource-paths.txt";
+
     private final static MultiPropertiesConfig[] EMPTY_MPC_ARRAY = new MultiPropertiesConfig[0];
 
+    private final static String STANDARD_CFG_DEFAULT_MCHANGE_LOG     = "/com/mchange/v2/log/default-mchange-log.properties";
+    private final static String STANDARD_CFG_MCHANGE_COMMONS         = "/mchange-commons.properties";
+    private final static String STANDARD_CFG_MCHANGE_LOG             = "/mchange-log.properties";
+
     // MT: all now mutable references, protected by class' lock
-    private static MultiPropertiesConfig                 config               = null;
-    private static List<DelayedLogItem>                  bootstrapLogItems    = null;
-    private static Method                                delayedDumpToLogger  = null;
-    private static SealedSystemPropertiesBooleanProperty freezeConfigProperty = null; // only initialized after log package initialization completes
-    private static MLogger                               classLogger          = null; // only initialized after log package initialization completes
-    private static boolean                               refreshDebugWarned   = false;
+    private static MultiPropertiesConfig                 config                = null;
+    private static List<DelayedLogItem>                  bootstrapLogItems     = null;
+    private static Method                                delayedDumpToLogger   = null;
+    private static SealedSystemPropertiesBooleanProperty freezeConfigProperty  = null; // only initialized after log package initialization completes
+    private static MLogger                               classLogger           = null; // only initialized after log package initialization completes
+    private static boolean                               refreshDebugWarned    = false;
+    private static List<String>                          resourcePathsTxtPaths = null;
+
+    private static List<String> resourcePathsFromMLogConfigResourcePathsTxt(List<DelayedLogItem> delayedLogItemsOut)
+    {
+        List<String> out = null;
+
+        try
+        {
+            ArrayList<URL> allResources = Collections.list(MLogConfig.class.getClassLoader().getResources(MLOG_CONFIG_RESOURCE_PATHS_RESOURCE));
+
+            int sz = allResources.size();
+
+            if (sz > 0)
+            {
+                out = new ArrayList<>();
+
+                // we want earlier entries in the CLASSPATH to have priority, so we start
+                // at the last element and concatenate as we work backwards
+                for (int i = sz; --i >= 0;) 
+                {
+                    URL resource = allResources.get(i);
+                    BufferedReader br = new BufferedReader( new InputStreamReader( resource.openStream(), "UTF8" ) );
+                    try
+                    {
+                        List<String> tmp = new ArrayList<>();
+                        String line;
+                        while ((line = br.readLine()) != null)
+                        {
+                            String trimmed = line.trim();
+                            if (trimmed.length() > 0 && !trimmed.startsWith("#"))
+                                tmp.add(trimmed);
+                        }
+                        out.addAll( tmp );
+                    }
+                    catch (Exception e)
+                    { delayedLogItemsOut.add(new DelayedLogItem(Level.WARNING, "An Exception occurred while trying to load an expected property config resources list from '" + resource + "'.", e)); }
+                    finally
+                    {
+                        try { if ( br != null ) br.close(); } //ensures closure of nested raw stream as well
+                        catch (IOException e) 
+                            { delayedLogItemsOut.add( new DelayedLogItem( Level.WARNING, "An IOException occurred while closing BufferedReader from resource path '" + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE + "'.", e ) ); }
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        { delayedLogItemsOut.add(new DelayedLogItem(Level.WARNING, "An unexpected Exception occurred while trying to load property config resources from '" + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE + "'.", e)); }
+
+        return out;
+    }
 
     static synchronized void markMLogReinitialized()
     {
         classLogger = MLog.getLogger(MLogConfig.class);
     }
+
+    static synchronized List<String> getResourcePathsTxtPaths()
+    { return resourcePathsTxtPaths; }
 
     private synchronized static MLogger getClassLogger()
     { return classLogger; }
@@ -34,29 +111,19 @@ public final class MLogConfig
     private synchronized static boolean isMLogInitialized()
     { return getClassLogger() != null; }
 
-    // this is very inelegant. in c3p0, mlog should be entirely independent of and prior to c3p0,
-    // conceptually, c3p0 is just a random user of the library.
-    // but in practice c3p0 is the most prominent user of the library,
-    // and we want to ease the transition from MConfig.WithTraditionalDefaultSources with minimum
-    // disruption to c3p0 users. so we are going to keep the default load paths between the two libraries
-    // in sync
-    public static String[] mlogC3p0Defaults()
-    { return new String[] {"/com/mchange/v2/log/default-mchange-log.properties","/mchange-commons.properties","/mchange-log.properties","/c3p0-default.properties"}; }
+    private static String[] mlogDefaults()
+    { return new String[] {STANDARD_CFG_DEFAULT_MCHANGE_LOG,STANDARD_CFG_MCHANGE_COMMONS,STANDARD_CFG_MCHANGE_LOG}; }
 
-    public static String[] mlogC3p0Preempts()
-    { return new String[] {"hocon:/reference,/application,/c3p0,/","/c3p0.properties","c3p0-xml:/c3p0-config.xml","c3p0-xml:file:${com.mchange.v2.c3p0.cfg.xml}","/",SealedSystemProperties.NOTIONAL_RESOURCE_PATH}; }
+    private static String[] mlogPreempts()
+    { return new String[] {"hocon:/reference,/application,/","/",SealedSystemProperties.NOTIONAL_RESOURCE_PATH}; }
 
-    public static String[] mlogC3p0Unified()
+    private static String[] mlogUnified()
     {
         return new String[] {
-            "/com/mchange/v2/log/default-mchange-log.properties",
-            "/mchange-commons.properties",
-            "/mchange-log.properties",
-            "/c3p0-default.properties",
-            "hocon:/reference,/application,/c3p0,/",
-            "/c3p0.properties",
-            "c3p0-xml:/c3p0-config.xml",
-            "c3p0-xml:file:${com.mchange.v2.c3p0.cfg.xml}",
+            STANDARD_CFG_DEFAULT_MCHANGE_LOG,
+            STANDARD_CFG_MCHANGE_COMMONS,
+            STANDARD_CFG_MCHANGE_LOG,
+            "hocon:/reference,/application,/",
             "/",
             SealedSystemProperties.NOTIONAL_RESOURCE_PATH
         };
@@ -120,7 +187,62 @@ public final class MLogConfig
 
         MultiPropertiesConfig tmpConfig;
 
-        if (MConfig.WithTraditionalDefaultSources.traditionalPathFileSourcedPathsFound(bli))
+        List<String> configuredPaths = resourcePathsFromMLogConfigResourcePathsTxt(bli);
+        resourcePathsTxtPaths = configuredPaths == null ? null : Collections.unmodifiableList(configuredPaths);
+
+        if (resourcePathsTxtPaths != null && resourcePathsTxtPaths.size() > 0)
+        {
+            // however a user might have configured, put sealed system properties then live system properties at the top of the precedence hierarchy
+            String[] resources = SealedSystemProperties.capCurrentThenSealed(resourcePathsTxtPaths.toArray(new String[resourcePathsTxtPaths.size()])); 
+
+            int indexOfDefaultMchangeLog = -1;
+            int indexOfMchangeCommons    = -1;
+            int indexOfMchangeLog        = -1;
+
+            for (int i = 0, len = resources.length; i < len; ++i)
+            {
+                // note latest index found will win, which is what we want
+                if (STANDARD_CFG_DEFAULT_MCHANGE_LOG.equals(resources[i])) indexOfDefaultMchangeLog = i;
+                else if (STANDARD_CFG_MCHANGE_COMMONS.equals(resources[i])) indexOfMchangeCommons = i;
+                else if (STANDARD_CFG_MCHANGE_LOG.equals(resources[i])) indexOfMchangeLog = i; 
+            }
+
+            if (indexOfDefaultMchangeLog < 0)
+                bli.add( new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                             "Standard mlog config file '" + STANDARD_CFG_DEFAULT_MCHANGE_LOG +
+                                             "' not found in the configured mlog path defined by " + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE +
+                                             ". We recommend this config source be included.") );
+            if (indexOfMchangeCommons < 0)
+                bli.add( new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                             "Standard mlog config file '" + STANDARD_CFG_MCHANGE_COMMONS +
+                                             "' not found in the configured mlog path defined by " + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE +
+                                             ". We recommend this config source be included.") );
+            if (indexOfMchangeLog < 0)
+                bli.add( new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                             "Standard mlog config file '" + STANDARD_CFG_MCHANGE_LOG +
+                                             "' not found in the configured mlog path defined by " + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE +
+                                             ". We recommend this config source be included.") );
+
+            boolean canonicalOrder = true;
+            int previousIndex = -1;
+            for ( int index : new int[] { indexOfDefaultMchangeLog, indexOfMchangeCommons, indexOfMchangeLog } )
+                if ( index >= 0 )
+                {
+                    if ( index < previousIndex ) canonicalOrder = false;
+                    previousIndex = index;
+                }
+
+            if (! canonicalOrder )
+                bli.add( new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                             "Ordering of standard mlog config files is non standard. The ordering " + Arrays.toString(new String[] {STANDARD_CFG_DEFAULT_MCHANGE_LOG, STANDARD_CFG_MCHANGE_COMMONS, STANDARD_CFG_MCHANGE_LOG} ) +
+                                             " is recommended.") );
+
+            // note that it's important that we read the config uncached here, because we call this from MLog's class init,
+            // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
+            // or deadlocks
+            tmpConfig = MConfig.AsProvidedIgnoreVetoed.readUncachedResourceConfig(null, resources, bli);
+        }
+        else if (MConfig.WithTraditionalDefaultSources.traditionalPathFileSourcedPathsFound(bli))
         {
             bli.add(new DelayedLogItem(DelayedLogItem.Level.WARNING,
                                        "At least one of the following resources " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() +
@@ -129,8 +251,8 @@ public final class MLogConfig
                                        "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
 
             // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
-            String[] defaults = mlogC3p0Defaults();
-            String[] preempts = mlogC3p0Preempts();
+            String[] defaults = mlogDefaults();
+            String[] preempts = mlogPreempts();
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared
@@ -140,7 +262,7 @@ public final class MLogConfig
         else
         {
             // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
-            String[] resources = mlogC3p0Unified();
+            String[] resources = mlogUnified();
 
             // note that it's important that we read the config uncached here, because we call this from MLog's class init,
             // and the cached pathway potentially hits a logger, which might lead to reentrancy for which we are not prepared

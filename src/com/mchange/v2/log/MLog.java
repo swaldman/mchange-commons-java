@@ -252,6 +252,12 @@ public abstract class MLog
     public static MLog instance()
     { return mlog(); }
 
+    /**
+     * @return null if no mlog-config-resource-paths.txt resources were even found
+     */
+    public static List<String> getConfigResourcePathsTxtPaths()
+    { return MLogConfig.getResourcePathsTxtPaths(); }
+
     public static MLogger getLogger(String name) 
     {
 	NameTransformer xformer = null;
