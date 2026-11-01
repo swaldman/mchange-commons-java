@@ -134,6 +134,19 @@ final class MLogConfigDriver
     }
 
     /**
+     *  The resource-path list this scenario discovered from mlog-config-resource-paths.txt, or
+     *  null where no such resource was found at all.
+     */
+    @SuppressWarnings("unchecked")
+    List<String> resourcePathsTxtPaths()
+    {
+        try
+        { return (List<String>) reach( "getResourcePathsTxtPaths" ).invoke( null ); }
+        catch ( Exception e )
+        { throw new RuntimeException( "MLogConfig.getResourcePathsTxtPaths() failed in the scenario", e ); }
+    }
+
+    /**
      *  Whether this scenario's MLog has come up. Reads MLogConfig's own predicate rather than
      *  guessing, because that is what the library's own decisions used to turn on.
      */

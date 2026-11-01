@@ -41,7 +41,7 @@ public final class MLogConfigBackstopJUnitTestCase extends TestCase
 
     /**
      *  Set by the scenario's /mchange-commons.properties, which is in the hardcoded source list
-     *  mlogC3p0Unified() returns. A key the RESOURCES supply is what a backstop has to lose to.
+     *  mlogUnified() returns. A key the RESOURCES supply is what a backstop has to lose to.
      */
     private final static String LIBRARY_SET_KEY = "layered.key";
 
