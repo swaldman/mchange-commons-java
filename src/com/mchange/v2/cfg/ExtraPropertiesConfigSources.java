@@ -158,9 +158,18 @@ public abstract class ExtraPropertiesConfigSources
                             String trimmed = line.trim();
                             if (trimmed.length() > 0 && !trimmed.startsWith("#"))
                             {
-                                int cut_point = trimmed.indexOf("#");
-                                String cut = cut_point >= 0 ? trimmed.substring(0,cut_point) : trimmed;
-                                tmp.add(cut.trim()); // we better retrim, or else we'll have any whitespace that came before the comment!
+                                // the FIRST whitespace-preceded '#', not the first '#': a line may carry both a
+                                // literal '#' and a trailing comment
+                                int cut_point = -1;
+                                for (int j = 1, len = trimmed.length(); cut_point < 0 && j < len; ++j)
+                                    if (trimmed.charAt(j) == '#' && Character.isWhitespace(trimmed.charAt(j-1)))
+                                        cut_point = j;
+
+                                // we only interpret as a comment if we have whitespace before the #, to avoid clipping e.g. HOCON scopes, or URL anchors, etc.
+                                // we have to retrim if we cut, or else we'll retain any whitespace that came before the comment.
+                                String cut = cut_point > 0 ? trimmed.substring(0,cut_point).trim() : trimmed;
+
+                                tmp.add(cut);
                             }
                         }
                         out.addAll( tmp );
@@ -170,7 +179,7 @@ public abstract class ExtraPropertiesConfigSources
                     finally
                     {
                         try { if ( br != null ) br.close(); } //ensures closure of nested raw stream as well
-                        catch (IOException e) 
+                        catch (IOException e)
                             { delayedLogItemsOut.add( new DelayedLogItem( Level.WARNING, "An IOException occurred while closing BufferedReader from resource path '" + MCFG_EXTRA_PROPERTIES_CONFIG_SOURCES + "'.", e ) ); }
                     }
                 }
@@ -182,5 +191,5 @@ public abstract class ExtraPropertiesConfigSources
         return out;
     }
 
-    public abstract PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List<DelayedLogItem> delayedLogItemsOut); 
+    public abstract PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List<DelayedLogItem> delayedLogItemsOut);
 }

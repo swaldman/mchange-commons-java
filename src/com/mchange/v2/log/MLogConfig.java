@@ -64,7 +64,7 @@ public final class MLogConfig
 
                 // we want earlier entries in the CLASSPATH to have priority, so we start
                 // at the last element and concatenate as we work backwards
-                for (int i = sz; --i >= 0;) 
+                for (int i = sz; --i >= 0;)
                 {
                     URL resource = allResources.get(i);
                     BufferedReader br = new BufferedReader( new InputStreamReader( resource.openStream(), "UTF8" ) );
@@ -77,9 +77,18 @@ public final class MLogConfig
                             String trimmed = line.trim();
                             if (trimmed.length() > 0 && !trimmed.startsWith("#"))
                             {
-                                int cut_point = trimmed.indexOf("#");
-                                String cut = cut_point >= 0 ? trimmed.substring(0,cut_point) : trimmed;
-                                tmp.add(cut.trim()); // we better retrim, or else we'll have any whitespace that came before the comment!
+                                // the FIRST whitespace-preceded '#', not the first '#': a line may carry both a
+                                // literal '#' and a trailing comment
+                                int cut_point = -1;
+                                for (int j = 1, len = trimmed.length(); cut_point < 0 && j < len; ++j)
+                                    if (trimmed.charAt(j) == '#' && Character.isWhitespace(trimmed.charAt(j-1)))
+                                        cut_point = j;
+
+                                // we only interpret as a comment if we have whitespace before the #, to avoid clipping e.g. HOCON scopes, or URL anchors, etc.
+                                // we have to retrim if we cut, or else we'll retain any whitespace that came before the comment.
+                                String cut = cut_point > 0 ? trimmed.substring(0,cut_point).trim() : trimmed;
+
+                                tmp.add(cut);
                             }
                         }
                         out.addAll( tmp );
@@ -89,7 +98,7 @@ public final class MLogConfig
                     finally
                     {
                         try { if ( br != null ) br.close(); } //ensures closure of nested raw stream as well
-                        catch (IOException e) 
+                        catch (IOException e)
                             { delayedLogItemsOut.add( new DelayedLogItem( Level.WARNING, "An IOException occurred while closing BufferedReader from resource path '" + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE + "'.", e ) ); }
                     }
                 }
@@ -197,7 +206,7 @@ public final class MLogConfig
         if (resourcePathsTxtPaths != null && resourcePathsTxtPaths.size() > 0)
         {
             // however a user might have configured, put sealed system properties then live system properties at the top of the precedence hierarchy
-            String[] resources = SealedSystemProperties.capCurrentThenSealed(resourcePathsTxtPaths.toArray(new String[resourcePathsTxtPaths.size()])); 
+            String[] resources = SealedSystemProperties.capCurrentThenSealed(resourcePathsTxtPaths.toArray(new String[resourcePathsTxtPaths.size()]));
 
             int indexOfDefaultMchangeLog = -1;
             int indexOfMchangeCommons    = -1;
@@ -208,7 +217,7 @@ public final class MLogConfig
                 // note latest index found will win, which is what we want
                 if (STANDARD_CFG_DEFAULT_MCHANGE_LOG.equals(resources[i])) indexOfDefaultMchangeLog = i;
                 else if (STANDARD_CFG_MCHANGE_COMMONS.equals(resources[i])) indexOfMchangeCommons = i;
-                else if (STANDARD_CFG_MCHANGE_LOG.equals(resources[i])) indexOfMchangeLog = i; 
+                else if (STANDARD_CFG_MCHANGE_LOG.equals(resources[i])) indexOfMchangeLog = i;
             }
 
             if (indexOfDefaultMchangeLog < 0)
@@ -334,14 +343,14 @@ public final class MLogConfig
 	    }
 	}
 	catch ( RuntimeException e )
-	{ 
+	{
 	    e.printStackTrace();
 	    throw e;
 	}
 	catch ( Exception e )
-	{ 
+	{
 	    e.printStackTrace();
-	    throw new RuntimeException( e ); 
+	    throw new RuntimeException( e );
 	}
     }
 
