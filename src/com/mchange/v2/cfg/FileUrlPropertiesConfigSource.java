@@ -95,12 +95,12 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  {@code permissions=useronly} ownership-and-mode chain, and how absence is reported under
      *  {@code required=}.</p>
      */
-    static final class Resolved
+    public static final class Resolved
     {
         /** The file to open: what the permissions check resolved to, when one ran. */
-        final Path    readPath;
-        final boolean requiredConfig;
-        final boolean enforceUserOnlyPermissions;
+        public final Path    readPath;
+        public final boolean requiredConfig;
+        public final boolean enforceUserOnlyPermissions;
 
         private Resolved( Path readPath, boolean requiredConfig, boolean enforceUserOnlyPermissions )
         {
@@ -113,13 +113,17 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     /**
      *  Interprets a {@code file:} identifier, up to but not including reading it.
      *
+     *  public because this is a useful utility for PropertiesConfigSources interpreting non-properties files into configs,
+     *  i.e. resource paths like c3p0-xml:file:///path/to/myconfig.xml
+     *
+     *
      *  @param source the source on whose behalf we are resolving. Vetoes name it, so a refusal
      *                is attributed to the source a caller actually asked for rather than to
      *                whichever class happens to hold this code. Typed VetoableConfig rather than
      *                PropertiesConfigSource because {@code permissions=useronly} can refuse: a
      *                source that cannot veto has no business asking for a check that might.
      */
-    static Resolved resolve( VetoableConfig source, String identifier, List<DelayedLogItem> delayedLogItems ) throws Exception
+    public static Resolved resolve( VetoableConfig source, String identifier, List<DelayedLogItem> delayedLogItems ) throws Exception
     {
             String                   fileUrl;
             Map<String,List<String>> parsedQueryString;
@@ -541,7 +545,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
 
             if ( problem != null )
             {
-                delayedLogItems.add( new DelayedLogItem( DelayedLogItem.Level.WARNING,
+                delayedLogItems.add( new DelayedLogItem( Level.WARNING,
                     "For '" + identifier + "', useronly permissions are set, but directory '" + dir + "' " +
                     problem + ". Anyone able to write that directory can delete this configuration. Because it " +
                     "is not marked required, reads would then silently proceed without it. Consider adding " +
@@ -664,7 +668,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
 
         if ( delayedLogItems != null )
             delayedLogItems.add( new DelayedLogItem(
-                DelayedLogItem.Level.WARNING,
+                Level.WARNING,
                 "Could not identify the superuser numerically: no filesystem root reported a 'unix:uid' of 0. " +
                 "Falling back to looking the superuser up by the name 'root', which trusts a name-to-uid mapping " +
                 "this process does not control. A 'permissions=useronly' check will accept files and links owned " +
@@ -683,7 +687,11 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
         { return null; }
     }
 
-    static Exception handleExceptionIndicatingFileNotFound(VetoableConfig source, String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
+    /**
+     *  public because this is a useful utility for PropertiesConfigSources interpreting non-properties files into configs,
+     *  i.e. resource paths like c3p0-xml:file:///path/to/myconfig.xml
+     */
+    public static Exception handleExceptionIndicatingFileNotFound(VetoableConfig source, String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
     {
         if (requiredConfig)
             return new InsecureConfigurationException(source, identifier, "Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.", e, delayedLogItems);

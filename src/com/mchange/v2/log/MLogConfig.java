@@ -76,7 +76,11 @@ public final class MLogConfig
                         {
                             String trimmed = line.trim();
                             if (trimmed.length() > 0 && !trimmed.startsWith("#"))
-                                tmp.add(trimmed);
+                            {
+                                int cut_point = trimmed.indexOf("#");
+                                String cut = cut_point >= 0 ? trimmed.substring(0,cut_point) : trimmed;
+                                tmp.add(cut.trim()); // we better retrim, or else we'll have any whitespace that came before the comment!
+                            }
                         }
                         out.addAll( tmp );
                     }
@@ -326,13 +330,13 @@ public final class MLogConfig
 	    {
 		Class<?> mConfigClass = Class.forName( "com.mchange.v2.cfg.MConfig" );
 		Class<?> delayedLogItemClass = Class.forName( "com.mchange.v2.cfg.DelayedLogItem" );
-		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class<?>[] { delayedLogItemClass, MLogger.class } );
+		delayedDumpToLogger = mConfigClass.getMethod("dumpToLogger", new Class<?>[] { List.class, MLogger.class } );
 	    }
 	}
 	catch ( RuntimeException e )
 	{ 
 	    e.printStackTrace();
-	    throw e; 
+	    throw e;
 	}
 	catch ( Exception e )
 	{ 
@@ -346,15 +350,6 @@ public final class MLogConfig
 	return (config != null ? config.getProperty( key ) : null);
     }
 
-    private static String dedupKey(DelayedLogItem dli) { return dli.getLevel().toString() + "\u0000" + dli.getText().toString(); }
-
-    // should not be called during static init to avoid cyclic dependency issues
-    //
-    // this got more complicated because we strip throwables off of log items before
-    // retaining them, to avoid pinning ClassLoaders in memory. so sometimes we see
-    // "duplicates" that are actually the same item, just one has its exception property
-    // trimmed. so, we deduplicate on only level and text, but we prefer to log items
-    // with throwables if we have one.
     synchronized static void logDelayedItems( MLogger logger )
     {
         //ensureLoad();
@@ -362,40 +357,12 @@ public final class MLogConfig
 
         if ( bootstrapLogItems != null ) // we only want to log them once, we don't want to retain their Throwables
         {
-            List<DelayedLogItem> items = new ArrayList<>();
-            items.addAll( bootstrapLogItems );
-
-            Set<String>                uniquerizer = new HashSet<>();
-            Map<String,DelayedLogItem> preferred   = new HashMap<>();
-
-            for ( DelayedLogItem item : items )
+            try { delayedDumpToLogger.invoke( null, new Object[] { bootstrapLogItems, logger } ); }
+            catch ( Exception e )
             {
-                String ddkey = dedupKey(item);
-                uniquerizer.add( ddkey );
-                if (item.getException() != null && !preferred.containsKey(ddkey))
-                    preferred.put(ddkey, item);
-            }
-
-            for( Iterator<DelayedLogItem> ii = items.iterator(); ii.hasNext(); )
-            {
-                DelayedLogItem item = ii.next();
-                String ddkey = dedupKey(item);
-
-                if (uniquerizer.contains( ddkey ) )
-                {
-                    uniquerizer.remove( ddkey );
-
-                    DelayedLogItem loggableItem = preferred.get(ddkey);
-                    if (loggableItem == null) loggableItem = item;
-
-                    try { delayedDumpToLogger.invoke( null, new Object[] { loggableItem, logger } ); }
-                    catch ( Exception e )
-                    {
-                        // bad, bad, shouldn't happen
-                        e.printStackTrace();
-                        throw new Error(e);
-                    }
-                }
+                // bad, bad, shouldn't happen
+                e.printStackTrace();
+                throw new Error(e);
             }
             bootstrapLogItems = null;
         }

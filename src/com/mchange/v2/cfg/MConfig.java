@@ -214,57 +214,23 @@ import static com.mchange.v2.cfg.ConfigUtils.EMPTY_STRING_ARRAY;
  *    that order, the first one set winning &mdash; may be loaded instead of
  *    {@code application.properties} / {@code application.json} / {@code application.conf}.</p></li>
  *
- *    <li><p>Paths beginning {@code c3p0-xml:} are read as <a href="https://www.mchange.com/projects/c3p0/">c3p0</a>
- *    XML configuration and translated into properties. What follows the prefix is either a
- *    classloader resource path beginning {@code /} &mdash; where <b>every</b> resource at that
- *    path is read and merged, earlier classpath entries winning, just as for properties resources
- *    &mdash; or a {@code file:} URL, which gets the full treatment described above, including
- *    {@code ${system.property}} references, {@code ?required=} and {@code ?permissions=useronly}.
- *    {@code c3p0-xml:/} alone names nothing and is refused, as is a query string on the
- *    classloader form, which would otherwise be read as part of the resource path and silently
- *    find nothing.</p>
+ *    <li><p>Any other identifier form a library has taught this one to read. A jar may ship a
+ *    {@code mcfg-extra-properties-config-sources.txt} resource naming
+ *    {@link ExtraPropertiesConfigSources} implementations, each of which is offered an
+ *    identifier nothing above claims and answers with a {@link PropertiesConfigSource} or with
+ *    null. c3p0 ships one, which is how {@code c3p0-xml:} identifiers are read &mdash; see
+ *    {@code com.mchange.v2.c3p0.cfg.C3P0Config} for that format.</p>
  *
- *    <p>Because the {@code file:} form can refuse on permission grounds, this source is vetoable,
- *    with everything that implies below: plain {@link MConfig.AsProvided} will not read it.</p>
+ *    <p>Note the two orderings, which are opposite. <b>Resolvers</b> are first-found: the
+ *    earliest declaration decides, across files by classpath order and within a file by line
+ *    order, because the first resolver that claims an identifier settles how it is read.
+ *    <b>Resource paths</b> are the other way round &mdash; later paths win, because the last
+ *    value written is the one in force.</p>
  *
- *    <p>Property names are mapped by shape, since this library has no list of c3p0's configurable
- *    properties to validate against. Within {@code <default-config>}, a bare name takes a
- *    {@code c3p0.} prefix and a compound name is kept as written &mdash; so
- *    {@code maxPoolSize} becomes {@code c3p0.maxPoolSize}, while
- *    {@code com.mchange.v2.log.freezeConfig} means itself. Within
- *    {@code <named-config name="X">}, names are prefixed {@code c3p0.named-configs.X.} and a
- *    leading {@code c3p0.} is dropped first, so both spellings of a pool property arrive at one
- *    key; a fully-qualified name is <b>refused with a warning</b> there, because a named config is
- *    a per-DataSource scope while such settings are read globally, with no DataSource in hand.
- *    {@code <user-overrides user="..."/>} maps the same way beneath
- *    {@code c3p0.user-overrides.<user>.} or
- *    {@code c3p0.named-configs.X.user-overrides.<user>.} &mdash; a {@code name} attribute is
- *    accepted in place of {@code user}, with a warning, because a since-corrected error in c3p0's
- *    documentation showed it. {@code <extensions>} names are never processed, being names a
- *    deployment invented for its own use, and are not read beneath a user override at all, since
- *    extensions are per-config rather than per-user.</p>
- *
- *    <p>Every named config additionally contributes the <b>bare scope key</b> with an empty
- *    value, so {@code <named-config name="X"/>} yields {@code c3p0.named-configs.X=} even with
- *    nothing in it. c3p0 distinguishes a scope declared empty from one never declared, and a
- *    scope with no properties would otherwise leave no trace. Since a key is a prefix of itself,
- *    the mark reads as {@code containsKey(pfx)} on the by-prefix lookup; <i>declared</i> stays
- *    {@code size() > 0}, because a scope declared in properties-style configuration carries no
- *    such mark and is declared nonetheless. A name containing a {@code '.'} is refused with a
- *    warning: in this flat namespace, scope {@code a.b} declared empty and scope {@code a} with
- *    an empty-valued property {@code b} are the same key with the same value. The mark is for
- *    named configs alone &mdash; for {@code <user-overrides>} and {@code <extensions>},
- *    declared-and-empty and undeclared mean the same thing to c3p0.</p>
- *
- *    <p>Parsing is <b>hardened</b> &mdash; doctypes, external entities, external DTDs and schemas,
- *    XInclude and entity expansion all disabled; see CVE-2018-20433. The single escape is the
- *    System property {@code com.mchange.v2.c3p0.cfg.xml.usePermissiveParser}, which defaults to
- *    false and is read <b>only</b> from the sealed snapshot of System properties, never from
- *    configuration: a flag that relaxes XML parsing must not be settable by the documents whose
- *    parsing it relaxes. In practice it means a {@code -D}. c3p0's own deprecated
- *    {@code com.mchange.v2.c3p0.cfg.xml.expandEntityReferences} is <i>not</i> honored here; if it
- *    is set, a warning points at {@code usePermissiveParser} instead, so a deployment migrating
- *    from c3p0's own config finder is told why its entity references stopped resolving.</p></li>
+ *    <p>An extension-supplied source may implement {@link VetoableConfig}, so an extension can
+ *    make an identifier refusable; vetoability is a property of the source rather than of the
+ *    identifier's spelling, and is discovered by resolving. {@link MConfig.AsProvided} declines
+ *    such an identifier exactly as it declines a {@code file:} one.</p></li>
  *  </ul>
  *
  *  <h3>The hardcoded backstop</h3>
@@ -779,7 +745,41 @@ public final class MConfig
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return ConfigUtils.combine( configs ); }
 
+    private static String dedupDelayedLogItemKey(DelayedLogItem dli)
+    {
+        // we often strip Exceptions, so don't want to treat them as part of keys.
+        // but we do want to prefer versions with Exceptions when we choose which
+        // "duplicate" to log, so we do that in dumpToLogger(...) below
+        return dli.getLevel() + "\u0000" + dli.getText(); 
+    }
+
+    public static void dumpToLogger(List<DelayedLogItem> items, MLogger logger, boolean dedup)
+    {
+        if (dedup)
+        {
+            LinkedHashMap<String,DelayedLogItem> deduped = new LinkedHashMap<>();
+            List<DelayedLogItem> dedupedList = new ArrayList<>();
+            for (DelayedLogItem item : items)
+            {
+                String key = dedupDelayedLogItemKey(item);
+                DelayedLogItem seen = deduped.get(key);
+                if (seen == null)
+                    deduped.put(key,item);
+                else if (seen.getException() == null && item.getException() != null) // prefer log messages with Exceptions
+                    deduped.put(key,item); 
+            }
+            for (DelayedLogItem item : deduped.values())
+                dedupedList.add(item);
+            _dumpToLogger(dedupedList, logger);
+        }
+        else
+            _dumpToLogger(items, logger);
+    }
+
     public static void dumpToLogger(List<DelayedLogItem> items, MLogger logger)
+    { dumpToLogger(items, logger, true); }
+
+    private static void _dumpToLogger(List<DelayedLogItem> items, MLogger logger)
     { for( DelayedLogItem item : items ) dumpToLogger( item, logger ); }
 
     public static void dumpToLogger( DelayedLogItem item, MLogger logger )

@@ -94,14 +94,12 @@ final class ConfigUtils
         }
     }
 
-    // eventually this should be extensible via some public API
     static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List<DelayedLogItem> delayedLogItems)
     {
         if (identifier == null) return null;
 
 	boolean hocon   = isHoconPath( identifier );
         boolean file    = FileUrlPropertiesConfigSource.isFileUrlIdentifier( identifier );
-        boolean c3p0Xml = C3P0XmlPropertiesConfigSource.isC3P0XmlIdentifier( identifier );
 
         PropertiesConfigSource out;
 
@@ -138,14 +136,31 @@ final class ConfigUtils
             out = propertiesConfigSource( SealedSystemPropertiesConfigSource.class.getName(), delayedLogItems );
         else if (file)
 	    out = propertiesConfigSource( FileUrlPropertiesConfigSource.class.getName(), delayedLogItems );
-        else if (c3p0Xml)
-            // no Class.forName guard, unlike HOCON: XML parsing is in the JDK, so unlike the
-            // HOCON bridge this source has no optional dependency that might be absent
-            out = propertiesConfigSource( C3P0XmlPropertiesConfigSource.class.getName(), delayedLogItems );
 	else if (identifier.startsWith("/"))
 	    out = propertiesConfigSource( BasicPropertiesConfigSource.class.getName(), delayedLogItems );
         else
-            throw new IllegalArgumentException(String.format("Resource identifier '%s' is not an absolute resource path, a file URL, a HOCON path, or a c3p0 XML config source. (Resource paths should be specified beginning with '/' or 'file:' or 'hocon:' or 'c3p0-xml:')", identifier));
+        {
+            out = null;
+            List<ExtraPropertiesConfigSources> extraPropertiesConfigSourcesList = ExtraPropertiesConfigSources.getResourceConfigured(delayedLogItems);
+            if (extraPropertiesConfigSourcesList != null)
+            {
+                for (ExtraPropertiesConfigSources epcs : extraPropertiesConfigSourcesList)
+                {
+                    out = epcs.propertiesConfigSourceForIdentifier(identifier, delayedLogItems);
+                    if (out != null)
+                        break;
+                }
+            }
+            if (out == null)
+            {
+                throw new UnhandledConfigResourceIdentifierException(
+                    "Resource identifier '" + identifier +
+                    "' is not an absolute resource path, a file URL, a HOCON path, '/', '" +
+                    SealedSystemProperties.NOTIONAL_RESOURCE_PATH +
+                    "', or an identifier handled by a custom PropertiesConfigSource configured via the ExtraPropertiesConfigSources mechanism."
+                );
+            }
+        }
 
         return out;
     }
@@ -155,13 +170,14 @@ final class ConfigUtils
 
     static boolean pointsToVetoableConfig( String identifier, List<DelayedLogItem> delayedLogItems )
     {
-        // null will return false, properly
         try
-        { return propertiesConfigSourceForIdentifier( identifier, delayedLogItems ) instanceof VetoableConfig; }
-        catch ( IllegalArgumentException e )
         {
-            // a malformed identifier is not vetoable. we do not report it here: this method is only
-            // asking a question, and the identifier will be read (and complained about) shortly.
+            // properly false for null
+            return propertiesConfigSourceForIdentifier( identifier, delayedLogItems ) instanceof VetoableConfig;
+        }
+        catch (UnhandledConfigResourceIdentifierException e)
+        {
+            // a bad path doesn't point to VetoableConfig
             return false;
         }
     }

@@ -210,7 +210,7 @@ final class BasicMultiPropertiesConfig extends MultiPropertiesConfig
             {
                 PropertiesConfigSource cs = ConfigUtils.propertiesConfigSourceForIdentifier( rp, delayedLogItems );
                 if (cs == null)
-                    throw new FileNotFoundException( "'" + rp + "' is not valid or could not be found. Skipping." );
+                    throw new FileNotFoundException( "'" + rp + "' could not be found, or else it is not a supported identifier. Skipping." );
                 else
                 {
                     PropertiesConfigSource.Parse parse = cs.propertiesFromSource( rp );

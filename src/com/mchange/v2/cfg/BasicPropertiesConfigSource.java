@@ -33,7 +33,7 @@ public final class BasicPropertiesConfigSource implements PropertiesConfigSource
         // we require properties resources (as opposed to other potential config sources)
         // to be identified by leading slashes, so we need to strip.
         String resourcePath;
-        if (!identifier.startsWith("/")) // programming error, only slash-beginning identifiers should be delegate to this class
+        if (!identifier.startsWith("/")) // programming error, only slash-beginning identifiers should delegate to this class
             throw new IllegalArgumentException("BasicPropertiesConfigSource expects identifiers beginning with '/', found '" + identifier + "'.");
         else
             resourcePath = identifier.substring(1);
