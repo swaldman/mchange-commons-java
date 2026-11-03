@@ -249,7 +249,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             // nevertheless, the code that enforces that behavior is invisible to me and I'd rather backstop it.
             if (!propsPath.isAbsolute())
             {
-                String msg = "Configuration resouces can be loaded only from absolute paths. '" + propsPath + "' is not. Ignoring.";
+                String msg = "Configuration resources can be loaded only from absolute paths. '" + propsPath + "' is not. Ignoring.";
                 delayedLogItems.add( new DelayedLogItem( Level.WARNING, msg, null ) );
                 throw new ConfigParseException(msg, null, delayedLogItems);
             }
