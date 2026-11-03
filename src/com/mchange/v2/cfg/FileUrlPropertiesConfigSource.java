@@ -2,6 +2,7 @@ package com.mchange.v2.cfg;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -81,9 +82,9 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
         // check, which resolve(..) now performs and routes itself. What is left to fail at this
         // point is the open, between the check and the read.
         catch (FileNotFoundException e)
-        { throw handleExceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
+        { throw exceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
         catch (NoSuchFileException e)
-        { throw handleExceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
+        { throw exceptionIndicatingFileNotFound( this, identifier, resolved.requiredConfig, e, delayedLogItems  ); }
     }
 
     /**
@@ -113,17 +114,69 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     /**
      *  Interprets a {@code file:} identifier, up to but not including reading it.
      *
-     *  public because this is a useful utility for PropertiesConfigSources interpreting non-properties files into configs,
-     *  i.e. resource paths like c3p0-xml:file:///path/to/myconfig.xml
+     *  <h3>What it does, and why it is public</h3>
      *
+     *  <p>Everything a {@code file:} identifier means except how to parse the bytes it names: the
+     *  query-string grammar, {@code ${system.property}} references resolved against the sealed
+     *  snapshot, the absolute-path rule, and the {@code permissions=useronly} ownership-and-mode
+     *  chain. What comes back is a {@link Resolved} naming the file to open and the two
+     *  directives that outlive resolution.</p>
+     *
+     *  <p>Public so that a {@link PropertiesConfigSource} reading a <b>non-properties</b> file can
+     *  get identical {@code file:} semantics rather than reimplement them &mdash; a second
+     *  implementation would drift, and these semantics are security-relevant. c3p0's
+     *  {@code c3p0-xml:file:/path/to/c3p0-config.xml} is the worked example: it resolves here,
+     *  parses XML itself, and so honors {@code ?required=} and {@code ?permissions=useronly}
+     *  exactly as a properties file does.</p>
+     *
+     *  <p>A caller doing this owes the file one more thing after a successful read:
+     *  {@link #warnIfRemovableByOthers} when {@link Resolved#enforceUserOnlyPermissions} is set.
+     *  That advisory is not part of resolution because it concerns a file that has already been
+     *  read successfully, and omitting it makes {@code permissions=useronly} quietly mean less
+     *  through one source than another.</p>
+     *
+     *  <h3>What it throws</h3>
+     *
+     *  <p>Every refusal and every parse failure is a {@link ConfigParseException}, which is the
+     *  one type a caller must handle. Within that:</p>
+     *
+     *  <ul>
+     *    <li>{@link InsecureConfigurationException} &mdash; a <b>veto</b>, and a
+     *    {@link ConfigVetoedException}: an unsupported or malformed query-string key or value, a
+     *    relative path, or a file that failed the {@code permissions=useronly} check. Also a
+     *    missing file where {@code required=true}, since the requirement is the deployment's own
+     *    statement that absence is not acceptable.</li>
+     *
+     *    <li>{@link OwnLogCarryingMissingFileException} &mdash; the file is absent and absence is
+     *    allowed. Named rather than generic because this source wants to report the absence in
+     *    its own words, carrying the delayed items it accumulated; see that class.</li>
+     *
+     *    <li>{@link ConfigParseException} itself &mdash; a malformed {@code ${}} reference: one
+     *    never closed, or an empty one naming nothing. A failure to parse the identifier rather
+     *    than a refusal on security grounds, so it is reported rather than vetoing the load.</li>
+     *  </ul>
+     *
+     *  <p>{@link java.net.URISyntaxException} and {@link java.io.IOException} escape as
+     *  themselves, from parsing the URL and from examining the filesystem respectively.</p>
+     *
+     *  <p>Note what is <b>not</b> thrown: an unset {@code ${}} reference. A named property that
+     *  is unset, or set to nothing but whitespace, makes the configuration it names
+     *  <b>absent</b> &mdash; the same as a file that is not there, and subject to the same
+     *  {@code required=} rule. That is what lets a source name an optional file unconditionally
+     *  in a shared resource-path list.</p>
      *
      *  @param source the source on whose behalf we are resolving. Vetoes name it, so a refusal
      *                is attributed to the source a caller actually asked for rather than to
      *                whichever class happens to hold this code. Typed VetoableConfig rather than
      *                PropertiesConfigSource because {@code permissions=useronly} can refuse: a
      *                source that cannot veto has no business asking for a check that might.
+     *  @param identifier the full identifier, beginning {@code file:}, query string included
+     *  @param delayedLogItems accumulates what resolution has to say. Not a logger: resolution
+     *                runs while logging may itself be half-configured, so items are collected
+     *                here and replayed once logging is up. A thrown exception carries the items
+     *                accumulated before it, so nothing said on the way to a failure is lost.
      */
-    public static Resolved resolve( VetoableConfig source, String identifier, List<DelayedLogItem> delayedLogItems ) throws Exception
+    public static Resolved resolve( VetoableConfig source, String identifier, List<DelayedLogItem> delayedLogItems ) throws ConfigParseException, URISyntaxException, IOException
     {
             String                   fileUrl;
             Map<String,List<String>> parsedQueryString;
@@ -214,11 +267,11 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
             // ConfigParseException, which the handler returns unchanged, so a not-found already
             // dressed by resolveReferencedPath(..) is not dressed twice.
             catch (OwnLogCarryingMissingFileException e)
-            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
+            { throw exceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
             catch (NoSuchFileException e)
-            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
+            { throw exceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
             catch (FileNotFoundException e)
-            { throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
+            { throw exceptionIndicatingFileNotFound( source, identifier, requiredConfig, e, delayedLogItems ); }
     }
 
     /**
@@ -247,7 +300,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  {@code file:} identifier still causes no seal.</p>
      */
     private static Path resolveReferencedPath( VetoableConfig source, String identifier, String fileUrl, boolean requiredConfig,
-                                               List<DelayedLogItem> delayedLogItems ) throws Exception
+                                               List<DelayedLogItem> delayedLogItems ) throws ConfigParseException
     {
         MultiPropertiesConfig sealed = SealedSystemProperties.initGet( delayedLogItems );
 
@@ -263,7 +316,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
                 "Config resource identifier '" + identifier + "' names System property '" + unresolved[0] +
                 "' as its path, or part of it, but that property is not set in the sealed snapshot of System " +
                 "properties. The configuration it names is treated as absent.";
-            throw handleExceptionIndicatingFileNotFound( source, identifier, requiredConfig, new FileNotFoundException( msg ), delayedLogItems );
+            throw exceptionIndicatingFileNotFound( source, identifier, requiredConfig, new FileNotFoundException( msg ), delayedLogItems );
         }
 
         // A substituted identifier denotes a filesystem path, NOT a URL, and is not
@@ -374,7 +427,7 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  A missing file, or a dangling link, raises NoSuchFileException from readAttributes, which
      *  the caller routes to its ordinary not-found handling. Absence is not insecurity.
      */
-    private static Path checkUserOnlyAndResolve( VetoableConfig source, String identifier, boolean requiredConfig, boolean explicitlyNotRequired, Path start, List<DelayedLogItem> delayedLogItems ) throws Exception
+    private static Path checkUserOnlyAndResolve( VetoableConfig source, String identifier, boolean requiredConfig, boolean explicitlyNotRequired, Path start, List<DelayedLogItem> delayedLogItems ) throws InsecureConfigurationException, OwnLogCarryingMissingFileException, IOException
     {
         Path        p    = start;
         Set<Path>   seen = new HashSet<>();
@@ -504,8 +557,36 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
      *  Erring toward silence is the right bias for an advisory that cannot be switched off. A
      *  warning that fires when it should not teaches people to ignore the warning, which costs
      *  more than the cases we miss.
+     *
+     *  <h3>For callers outside this class</h3>
+     *
+     *  <p>Public so that a {@link PropertiesConfigSource} reading a non-properties file through
+     *  {@link #resolve} can complete what {@code permissions=useronly} promises. Call it after a
+     *  <b>successful</b> read, and only when {@link Resolved#enforceUserOnlyPermissions} is set:
+     *
+     *  <pre>
+     *    if ( resolved.enforceUserOnlyPermissions )
+     *        warnIfRemovableByOthers( identifier, resolved.readPath, resolved.requiredConfig, delayedLogItems );
+     *  </pre>
+     *
+     *  <p>It is separate from {@code resolve} because it concerns a file that has already been
+     *  read: the file's own mode was sound, and what remains to say is that someone else may be
+     *  able to replace it tomorrow. Skip it and {@code permissions=useronly} quietly means less
+     *  through your source than through this one.</p>
+     *
+     *  <p>Two things to know before reading its silence as a clean bill of health. It returns
+     *  immediately when {@code requiredConfig} is true &mdash; a vanished required file already
+     *  throws, so there is no silent failure left to advise about. And, per above, it is
+     *  deliberately biased toward silence: it reports only what it is sure of, so saying nothing
+     *  is not the same as finding nothing wrong.</p>
+     *
+     *  @param identifier the identifier as written, for the message
+     *  @param readPath from {@link Resolved#readPath}: the file actually opened, whose real
+     *                directory chain is what gets walked
+     *  @param requiredConfig from {@link Resolved#requiredConfig}
+     *  @param delayedLogItems where the advisory is recorded, if there is one
      */
-    private static void warnIfRemovableByOthers( String identifier, Path readPath, boolean requiredConfig,
+    public static void warnIfRemovableByOthers( String identifier, Path readPath, boolean requiredConfig,
                                                  List<DelayedLogItem> delayedLogItems )
     {
         // a vanished required file already throws. there is no silent failure to warn about.
@@ -688,15 +769,49 @@ public final class FileUrlPropertiesConfigSource implements PropertiesConfigSour
     }
 
     /**
-     *  public because this is a useful utility for PropertiesConfigSources interpreting non-properties files into configs,
-     *  i.e. resource paths like c3p0-xml:file:///path/to/myconfig.xml
+     *  The exception to throw when a {@code file:} identifier names a file that is not there.
+     *  <b>Returns</b> it; the caller throws it.
+     *
+     *  <p>Returning rather than throwing is deliberate. Written as
+     *  {@code throw exceptionIndicatingFileNotFound( .. )} the compiler sees that control leaves
+     *  the block, so no unreachable {@code return} or {@code throw} has to be invented to satisfy
+     *  it &mdash; which is what a void method that always throws forces at every call site. The
+     *  cost is that a caller who drops the {@code throw} silently proceeds as though the file had
+     *  been read, so always throw the result.</p>
+     *
+     *  <p>Which exception depends on what absence means here, and that is the reason to call this
+     *  rather than construct one:</p>
+     *
+     *  <ul>
+     *    <li>{@code required=true} &mdash; an {@link InsecureConfigurationException}, hence a
+     *    veto. The deployment said absence was unacceptable.</li>
+     *    <li>the failure is already a {@link ConfigParseException} &mdash; passed through
+     *    unchanged, so a refusal raised deeper down is not reclassified as mere absence on its
+     *    way out.</li>
+     *    <li>otherwise &mdash; an {@link OwnLogCarryingMissingFileException}, with a delayed item
+     *    recording the skip. Ordinary absence: the path contributes nothing and the load
+     *    continues.</li>
+     *  </ul>
+     *
+     *  <p>Public for the same reason {@link #resolve} is: a source that reads a non-properties
+     *  file through {@code resolve} must report absence the same way, or {@code required=} would
+     *  mean one thing through one source and another through the next.</p>
+     *
+     *  @param source the source to attribute a veto to. See {@link #resolve}.
+     *  @param identifier the identifier as written, NOT {@link Resolved#readPath} &mdash; the
+     *                message should name what the deployment wrote, not what a symlink chain
+     *                resolved it to.
+     *  @param requiredConfig from {@link Resolved#requiredConfig}
+     *  @param e the failure that indicated absence, carried as the cause
+     *  @param delayedLogItems accumulated items, carried by the returned exception
+     *  @return the exception to throw. Never null.
      */
-    public static Exception handleExceptionIndicatingFileNotFound(VetoableConfig source, String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
+    public static ConfigParseException exceptionIndicatingFileNotFound(VetoableConfig source, String identifier, boolean requiredConfig, Exception e, List<DelayedLogItem> delayedLogItems)
     {
         if (requiredConfig)
             return new InsecureConfigurationException(source, identifier, "Existence of the file specified by '" + identifier +"' is required for this configuration, but the file does not exist.", e, delayedLogItems);
         else if (e instanceof ConfigParseException)
-            return e;
+            return (ConfigParseException) e;
         else
         {
             delayedLogItems.add( MConfig.skippingFileNotFoundDelayedItem(identifier, e) );
