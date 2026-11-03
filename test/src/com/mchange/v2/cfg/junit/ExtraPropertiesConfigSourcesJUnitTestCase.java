@@ -298,20 +298,128 @@ public final class ExtraPropertiesConfigSourcesJUnitTestCase extends TestCase
 
     // ------------------------------------------------------------------ the file's syntax
 
-    /** Blank lines, '#' comment lines, trailing comments and whitespace are all handled. */
-    public void testCommentsBlanksAndTrailingCommentsAreHandled()
+    /**
+     *  The line grammar, form by form.
+     *
+     *  <p>Same rules as {@code mlog-config-resource-paths.txt}: a first non-whitespace {@code #}
+     *  makes a comment line, an empty or all-whitespace line is ignored, and otherwise the line
+     *  is cut at a {@code #} <b>preceded by whitespace</b> and then <b>trimmed again</b>. The
+     *  second trim is the one that matters here: without it a trailing comment would leave
+     *  whitespace on the end of a class name, and {@code Class.forName} on
+     *  {@code "com.example.Foo "} fails with a ClassNotFoundException naming a class that looks
+     *  exactly right in the log.</p>
+     *
+     *  <p>The whitespace requirement is not needed for class names, which cannot contain
+     *  {@code #} &mdash; it is needed for resource identifiers, which can. Both files use the one
+     *  grammar anyway, so that a deployment author learns one rule rather than two, and
+     *  {@link #testATightHashIsPartOfTheNameNotAComment} holds the two in step.</p>
+     *
+     *  <p>Asserted one form per scenario rather than all at once, so a failure names which form
+     *  broke. Each case declares a single line and asks whether the resolver answered -- which is
+     *  the only thing observable from outside, since a name that parsed wrongly simply fails to
+     *  instantiate.</p>
+     */
+    public void testTheLineGrammarFormByForm()
     {
-        CfgScenario s = scenario( root( "# a whole-line comment",
-                                        "",
-                                        "   " + ALPHA + "   # a trailing comment, and padding",
-                                        "   ",
-                                        "#" + BOTH ) );
+        assertDeclares( "a bare name",                        ALPHA );
+        assertDeclares( "surrounding whitespace",             "   " + ALPHA + "   " );
+        assertDeclares( "a trailing comment",                 ALPHA + " # why this one" );
+        assertDeclares( "padding either side of the comment", "  " + ALPHA + "   #   why this one" );
+        assertDeclares( "several hashes",                     ALPHA + " ## ### #" );
+
+        assertDeclaresNothing( "a comment in column one",     "#" + ALPHA );
+        assertDeclaresNothing( "a comment after whitespace",  "    #" + ALPHA );
+        assertDeclaresNothing( "an empty file",               "" );
+        assertDeclaresNothing( "only whitespace",             "      " );
+        assertDeclaresNothing( "only a tab",                  "\t" );
+    }
+
+    private void assertDeclares( String what, String line )
+    {
+        CfgScenario s = scenario( root( line ) );
         try
         {
             String[] who = new String[1];
             read( s, "alpha:something", who );
+            assertEquals( what + " should declare the resolver", ALPHA, who[0] );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
 
-            assertEquals( "the padded, trailing-commented line should still name alpha", ALPHA, who[0] );
+    /**
+     *  A comment or blank line must be <b>recognized as one</b>, not merely fail to name a
+     *  resolver.
+     *
+     *  <p>The second assertion is what makes this test worth anything. Treat a comment line as an
+     *  entry and it parses to the empty string, which names no class, so nothing answers and a
+     *  test asking only "did anything answer?" passes. The tell is the diagnostic: an entry that
+     *  cannot be instantiated is reported, and a line correctly understood as a comment produces
+     *  no such report. Two mutations -- not skipping comment lines, and testing the untrimmed
+     *  line for a leading {@code #} -- are invisible without it.</p>
+     */
+    private void assertDeclaresNothing( String what, String line )
+    {
+        CfgScenario s = scenario( root( line ) );
+        try
+        {
+            String[] who = new String[1];
+            List<String[]> items = read( s, "alpha:something", who );
+
+            assertNull( what + " should declare nothing, but something answered", who[0] );
+            assertFalse( what + " should be understood as a comment or blank, not as an entry " +
+                         "that failed to instantiate: " + describe( items ),
+                         says( items, "WARNING", "Could not instantiate" ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  And the trailing-comment trim specifically, from the other side: a name left with
+     *  trailing whitespace would be reported as un-instantiable, so no such warning may appear.
+     *
+     *  <p>Worth asserting separately because the case above would also pass if the name were
+     *  mangled in some way that happened to still resolve. This one watches for the diagnostic
+     *  that a mangled name would produce.</p>
+     */
+    public void testATrailingCommentLeavesNoWhitespaceOnTheName()
+    {
+        CfgScenario s = scenario( root( ALPHA + "    # padded comment" ) );
+        try
+        {
+            String[] who = new String[1];
+            List<String[]> items = read( s, "alpha:something", who );
+
+            assertEquals( ALPHA, who[0] );
+            assertFalse( "a name with trailing whitespace would be reported un-instantiable: " + describe( items ),
+                         says( items, "WARNING", "Could not instantiate" ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  A {@code #} with no whitespace before it is part of the entry, not the start of a comment
+     *  -- here too, even though no class name could contain one.
+     *
+     *  <p>The rule exists for the other file, where identifiers legitimately carry a {@code #}:
+     *  a HOCON scope, a URL fragment. Applying it uniformly costs nothing and means there is one
+     *  line grammar to learn rather than two that differ in a corner. What it looks like here is
+     *  that a malformed name is reported as a malformed name, rather than being quietly truncated
+     *  into a different one that might even exist.</p>
+     */
+    public void testATightHashIsPartOfTheNameNotAComment()
+    {
+        CfgScenario s = scenario( root( ALPHA + "#not-a-comment" ) );
+        try
+        {
+            String[] who = new String[1];
+            List<String[]> items = read( s, "alpha:something", who );
+
+            assertNull( "the line names no loadable class, so nothing should answer", who[0] );
+            assertTrue( "and the whole line should be reported as the name it tried: " + describe( items ),
+                        says( items, "WARNING", ALPHA + "#not-a-comment" ) );
         }
         finally
         { s.closeQuietly(); }

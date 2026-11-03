@@ -197,24 +197,125 @@ public final class MLogConfigResourcePathsTxtJUnitTestCase extends TestCase
         { s.closeQuietly(); }
     }
 
-    /** Blank lines, '#' comments and surrounding whitespace are ignored or trimmed. */
-    public void testCommentsBlanksAndWhitespaceAreIgnored()
+    /**
+     *  The line grammar, every form of it.
+     *
+     *  <p>A line whose first non-whitespace character is {@code #} is a comment. A line that is
+     *  empty or all whitespace is ignored. Otherwise the line is cut at a {@code #} that is
+     *  <b>preceded by whitespace</b>, and what remains is <b>trimmed again</b> &mdash; without
+     *  that second trim, {@code /some.properties   # why} would yield a resource path with
+     *  trailing spaces, and a path with trailing spaces matches no resource while saying nothing
+     *  about why.</p>
+     *
+     *  <p>The whitespace requirement is what keeps a {@code #} that means something from being
+     *  taken for a comment: a HOCON identifier names a scope with one, and a URL may carry a
+     *  fragment. See {@link #testAHoconScopeSurvivesTheCommentRule}.</p>
+     *
+     *  <p>Asserted on the exact parsed list rather than on behaviour, because that is the only
+     *  way to see trailing whitespace at all: a path with a stray space simply fails to resolve,
+     *  which is indistinguishable from a path that was never there.</p>
+     */
+    public void testTheLineGrammar()
     {
-        CfgScenario s = scenario( root( "# a comment",
-                                        "",
-                                        "   /probe-one.properties   ",
-                                        "   ",
-                                        "#/probe-two.properties",
-                                        "/probe-two.properties" ) );
+        CfgScenario s = scenario( root(
+            "# a comment in column one",
+            "      # a comment after leading whitespace",
+            "",
+            "          ",
+            "\t  \t",
+            "/plain.properties",
+            "    /padded.properties    ",
+            "/trailing-comment.properties # why this one is here",
+            "/tight-comment.properties#no-whitespace-so-this-is-not-a-comment",
+            "/comment-with-hashes.properties ## ### #"
+        ) );
         try
         {
             MLogConfigDriver d = new MLogConfigDriver( s );
             d.refresh( null, null );
 
-            assertEquals( "only the two real, trimmed paths should survive",
-                          Arrays.asList( "/probe-one.properties", "/probe-two.properties" ),
+            assertEquals( Arrays.asList( "/plain.properties",
+                                         "/padded.properties",
+                                         "/trailing-comment.properties",
+                                         "/tight-comment.properties#no-whitespace-so-this-is-not-a-comment",
+                                         "/comment-with-hashes.properties" ),
                           d.resourcePathsTxtPaths() );
-            assertEquals( "from-two", d.getProperty( CONTESTED ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  A file of nothing but comments and blanks yields no paths at all, which must read as
+     *  "no list was declared" rather than as "an empty list was declared".
+     *
+     *  <p>The difference is visible: an empty declared list would take the declared-list branch
+     *  and then read nothing, where no declaration falls through to the hardcoded sources. The
+     *  predicate is on paths yielded, not on the resource existing.</p>
+     */
+    public void testAFileOfOnlyCommentsAndBlanksDeclaresNothing()
+    {
+        CfgScenario s = scenario( root( "# nothing but comments here", "", "   ", "#/not-a-path.properties" ) );
+        try
+        {
+            MLogConfigDriver d = new MLogConfigDriver( s );
+            d.refresh( null, null );
+
+            List<String> found = d.resourcePathsTxtPaths();
+            assertTrue( "no paths should have been parsed, got " + found,
+                        found == null || found.isEmpty() );
+            assertEquals( "so the hardcoded source list must be in force",
+                          "mchange-commons", d.getProperty( HARDCODED_LIST_MARKER ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  A {@code #} that means something is not taken for a comment.
+     *
+     *  <p>A HOCON identifier names a scope with {@code #} &mdash; {@code hocon:/scoped.conf#my-scope}
+     *  reads only the config under {@code my-scope} &mdash; and a URL may carry a fragment. Cutting
+     *  at any {@code #} silently turned such an identifier into one that reads the whole file, with
+     *  no warning: a deployment would simply be configured from the wrong thing. Requiring
+     *  whitespace before a comment is what distinguishes the two.</p>
+     */
+    public void testAHoconScopeSurvivesTheCommentRule()
+    {
+        CfgScenario s = scenario( root( "hocon:/scoped.conf#my-scope" ) );
+        try
+        {
+            MLogConfigDriver d = new MLogConfigDriver( s );
+            d.refresh( null, null );
+
+            assertEquals( Arrays.asList( "hocon:/scoped.conf#my-scope" ), d.resourcePathsTxtPaths() );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  And it survives alongside a real trailing comment. RED pending a fix.
+     *
+     *  <p>The comment is found with {@code indexOf("#")}, which yields the <b>first</b>
+     *  {@code #} on the line and then tests only that one for preceding whitespace. A line
+     *  carrying both a literal {@code #} and a trailing comment therefore has its first
+     *  {@code #} rejected as a comment marker &mdash; correctly &mdash; and no further
+     *  {@code #} considered, so the comment is kept as part of the identifier.</p>
+     *
+     *  <p>Scanning for the first whitespace-preceded {@code #} rather than the first {@code #}
+     *  fixes it. The loop starts at index 1, since a {@code #} at index 0 is already a comment
+     *  line and has no preceding character.</p>
+     */
+    public void testAHoconScopeSurvivesAlongsideARealTrailingComment()
+    {
+        CfgScenario s = scenario( root( "hocon:/scoped.conf#my-scope   # and a real comment" ) );
+        try
+        {
+            MLogConfigDriver d = new MLogConfigDriver( s );
+            d.refresh( null, null );
+
+            assertEquals( Arrays.asList( "hocon:/scoped.conf#my-scope" ), d.resourcePathsTxtPaths() );
         }
         finally
         { s.closeQuietly(); }
