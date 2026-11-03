@@ -522,6 +522,12 @@ public final class MConfig
         /**
          * This method directly logs conditions that occur while it is building its output.
          */
+        public static MultiPropertiesConfig readCachedResourceConfig( String resourcePath )
+        { return readCachedResourceConfig( new String[] { resourcePath } ); }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources)
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -538,6 +544,12 @@ public final class MConfig
             try { return AsProvided.readUncachedResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, dlis ); }
             finally { dumpToLogger( dlis, logger() ); }
         }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig( String resourcePath )
+        { return readUncachedResourceConfig( new String[]{ resourcePath } ); }
 
         private static void requireNoVetoableConfig(String[] defaultResources, String[] preemptingResources, List<DelayedLogItem> delayedLogItemsOut)
         {
@@ -597,6 +609,12 @@ public final class MConfig
         /**
          * This method directly logs conditions that occur while it is building its output.
          */
+        public static MultiPropertiesConfig readCachedResourceConfig( String resourcePath ) throws ConfigVetoedException
+        { return readCachedResourceConfig( new String[] { resourcePath } ); }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources) throws ConfigVetoedException
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -614,10 +632,14 @@ public final class MConfig
             finally { dumpToLogger( dlis, logger() ); }
         }
 
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig( String resourcePath ) throws ConfigVetoedException
+        { return readUncachedResourceConfig( new String[]{ resourcePath } ); }
+
         private AsProvidedVetoable() {}
     }
-
-
 
     public final static class AsProvidedIgnoreVetoed {
 
@@ -666,6 +688,12 @@ public final class MConfig
         /**
          * This method directly logs conditions that occur while it is building its output.
          */
+        public static MultiPropertiesConfig readCachedResourceConfig( String resourcePath )
+        { return readCachedResourceConfig( new String[] { resourcePath } ); }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
         public static MultiPropertiesConfig readUncachedResourceConfig(String[] defaultResources, String[] preemptingResources)
         {
             List<DelayedLogItem> dlis = new ArrayList<>();
@@ -682,6 +710,12 @@ public final class MConfig
             try { return AsProvidedIgnoreVetoed.readUncachedResourceConfig( EMPTY_STRING_ARRAY, resourcePaths, dlis ); }
             finally { dumpToLogger( dlis, logger() ); }
         }
+
+        /**
+         * This method directly logs conditions that occur while it is building its output.
+         */
+        public static MultiPropertiesConfig readUncachedResourceConfig( String resourcePath )
+        { return readUncachedResourceConfig( new String[]{ resourcePath } ); }
 
         private AsProvidedIgnoreVetoed() {}
     }
@@ -744,6 +778,22 @@ public final class MConfig
      */
     public static MultiPropertiesConfig combine( MultiPropertiesConfig[] configs )
     { return ConfigUtils.combine( configs ); }
+
+    /**
+     * The returned config reports {@code notionalResourcePath} as its sole resource path.
+     * The {@code Properties} are copied, so later mutation of {@code props} cannot affect
+     * the returned config.
+     */
+    public static MultiPropertiesConfig fromProperties(String notionalResourcePath, Properties props)
+    { return MultiPropertiesConfig.fromProperties( notionalResourcePath, props ); }
+
+    /**
+     * As {@link #fromProperties(String,Properties)}, with a synthetic notional resource path
+     * allocated fresh on every call &mdash; so two configs built from the same {@code Properties}
+     * occupy two distinct resource paths when {@link #combine} merges them.
+     */
+    public static MultiPropertiesConfig fromProperties(Properties props)
+    { return MultiPropertiesConfig.fromProperties( props ); }
 
     private static String dedupDelayedLogItemKey(DelayedLogItem dli)
     {
