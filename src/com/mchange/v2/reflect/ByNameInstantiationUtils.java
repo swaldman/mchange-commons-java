@@ -6,6 +6,9 @@ import java.lang.reflect.InvocationTargetException;
 import com.mchange.v2.log.*;
 import com.mchange.v2.cfg.*;
 
+import static com.mchange.v2.lang.ObjectUtils.eqOrBothNull;
+import static com.mchange.v2.lang.ObjectUtils.hashOrZero;
+
 public final class ByNameInstantiationUtils
 {
     final static MLogger logger = MLog.getLogger( ByNameInstantiationUtils.class );
@@ -18,6 +21,36 @@ public final class ByNameInstantiationUtils
 
     private final static SealedSystemPropertiesBooleanProperty _enforceWhiteList = new SealedSystemPropertiesBooleanProperty( ENFORCE_WHITELIST_KEY, true, false );
 
+    /**
+     *  A record that a warning about <code>fqcn</code>'s absence from the whitelist has already been
+     *  emitted, under the configuration <code>pcfg</code>. These are the elements of the set callers
+     *  hand to {@link #checkWarnThrowForInstantiateByNameGated(String,PropertiesConfig,Set)}, which
+     *  both reads and writes them. Callers do not usually construct these themselves &mdash; they just
+     *  supply an empty, mutable set for the gate to fill.
+     *
+     *  <p>Note that a <code>Warned</code> is keyed on the configuration as well as the class name, so
+     *  that a configuration change which might have changed the whitelist warns afresh. See that
+     *  method's documentation for what that implies in practice.</p>
+     */
+    public final static class Warned
+    {
+        final String fqcn;
+        final PropertiesConfig pcfg;
+
+        public Warned(String fqcn, PropertiesConfig pcfg)
+        {
+            this.fqcn = fqcn;
+            this.pcfg = pcfg;
+        }
+
+        @Override
+        public boolean equals(Object o) { return (o instanceof Warned) && equals((Warned) o); }
+        public boolean equals(Warned w) { return eqOrBothNull(this.fqcn,w.fqcn) && eqOrBothNull(this.pcfg,w.pcfg); }
+
+        @Override
+        public int hashCode() { return hashOrZero(fqcn) ^ hashOrZero(pcfg); }
+    }
+
     public static Object instantiateByNameGated(String fqcn, PropertiesConfig pcfg)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationNotPermittedException
     {
@@ -29,8 +62,50 @@ public final class ByNameInstantiationUtils
      * In some contexts, instantiation by name doesn't happen in a single step.
      * This does all the whitelist-checking and warning we want to support, and throws if we would not
      * permit the operation. You can safely instantiateByNameUngated(...) if this function succeeds.
+     *
+     * <p>Note that the check is a check of the <i>name</i>, so it is also the right gate in front of
+     * a mere <code>Class.forName(..)</code>. Loading a class runs its static initializers, so a load
+     * by an untrusted name is already an execution of untrusted code, whether or not an instance is
+     * ever constructed.</p>
+     *
+     * @param fqcn the fully-qualified class name whose by-name use is proposed
+     *
+     * @param pcfg the configuration from which the whitelist and the enforcement flag are drawn, in
+     *        addition to the sealed System properties snapshot. May be <code>null</code>, in which
+     *        case only the snapshot is consulted.
+     *
+     * @param optionalAlreadyWarned may be <code>null</code>. When non-null, a caller-owned mutable set
+     *        in which this method records the (fqcn, pcfg) pairs it has warned about, and which it
+     *        consults to suppress a warning it has already emitted. Callers that reach this gate
+     *        repeatedly for the same class &mdash; a <code>DataSource</code> re-checking on every
+     *        connection checkout, say &mdash; should pass one, or the warning becomes a flood. Pass
+     *        <code>null</code> to warn every time.
+     *
+     *        <p>The set is both read and written here, and is not internally synchronized, so a caller
+     *        that shares it between threads must guard it. Passing a set owned by a lock already held
+     *        at the call site is the simplest approach.</p>
+     *
+     *        <p>Suppression is keyed on <code>pcfg</code> as well as on <code>fqcn</code>, so that a
+     *        configuration change which might have changed the whitelist warns afresh. Be aware of what
+     *        that means in practice: <code>PropertiesConfig</code> implementations do not generally
+     *        override <code>equals(..)</code>, so suppression ordinarily lasts only for as long as the
+     *        caller hands in the same <code>PropertiesConfig</code> <i>instance</i>. A caller that
+     *        builds a fresh config for each call will see no suppression at all, and will grow the set
+     *        without bound. Callers wanting suppression should hold a stable reference &mdash; which is
+     *        what a library-wide config accessor ordinarily returns.</p>
+     *
+     *        <p>Only the warn-and-continue path consults this set. When whitelist enforcement is on, a
+     *        non-whitelisted name throws every time, as it must.</p>
+     *
+     * @throws InstantiationNotPermittedException if <code>fqcn</code> is not whitelisted and whitelist
+     *         enforcement is in effect. Note that enforcement defaults to <i>off</i> for now, so an
+     *         unwhitelisted name ordinarily warns rather than throwing. That default is expected to
+     *         change in a future release.
+     *
+     * @see #checkWarnThrowForInstantiateByNameGated(String,PropertiesConfig)
+     * @see #instantiateByNameUngated
      */
-    public static void checkWarnThrowForInstantiateByNameGated(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
+    public static void checkWarnThrowForInstantiateByNameGated(String fqcn, PropertiesConfig pcfg, Set<Warned> optionalAlreadyWarned) throws InstantiationNotPermittedException
     {
         WhitelistInfo info = collectWhitelistSyspropsPropertiesConfig(pcfg);
         Set<String> whitelist = info.getWhitelist();
@@ -58,24 +133,38 @@ public final class ByNameInstantiationUtils
                 SealedSystemPropertiesBooleanProperty.Details details = holder[0];
                 if (logger.isLoggable(MLevel.WARNING))
                 {
-                    if (details.isUnconfigured())
-                        logger.log(
-                           MLevel.WARNING,
-                           "Instantiating '" + fqcn + "' by name despite its absence from the " + whitelistDescriptor + ", " +
-                           "and despite no explicit suppression of whitelist enforcement via '" + ENFORCE_WHITELIST_KEY + "=false'. " +
-                           "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
-                           "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
-                        );
-                    else
-                        logger.log(
-                           MLevel.WARNING,
-                           "Instantiating '" + fqcn + "' by name despite conflicts in the configuration of the " + whitelistDescriptor + ": " + details +
-                           ". Current whitelist: " + whitelist
-                        );
+                    Warned warned = null;
+                    if (optionalAlreadyWarned == null || !optionalAlreadyWarned.contains(warned = new Warned(fqcn, pcfg)))
+                    {
+                        if (details.isUnconfigured())
+                            logger.log(
+                               MLevel.WARNING,
+                               "Instantiating '" + fqcn + "' by name despite its absence from the " + whitelistDescriptor + ", " +
+                               "and despite no explicit suppression of whitelist enforcement via '" + ENFORCE_WHITELIST_KEY + "=false'. " +
+                               "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
+                               "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
+                            );
+                        else
+                            logger.log(
+                               MLevel.WARNING,
+                               "Instantiating '" + fqcn + "' by name despite conflicts in the configuration of the " + whitelistDescriptor + ": " + details +
+                               ". Current whitelist: " + whitelist
+                            );
+                        if (warned != null) optionalAlreadyWarned.add(warned); // warned not null implies optionalAlreadyWarned not null
+                    }
                 }
             }
         }
     }
+
+    /**
+     *  Equivalent to {@link #checkWarnThrowForInstantiateByNameGated(String,PropertiesConfig,Set)} with
+     *  no record of prior warnings, so that a non-whitelisted name warns on every call. Appropriate for
+     *  gates reached once per object, or once per configuration load. A gate reached once per operation
+     *  &mdash; per connection checkout, per request &mdash; should prefer the three-argument form.
+     */
+    public static void checkWarnThrowForInstantiateByNameGated(String fqcn, PropertiesConfig pcfg) throws InstantiationNotPermittedException
+    { checkWarnThrowForInstantiateByNameGated( fqcn, pcfg, null ); }
 
     /**
      *  Instantiates fqcn without consulting the whitelist at all. This is the bypass, and
