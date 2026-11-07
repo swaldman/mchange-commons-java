@@ -40,13 +40,14 @@ public final class MLogConfig
     private final static String STANDARD_CFG_MCHANGE_LOG             = "/mchange-log.properties";
 
     // MT: all now mutable references, protected by class' lock
-    private static MultiPropertiesConfig                 config                = null;
-    private static List<DelayedLogItem>                  bootstrapLogItems     = null;
-    private static Method                                delayedDumpToLogger   = null;
-    private static SealedSystemPropertiesBooleanProperty freezeConfigProperty  = null; // only initialized after log package initialization completes
-    private static MLogger                               classLogger           = null; // only initialized after log package initialization completes
-    private static boolean                               refreshDebugWarned    = false;
-    private static List<String>                          resourcePathsTxtPaths = null;
+    private static MultiPropertiesConfig                 config                 = null;
+    private static List<DelayedLogItem>                  bootstrapLogItems      = null;
+    private static Method                                delayedDumpToLogger    = null;
+    private static SealedSystemPropertiesBooleanProperty freezeConfigProperty   = null; // only initialized after log package initialization completes
+    private static MLogger                               classLogger            = null; // only initialized after log package initialization completes
+    private static boolean                               refreshDebugWarned     = false;
+    private static List<String>                          resourcePathsTxtPaths  = null;
+    private static List<String>                          effectiveResourcePaths = null;
 
     private static List<String> resourcePathsFromMLogConfigResourcePathsTxt(List<DelayedLogItem> delayedLogItemsOut)
     {
@@ -117,6 +118,9 @@ public final class MLogConfig
 
     static synchronized List<String> getResourcePathsTxtPaths()
     { return resourcePathsTxtPaths; }
+
+    static synchronized List<String> getEffectiveResourcePaths()
+    { return effectiveResourcePaths; }
 
     private synchronized static MLogger getClassLogger()
     { return classLogger; }
@@ -205,6 +209,15 @@ public final class MLogConfig
 
         if (resourcePathsTxtPaths != null && resourcePathsTxtPaths.size() > 0)
         {
+            if (MConfig.WithTraditionalDefaultSources.traditionalPathFileSourcedPathsFound(bli))
+            {
+                bli.add( new DelayedLogItem(DelayedLogItem.Level.WARNING,
+                                            "At least one of the following legacy resources " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() +
+                                            " has been found. Resource paths have also been found in a newer " + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE +
+                                            ", so mlog will configure itself using the newer mechanism. Packaging both is a misconfiguration. " +
+                                            "Please remove any of " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() + " from your CLASSPATH.") );
+            }
+
             // however a user might have configured, put sealed system properties then live system properties at the top of the precedence hierarchy
             String[] resources = SealedSystemProperties.capCurrentThenSealed(resourcePathsTxtPaths.toArray(new String[resourcePathsTxtPaths.size()]));
 
@@ -258,10 +271,11 @@ public final class MLogConfig
         else if (MConfig.WithTraditionalDefaultSources.traditionalPathFileSourcedPathsFound(bli))
         {
             bli.add(new DelayedLogItem(DelayedLogItem.Level.WARNING,
-                                       "At least one of the following resources " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() +
-                                       " has been found, so mlog will configure itself using the traditional mechanism that honored these files. " +
+                                       "At least one of the following legacy resources " + MConfig.WithTraditionalDefaultSources.traditionalPathFileResourcesSearched() +
+                                       " has been found, and no resource paths have been found in a newer " + MLOG_CONFIG_RESOURCE_PATHS_RESOURCE +
+                                       ", so mlog will configure itself using the traditional mechanism that used the legacy files. " +
                                        "However, mlog is transitioning from this mechanism, which is fragile and obscure. The supported way to customize configuration is " +
-                                       "to refresh a now hardcoded configuration source list with overrides and then call MLog.refreshConfig(...) with overrides."));
+                                       "to supply resource paths in a MLOG_CONFIG_RESOURCE_PATHS_RESOURCE and/or augment the configuration sources by calling MLog.refreshConfigWithBackstopsAndOverrides(...) and similar methods."));
 
             // note that if backstops or overrides are non-null, we cap later, after the overrides, if we can cap
             String[] defaults = mlogDefaults();
@@ -319,6 +333,9 @@ public final class MLogConfig
 		bli.add( new DelayedLogItem( DelayedLogItem.Level.INFO, "Refreshed MLog library log configuration, without backstops or overrides.") );
 	    config = tmpConfig;
 	}
+
+        effectiveResourcePaths = Collections.unmodifiableList(Arrays.asList(config.getPropertiesResourcePaths()));
+        
         bli.add(new DelayedLogItem(DelayedLogItem.Level.INFO,
                                    "mlog config is now drawn from the following configuration sources: " +
                                    Arrays.toString(config.getPropertiesResourcePaths()) +

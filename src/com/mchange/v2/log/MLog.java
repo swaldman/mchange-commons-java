@@ -258,6 +258,9 @@ public abstract class MLog
     public static List<String> getConfigResourcePathsTxtPaths()
     { return MLogConfig.getResourcePathsTxtPaths(); }
 
+    public static List<String> getConfigEffectiveResourcePaths()
+    { return MLogConfig.getEffectiveResourcePaths(); }
+
     public static MLogger getLogger(String name) 
     {
 	NameTransformer xformer = null;
