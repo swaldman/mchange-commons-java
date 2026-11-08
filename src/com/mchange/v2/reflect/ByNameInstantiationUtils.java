@@ -125,7 +125,9 @@ public final class ByNameInstantiationUtils
             if (_enforceWhiteList.getValue(pcfg, logger, holder))
             {
                 throw new InstantiationNotPermittedException(
-                  "By-name instantiation of '" + fqcn + "' not permitted. The class is not in the " + whitelistDescriptor + ", which is enforced. Whitelist: " + whitelist
+                    "By-name instantiation of '" + fqcn + "' not permitted. The class is not in the " + whitelistDescriptor + ", which is enforced.",
+                    fqcn,
+                    info
                 );
             }
             else
@@ -142,17 +144,19 @@ public final class ByNameInstantiationUtils
                                "Instantiating '" + fqcn + "' by name despite its absence from the " + whitelistDescriptor + ", " +
                                "and despite no explicit suppression of whitelist enforcement via '" + ENFORCE_WHITELIST_KEY + "=false'. " +
                                "This may be blocked in future releases. If you mean for '" + fqcn + "' to be instantiated by name, please add it to the whitelist, " +
-                               "or else explicitly suppress enforcement of the whitelist. Current whitelist: " + whitelist
+                               "or else explicitly suppress enforcement of the whitelist. Log at DEBUG/FINE to see the current whitelist."
                             );
                         else
                             logger.log(
                                MLevel.WARNING,
                                "Instantiating '" + fqcn + "' by name despite conflicts in the configuration of the " + whitelistDescriptor + ": " + details +
-                               ". Current whitelist: " + whitelist
+                               ". Log at DEBUG/FINE to see the current whitelist."
                             );
                         if (warned != null) optionalAlreadyWarned.add(warned); // warned not null implies optionalAlreadyWarned not null
                     }
                 }
+                if (logger.isLoggable(MLevel.FINE))
+                    logger.log(MLevel.FINE, "'" + fqcn + "' not in '" + whitelistManager.getWhitelistBaseKey() + "' and would be refused if the whitelist were enforced. Current whitelist: " + whitelist);
             }
         }
     }
@@ -230,6 +234,9 @@ public final class ByNameInstantiationUtils
 
     public static boolean isEnforcingWhitelist(PropertiesConfig pcfg)
     { return _enforceWhiteList.getValue(pcfg, logger, null); }
+
+    public static String getWhitelistBaseKey()
+    { return whitelistManager.getWhitelistBaseKey(); }
 
     private static Object doInstantiate(String fqcn)
         throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
