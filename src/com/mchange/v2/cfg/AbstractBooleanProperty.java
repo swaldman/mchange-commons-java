@@ -142,7 +142,7 @@ abstract class AbstractBooleanProperty
                        "We currently default to " + defaultValue +
                        ", the less secure value. THIS MAY CHANGE IN A FUTURE RELEASE. " +
                        "Please modify your configuration to tolerate the more secure value of " + strongest +
-                        " and explicitly configure '" + property + "' to " + strongest +
+                        " and then explicitly configure '" + property + "' to " + strongest +
                        ", or else explicitly configure '" + property + "' to " + defaultValue +
                        " and take responsibility for the risk.");
             warnedUnconfiguredWeakDefault = true;
