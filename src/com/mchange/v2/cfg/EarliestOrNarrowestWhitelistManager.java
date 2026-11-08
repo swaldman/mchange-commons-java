@@ -69,13 +69,13 @@ class EarliestOrNarrowestWhitelistManager extends WhitelistManager
     {
         WhitelistInfo previous = previousWhitelistInfo == null ? collectWhitelistInfoSyspropsPropertiesConfig(SealedSystemProperties.get(), pcfg, logger) : previousWhitelistInfo;
 
-        Set<String>          outWhitelist = new HashSet<>( previous.whitelist );
+        Set<String>          outWhitelist = new HashSet<>( previous.getWhitelist() );
         Set<String>          outFromKeys  = previous.getFromKeys();
         WhitelistInfo.Source outSource    = previous.getSource();
         if (previous.getWhitelist().equals(ACCEPT_ANY_WHITELIST))
         {
             WhitelistInfo replacement = collectWhitelistInfoSyspropsPropertiesConfig(null, pcfg, logger); // we can only narrow from current config
-            outWhitelist = new HashSet<>( replacement.whitelist ); // we need this one modifiable
+            outWhitelist = new HashSet<>( replacement.getWhitelist() ); // we need this one modifiable
             outFromKeys = replacement.getFromKeys();
             outSource = replacement.getSource();
         }
@@ -100,7 +100,7 @@ class EarliestOrNarrowestWhitelistManager extends WhitelistManager
                     outWhitelist = new HashSet<String>(); // we need this one modifiable
                 else
                 {
-                    outWhitelist = new HashSet<>( previous.whitelist ); // we need this one modifiable
+                    outWhitelist = new HashSet<>( previous.getWhitelist() ); // we need this one modifiable
                     outWhitelist.retainAll(currentWhitelistFromEarliestKeys);
                 }
 
@@ -140,12 +140,12 @@ class EarliestOrNarrowestWhitelistManager extends WhitelistManager
 
         if (logger.isLoggable(MLevel.WARNING))
         {
-            if (previousWhitelistInfo != null && !out.whitelist.equals(previousWhitelistInfo.whitelist))
+            if (previousWhitelistInfo != null && !out.getWhitelist().equals(previousWhitelistInfo.getWhitelist()))
             {
                 logger.log(
                     MLevel.WARNING,
                     "A late narrowing of security configuration has been applied: the whitelist controlled by '" + getWhitelistBaseKey() +
-                    "' narrowed from " + previousWhitelistInfo.whitelist + " to " + out.whitelist + ". Only narrowing changes are honored after first lookup; widening changes are silently ignored." 
+                    "' narrowed from " + previousWhitelistInfo.getWhitelist() + " to " + out.getWhitelist() + ". Only narrowing changes are honored after first lookup; widening changes are silently ignored." 
                 );
             }
         }
