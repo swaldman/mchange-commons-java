@@ -101,11 +101,22 @@ public final class HoconAbsentJUnitTestCase extends TestCase
     }
 
     /**
-     *  The one case that escalates: if a real resource happens to sit at the path you get
-     *  by chopping "hocon:" off the identifier, the library reports a WARNING carrying an
-     *  exception instead of a quiet FINE skip. Here /reference.conf genuinely exists.
+     *  Nothing escalates any more, not even when the resource is really there.
+     *
+     *  <p>Through 0.7.0 this case produced a WARNING: the library chopped "hocon:" off the
+     *  identifier, asked whether a resource sat at whatever was left, and if one did, said so
+     *  loudly. Here <code>/reference.conf</code> genuinely exists, so that is what used to
+     *  happen -- as the earlier version of this case asserted, describing the resource as one
+     *  that "happens to sit" at the stripped path, which is the tell.</p>
+     *
+     *  <p>The check could not be made to work. A HOCON identifier is a comma-separated list
+     *  whose elements may be URLs, may carry <code>#scope</code> suffixes, may need the three
+     *  HOCON suffixes appended, and conventionally end with <code>/</code>, meaning System
+     *  properties -- which is always satisfiable, so any honest check reports "might exist" for
+     *  every realistic identifier. Rather than guess, 0.7.1 says the one thing it knows, once
+     *  per identifier, at INFO: this will not be read.</p>
      */
-    public void testExistingResourceAtStrippedPathEscalatesToWarning()
+    public void testAnExistingResourceAtTheStrippedPathNoLongerEscalates()
     {
         CfgScenario s = openWithoutHocon();
         try
@@ -116,9 +127,40 @@ public final class HoconAbsentJUnitTestCase extends TestCase
             assertEquals( "plain-value", s.getProperty( mpc, "plain.key" ) );
 
             List<String[]> items = s.getDelayedLogItems( mpc );
-            assertTrue( "expected a WARNING for the existing-but-unparseable resource, got:"
+            assertFalse( "an absent optional dependency must not draw a WARNING, got:"
+                             + CfgScenario.describe( items ),
+                         CfgScenario.hasLogItem( items, "WARNING", "hocon:/reference.conf" ) );
+            assertTrue( "the INFO notice should name the identifier, got:"
                             + CfgScenario.describe( items ),
-                        CfgScenario.hasLogItem( items, "WARNING", "hocon:/reference.conf" ) );
+                        CfgScenario.hasLogItem( items, "INFO", "hocon:/reference.conf" ) );
+        }
+        finally
+        { s.closeQuietly(); }
+    }
+
+    /**
+     *  The notice is reported once per identifier, not once per read.
+     *
+     *  <p>This is the whole reason the message can afford to be INFO rather than FINE: c3p0 and
+     *  mlog both put a <code>hocon:</code> element in their default source lists, so an ordinary
+     *  deployment reaches this path on every configuration load. Before the dedup, one c3p0 test
+     *  run emitted 216 of these and 115 stack traces.</p>
+     */
+    public void testTheUnavailabilityNoticeIsReportedOncePerIdentifier()
+    {
+        CfgScenario s = openWithoutHocon();
+        try
+        {
+            String[] paths = new String[] { "hocon:/reference", "/plain.properties" };
+
+            List<String[]> first  = s.getDelayedLogItems( s.asProvidedUncached( paths, new ArrayList() ) );
+            List<String[]> second = s.getDelayedLogItems( s.asProvidedUncached( paths, new ArrayList() ) );
+
+            assertTrue( "precondition: the first read must report it, got:" + CfgScenario.describe( first ),
+                        CfgScenario.hasLogItem( first, "INFO", "hocon:/reference" ) );
+            assertFalse( "a second read of the same identifier must not report it again, got:"
+                             + CfgScenario.describe( second ),
+                         CfgScenario.hasLogItem( second, "INFO", "hocon:/reference" ) );
         }
         finally
         { s.closeQuietly(); }

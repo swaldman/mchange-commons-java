@@ -94,6 +94,18 @@ final class ConfigUtils
         }
     }
 
+    //MT: protected by class lock
+    private final static Set<String> warnedIdentifiers = new HashSet<>();
+
+    private static synchronized void maybeWarnHoconIdentifier(String identifier, List<DelayedLogItem> delayedLogItems)
+    {
+        if (!warnedIdentifiers.contains(identifier))
+        {
+            delayedLogItems.add( new DelayedLogItem( Level.INFO, String.format("Config for identifier '%s' will not be read, since the HOCON library (typesafe-config) is not available.", identifier) ) );
+            warnedIdentifiers.add(identifier);
+        }
+    }
+
     static PropertiesConfigSource propertiesConfigSourceForIdentifier(String identifier, List<DelayedLogItem> delayedLogItems)
     {
         if (identifier == null) return null;
@@ -114,21 +126,10 @@ final class ConfigUtils
             {
                 out = null;
                 if (delayedLogItems != null)
-                    delayedLogItems.add( new DelayedLogItem( Level.WARNING, "Class not found while testing for HOCON lib (typesafe-config).", e ) );
+                    delayedLogItems.add( new DelayedLogItem( Level.FINER, "Class not found while testing for HOCON lib (typesafe-config).", e ) );
             }
-            if (out == null)
-            {
-                //Okay. Apparently the HOCON bridge lib is not available. Let's see if the resource is present.
-                int sfx_index = identifier.lastIndexOf('#');
-                String resourcePath = sfx_index > 0 ? identifier.substring( HOCON_PFX_LEN, sfx_index ) : identifier.substring( HOCON_PFX_LEN );
-                if (delayedLogItems != null)
-                {
-                    if (BasicMultiPropertiesConfig.class.getResource( resourcePath ) == null)
-                        delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("HOCON lib (typesafe-config) is not available. Also, no resource available at '%s' for HOCON identifier '%s'.", resourcePath, identifier) ) );
-                    else
-                        delayedLogItems.add( new DelayedLogItem( Level.WARNING, String.format("Could not decode HOCON resource '%s', even though the resource exists, because HOCON lib (typesafe-config) is not available.", identifier) ) );
-                }
-            }
+            if (out == null && delayedLogItems != null)
+                maybeWarnHoconIdentifier(identifier,delayedLogItems);
         }
 	else if ( "/".equals(identifier) )
 	    out = propertiesConfigSource( SystemPropertiesConfigSource.class.getName(), delayedLogItems );

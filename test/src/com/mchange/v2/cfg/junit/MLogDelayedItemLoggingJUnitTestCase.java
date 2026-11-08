@@ -63,7 +63,16 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
     private final static String HOCON_ABSENT_ITEM = "Class not found while testing for HOCON lib";
     private final static String OVERRIDE_RESOURCE = "/no-such-override-resource.properties";
 
-    /** An identifier whose read repeats a message MLog's own bootstrap read already produced. */
+    /**
+     *  An identifier whose read repeats a message MLog's own bootstrap read already produced.
+     *
+     *  <p>The echo is the fixture, and it is fragile in a way that is invisible from here: it
+     *  requires the item to be emitted on EVERY read of this identifier. Make the reporting of
+     *  HOCON's absence once-per-ClassLoader and there is no echo left -- the single emission
+     *  goes to whichever read happens first, the other read is silent, and both cases below go
+     *  on passing while asserting nothing. {@link #echoingOverride} and
+     *  {@link #assertABootstrapTwinExisted} exist to make that fail loudly instead.</p>
+     */
     private final static String ECHOES_BOOTSTRAP  = "hocon:/reference,/application,/";
 
     // ------------------------------------------------------------- the tests
@@ -121,11 +130,12 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
         try
         {
             Driver d = new Driver( s );
-            d.refresh( new Object[] { d.readAsProvided( ECHOES_BOOTSTRAP ) }, "echoing override" );
+            d.refresh( new Object[] { echoingOverride( s, d ) }, "echoing override" );
             List<String[]> logged = d.logDelayedItems();
 
             assertTrue( "the echoed message never appeared, so this test would pass vacuously",
                         contains( logged, HOCON_ABSENT_ITEM ) );
+            assertABootstrapTwinExisted( logged );
             assertNoDuplicates( logged );
         }
         finally
@@ -143,7 +153,7 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
         try
         {
             Driver d = new Driver( s );
-            d.refresh( new Object[] { d.readAsProvided( ECHOES_BOOTSTRAP ) }, "echoing override" );
+            d.refresh( new Object[] { echoingOverride( s, d ) }, "echoing override" );
             List<String[]> logged = d.logDelayedItems();
 
             List<String[]> matches = new ArrayList<String[]>();
@@ -152,7 +162,8 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
 
             assertEquals( "expected the echoed message exactly once, got: " + describe( logged ),
                           1, matches.size() );
-            assertNotNull( "the surviving copy lost its Throwable; the stripped twin won the dedup",
+            assertNotNull( "the surviving copy lost its Throwable; the stripped twin won the dedup, got: "
+                               + describe( logged ),
                            matches.get( 0 )[2] );
         }
         finally
@@ -182,6 +193,45 @@ public final class MLogDelayedItemLoggingJUnitTestCase extends TestCase
         }
         finally
         { s.closeQuietly(); }
+    }
+
+    // ------------------------------------------------------------- fixture guards
+
+    /**
+     *  The override, having first checked that reading it really does report
+     *  {@link #HOCON_ABSENT_ITEM} itself. Half of proving a twin exists: this is the copy that
+     *  arrives STRIPPED, because an override built through MConfig is stripped.
+     */
+    private static Object echoingOverride( CfgScenario s, Driver d )
+    {
+        Object override = d.readAsProvided( ECHOES_BOOTSTRAP );
+        List<String[]> own = s.getDelayedLogItems( override );
+        assertTrue( "precondition: reading '" + ECHOES_BOOTSTRAP + "' must itself report \""
+                        + HOCON_ABSENT_ITEM + "\", or the override is not echoing anything and "
+                        + "there is no stripped twin to collapse. Got:" + describe( own ),
+                    contains( own, HOCON_ABSENT_ITEM ) );
+        return override;
+    }
+
+    /**
+     *  The other half: that MLog's own bootstrap read produced the message too, so the dedup
+     *  had two copies to collapse rather than one copy to leave alone.
+     *
+     *  <p>Checked through the Throwable, which is the only evidence left after the collapse.
+     *  The override's copy is always stripped, so a surviving Throwable can only have come from
+     *  the unstripped bootstrap copy -- and its absence means no bootstrap copy was there, which
+     *  is precisely the state in which "nothing was logged twice" is true for the wrong
+     *  reason.</p>
+     */
+    private static void assertABootstrapTwinExisted( List<String[]> logged )
+    {
+        for ( String[] rec : logged )
+            if ( rec[1] != null && rec[1].contains( HOCON_ABSENT_ITEM ) && rec[2] != null ) return;
+
+        fail( "precondition: no surviving copy of \"" + HOCON_ABSENT_ITEM + "\" carries a "
+                  + "Throwable, so MLog's bootstrap read never produced one and the override had "
+                  + "nothing to echo. This case would pass without collapsing anything. Got:"
+                  + describe( logged ) );
     }
 
     // ------------------------------------------------------------- assertions
