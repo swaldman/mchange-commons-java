@@ -335,11 +335,27 @@ public final class MLogConfig
 	}
 
         effectiveResourcePaths = Collections.unmodifiableList(Arrays.asList(config.getPropertiesResourcePaths()));
-        
+
         bli.add(new DelayedLogItem(DelayedLogItem.Level.INFO,
                                    "mlog config is now drawn from the following configuration sources: " +
                                    Arrays.toString(config.getPropertiesResourcePaths()) +
                                    ". Later paths shadow earlier paths where values conflict."));
+
+        boolean endsFrozen;
+        if (isMLogInitialized() && freezeConfigProperty != null)
+        {
+            // mlog is initialized, so we can use a logger
+            MLogger logger = getClassLogger(); // guaranteed not null, once mlog is initialized
+            endsFrozen = freezeConfigProperty.getValue(config, logger);
+        }
+        else
+        {
+            String fromSealedSys = SealedSystemProperties.initGet(bli).getProperty(FREEZE_CONFIG_KEY);
+            String fromConfig = config.getProperty(FREEZE_CONFIG_KEY);
+            endsFrozen = ("true".equalsIgnoreCase(fromSealedSys) || "true".equalsIgnoreCase(fromConfig));
+        }
+        if (endsFrozen)
+            bli.add(new DelayedLogItem( DelayedLogItem.Level.INFO, "mlog configuration is now frozen, and cannot be updated or refreshed. [" + FREEZE_CONFIG_KEY + "=true]" ));
 
         if (bootstrapLogItems == null)
             bootstrapLogItems = bli;
