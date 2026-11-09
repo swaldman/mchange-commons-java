@@ -60,7 +60,8 @@ object `package` extends StringentJavaModule, SonatypeCentralPublishModule {
   // They are ordinary deps here rather than mill's Dep.optional(), because a
   // dep marked optional drops out of all downstream resolution, including our
   // own test classpath, which needs com.typesafe.config. So the optional flag
-  // is set on the way into the POM instead, in publishXmlDeps below.
+  // is set on the way into the published metadata instead, in publishXmlDeps and
+  // publishMvnDeps below.
   //
   val optionalDeps = Seq(
     mvn"com.typesafe:config:1.3.4",
@@ -74,8 +75,32 @@ object `package` extends StringentJavaModule, SonatypeCentralPublishModule {
 
   private lazy val optionalArtifacts = optionalDeps.map(d => Artifact.fromDepJava(d).artifact).toSet
 
+  //
+  // Mill derives the POM and the ivy file from two separate tasks, each of which
+  // rebuilds the dependency list from allMvnDeps() independently: pom reads
+  // publishXmlDeps, ivy reads publishMvnDeps. Marking only the first left ivy.xml
+  // declaring all of these as ordinary compile-scope dependencies, so anything
+  // resolving against ~/.ivy2/local -- which resolves from the ivy metadata, not
+  // the POM -- pulled them in transitively after all. Both need the flag.
+  //
+  // Ivy does honor it: an optional dependency is emitted into ivy's "optional"
+  // configuration, which default resolution does not fetch.
+  //
+  private def markOptional(deps: Seq[Dependency]) =
+    deps.map(d => if (optionalArtifacts(d.artifact)) d.copy(optional = true) else d)
+
   override def publishXmlDeps = Task.Anon {
-    super.publishXmlDeps().map(d => if (optionalArtifacts(d.artifact)) d.copy(optional = true) else d)
+    markOptional(super.publishXmlDeps())
+  }
+
+  // publishMvnDeps is a task whose value is itself a function, so the parameter
+  // types are spelled out: inside Task.Anon the expected type of the body is
+  // Result[(..) => Seq[Dependency]], not the function type, so nothing propagates
+  // into the lambda for Scala to infer them from.
+  override def publishMvnDeps = Task.Anon {
+    val base = super.publishMvnDeps()
+    (rootDepVersions : Map[coursier.core.Module, String], bomDepMgmt : coursier.core.DependencyManagement.Map) =>
+      markOptional(base(rootDepVersions, bomDepMgmt))
   }
 
   def manifest = Task {
