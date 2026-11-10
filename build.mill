@@ -35,7 +35,7 @@ object `package` extends StringentJavaModule, SonatypeCentralPublishModule {
   val projectName = "mchange-commons-java"
 
   def artifactName     = projectName
-  def publishVersion   = "0.7.1-SNAPSHOT"
+  def publishVersion   = "0.7.1"
   def pomPackagingType = PackagingType.Jar
 
   //
